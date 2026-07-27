@@ -1,0 +1,149 @@
+import { useEffect, useState } from 'react';
+import { Plus, Edit2, Trash2, Search, Download } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useBranchFilter } from '../lib/useBranchFilter';
+import { useToast } from '../components/Toast';
+import { PageHeader, Card } from '../components/PageHeader';
+import { DataTable, type Column } from '../components/DataTable';
+import { Button } from '../components/Button';
+import { Input, Select, Textarea } from '../components/Input';
+import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { formatCurrency, formatDate, todayISO } from '../lib/format';
+import { exportToExcel } from '../lib/excel';
+import { logAudit } from '../lib/audit';
+import type { Expense, Branch, Settings } from '../lib/types';
+
+const EXPENSE_CATEGORIES = ['rent', 'utilities', 'salaries', 'supplies', 'maintenance', 'marketing', 'transport', 'other'];
+
+export function ExpensesPage() {
+  const { t, lang } = useLanguage();
+  const { user } = useAuth();
+  const branchFilter = useBranchFilter();
+  const { show } = useToast();
+  const [items, setItems] = useState<Expense[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState({ category: '', description: '', amount: 0, branch_id: '', payment_method: 'cash', expense_date: todayISO(), notes: '' });
+  const [currency, setCurrency] = useState('EGP');
+
+  async function load() {
+    setLoading(true);
+    try {
+      let expenseQuery = supabase.from('expenses').select('*').order('expense_date', { ascending: false });
+      if (branchFilter) expenseQuery = expenseQuery.eq('branch_id', branchFilter);
+      const [e, b, s] = await Promise.all([
+        expenseQuery,
+        supabase.from('branches').select('*').order('name'),
+        supabase.from('settings').select('*').maybeSingle(),
+      ]);
+      setItems((e.data as Expense[]) || []);
+      setBranches((b.data as Branch[]) || []);
+      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { load(); }, []);
+
+  const filtered = items.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()) || e.category?.toLowerCase().includes(search.toLowerCase()));
+  const openAdd = () => { setEditing(null); setForm({ category: '', description: '', amount: 0, branch_id: user?.branch_id || '', payment_method: 'cash', expense_date: todayISO(), notes: '' }); setModalOpen(true); };
+  const openEdit = (e: Expense) => { setEditing(e); setForm({ category: e.category || '', description: e.description || '', amount: e.amount, branch_id: e.branch_id || '', payment_method: e.payment_method, expense_date: e.expense_date, notes: e.notes || '' }); setModalOpen(true); };
+
+  const save = async () => {
+    if (!form.amount || form.amount <= 0) { show(t('required') + ': ' + t('amount'), 'error'); return; }
+    const payload = { ...form, branch_id: form.branch_id || null, created_by: user?.id || null };
+    if (editing) {
+      const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id);
+      if (error) { show(error.message, 'error'); return; }
+      await logAudit('update', 'expenses', editing.id);
+    } else {
+      const { error } = await supabase.from('expenses').insert(payload);
+      if (error) { show(error.message, 'error'); return; }
+      await logAudit('create', 'expenses');
+    }
+    show(t('saveSuccess'), 'success');
+    setModalOpen(false);
+    load();
+  };
+
+  const remove = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from('expenses').delete().eq('id', deleteId);
+    if (error) show(error.message, 'error');
+    else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'expenses', deleteId); }
+    setDeleteId(null);
+    load();
+  };
+
+  const handleExport = () => exportToExcel(items.map((e) => ({ Date: e.expense_date, Category: e.category || '', Description: e.description || '', Amount: e.amount, PaymentMethod: e.payment_method })), 'expenses');
+
+  const columns: Column<Expense>[] = [
+    { key: 'expense_date', header: t('date'), render: (e) => formatDate(e.expense_date, lang) },
+    { key: 'category', header: t('expenseCategory'), render: (e) => <span className="capitalize">{e.category || '-'}</span> },
+    { key: 'description', header: t('description'), render: (e) => e.description || '-' },
+    { key: 'amount', header: t('amount'), render: (e) => <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(e.amount, currency, lang)}</span> },
+    { key: 'payment_method', header: t('paymentMethod'), render: (e) => <span className="capitalize">{e.payment_method}</span> },
+    { key: 'actions', header: t('actions'), render: (e) => (
+      <div className="flex gap-1">
+        <button onClick={() => openEdit(e)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(e.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+      </div>
+    )},
+  ];
+
+  return (
+    <div>
+      <PageHeader title={t('expenses')} actions={
+        <>
+          <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+        </>
+      } />
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+      </Card>
+      <Card className="p-4">
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
+      </Card>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Select label={t('expenseCategory')} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <option value="">--</option>
+              {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c} className="capitalize">{c}</option>)}
+            </Select>
+            <Input label={t('expenseDate')} type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} required />
+            <Input label={t('amount')} type="number" step="0.01" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })} required />
+            <Select label={t('paymentMethod')} value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })}>
+              <option value="cash">{t('cash')}</option>
+              <option value="card">{t('card')}</option>
+              <option value="transfer">{t('transfer')}</option>
+            </Select>
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </div>
+          <Input label={t('description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <Textarea label={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
+            <Button onClick={save}>{t('save')}</Button>
+          </div>
+        </div>
+      </Modal>
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
+    </div>
+  );
+}

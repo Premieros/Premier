@@ -1,0 +1,242 @@
+import { useEffect, useState } from 'react';
+import { Edit2, Search, Shield, Settings } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../components/Toast';
+import { PageHeader, Card } from '../components/PageHeader';
+import { DataTable, type Column } from '../components/DataTable';
+import { Input, Select } from '../components/Input';
+import { Modal } from '../components/Modal';
+import { formatDate } from '../lib/format';
+import { logAudit } from '../lib/audit';
+import { ALL_PERMISSIONS, PERMISSION_LABELS, PERMISSION_GROUPS, DEFAULT_ROLE_PERMISSIONS, type Permission } from '../lib/permissions';
+import type { AppUser, Branch, Role } from '../lib/types';
+
+const ROLES: Role[] = ['admin', 'manager', 'cashier', 'salesperson'];
+const ROLE_LABELS: Record<Role, { ar: string; en: string }> = {
+  admin: { ar: 'مدير عام', en: 'Admin' },
+  manager: { ar: 'مدير', en: 'Manager' },
+  cashier: { ar: 'أمين صندوق', en: 'Cashier' },
+  salesperson: { ar: 'بائع', en: 'Salesperson' },
+};
+
+export function UsersPage() {
+  const { t, lang } = useLanguage();
+  const { show } = useToast();
+  const [items, setItems] = useState<AppUser[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<AppUser | null>(null);
+  const [form, setForm] = useState({ full_name: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [permModal, setPermModal] = useState<AppUser | null>(null);
+  const [permForm, setPermForm] = useState<Record<string, boolean>>({});
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [u, b] = await Promise.all([
+        supabase.from('users').select('*').order('created_at', { ascending: false }),
+        supabase.from('branches').select('*').order('name'),
+      ]);
+      setItems((u.data as AppUser[]) || []);
+      setBranches((b.data as Branch[]) || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { load(); }, []);
+
+  const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
+
+  const openEdit = (u: AppUser) => {
+    setEditing(u);
+    setForm({ full_name: u.full_name || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
+    setModalOpen(true);
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    const payload = { full_name: form.full_name, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
+    const { error } = await supabase.from('users').update(payload).eq('id', editing.id);
+    if (error) { show(error.message, 'error'); return; }
+    await logAudit('update', 'users', editing.id, payload);
+    show(t('saveSuccess'), 'success');
+    setModalOpen(false);
+    load();
+  };
+
+  const openPermissions = (u: AppUser) => {
+    setPermModal(u);
+    const defaults = DEFAULT_ROLE_PERMISSIONS[u.role];
+    const custom = u.permissions || {};
+    const merged: Record<string, boolean> = {};
+    ALL_PERMISSIONS.forEach((p) => {
+      if (p in custom) merged[p] = custom[p];
+      else merged[p] = defaults.includes(p);
+    });
+    setPermForm(merged);
+  };
+
+  const savePermissions = async () => {
+    if (!permModal) return;
+    const { error } = await supabase.from('users').update({ permissions: permForm }).eq('id', permModal.id);
+    if (error) { show(error.message, 'error'); return; }
+    await logAudit('update', 'users', permModal.id, { permissions: permForm });
+    show(t('saveSuccess'), 'success');
+    setPermModal(null);
+    load();
+  };
+
+  const togglePermission = (perm: Permission) => {
+    setPermForm((prev) => ({ ...prev, [perm]: !prev[perm] }));
+  };
+
+  const setGroupPermissions = (perms: Permission[], value: boolean) => {
+    setPermForm((prev) => {
+      const next = { ...prev };
+      perms.forEach((p) => { next[p] = value; });
+      return next;
+    });
+  };
+
+  const columns: Column<AppUser>[] = [
+    { key: 'email', header: t('email'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.email}</span> },
+    { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
+    { key: 'role', header: t('role'), render: (u) => (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 capitalize">
+        <Shield className="w-3 h-3" /> {ROLE_LABELS[u.role]?.[lang] || u.role}
+      </span>
+    )},
+    { key: 'branch', header: t('branch'), render: (u) => branches.find((b) => b.id === u.branch_id)?.name || '-' },
+    { key: 'is_active', header: t('status'), render: (u) => (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+        {u.is_active ? t('active') : t('inactive')}
+      </span>
+    )},
+    { key: 'created_at', header: t('date'), render: (u) => formatDate(u.created_at) },
+    { key: 'actions', header: t('actions'), render: (u) => (
+      <div className="flex gap-1">
+        <button onClick={() => openEdit(u)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => openPermissions(u)} className="p-1.5 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500" title={t('permissions')}><Settings className="w-4 h-4" /></button>
+      </div>
+    )},
+  ];
+
+  return (
+    <div>
+      <PageHeader title={t('users')} />
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+        </div>
+      </Card>
+      <Card className="p-4">
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+      </Card>
+
+      {/* Edit User Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('edit')}>
+        {editing && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+              <p className="text-sm text-slate-500">{t('email')}</p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">{editing.email}</p>
+            </div>
+            <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
+              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
+            </Select>
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+            <Select label={t('status')} value={form.is_active ? '1' : '0'} onChange={(e) => setForm({ ...form, is_active: e.target.value === '1' })}>
+              <option value="1">{t('active')}</option>
+              <option value="0">{t('inactive')}</option>
+            </Select>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+              <button onClick={save} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Permissions Modal */}
+      <Modal open={!!permModal} onClose={() => setPermModal(null)} title={t('managePermissions')} size="lg">
+        {permModal && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 flex items-center justify-between">
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{permModal.full_name || permModal.email}</p>
+                <p className="text-xs text-slate-500">{ROLE_LABELS[permModal.role]?.[lang] || permModal.role}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => {
+                  const defaults = DEFAULT_ROLE_PERMISSIONS[permModal.role];
+                  const all: Record<string, boolean> = {};
+                  ALL_PERMISSIONS.forEach((p) => { all[p] = defaults.includes(p); });
+                  setPermForm(all);
+                }} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-600 text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('all')}
+                </button>
+                <button onClick={() => {
+                  const all: Record<string, boolean> = {};
+                  ALL_PERMISSIONS.forEach((p) => { all[p] = false; });
+                  setPermForm(all);
+                }} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-600 text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('none')}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {PERMISSION_GROUPS.map((group) => {
+                const allChecked = group.permissions.every((p) => permForm[p]);
+                const someChecked = group.permissions.some((p) => permForm[p]);
+                return (
+                  <div key={group.key} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/50">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allChecked}
+                          ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                          onChange={() => setGroupPermissions(group.permissions, !allChecked)}
+                          className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                        <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{group[lang]}</span>
+                      </label>
+                    </div>
+                    <div className="px-4 py-2 space-y-2">
+                      {group.permissions.map((perm) => (
+                        <label key={perm} className="flex items-center gap-3 cursor-pointer py-1">
+                          <input
+                            type="checkbox"
+                            checked={!!permForm[perm]}
+                            onChange={() => togglePermission(perm)}
+                            className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          />
+                          <span className="text-sm text-slate-600 dark:text-slate-300">{PERMISSION_LABELS[perm]?.[lang] || perm}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <button onClick={() => setPermModal(null)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+              <button onClick={savePermissions} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
