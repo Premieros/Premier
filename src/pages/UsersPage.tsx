@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Edit2, Plus, Search, Shield, Settings } from 'lucide-react';
+import { Edit2, Plus, Search, Shield, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
@@ -8,6 +8,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
 import { Input, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatDate } from '../lib/format';
 import { logAudit } from '../lib/audit';
 import { ALL_PERMISSIONS, PERMISSION_LABELS, PERMISSION_GROUPS, DEFAULT_ROLE_PERMISSIONS, type Permission } from '../lib/permissions';
@@ -31,6 +32,8 @@ export function UsersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [form, setForm] = useState({ full_name: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [newPassword, setNewPassword] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
   const [permModal, setPermModal] = useState<AppUser | null>(null);
@@ -56,6 +59,7 @@ export function UsersPage() {
   const openEdit = (u: AppUser) => {
     setEditing(u);
     setForm({ full_name: u.full_name || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
+    setNewPassword('');
     setModalOpen(true);
   };
 
@@ -101,9 +105,39 @@ export function UsersPage() {
     const payload = { full_name: form.full_name, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
     const { error } = await supabase.from('users').update(payload).eq('id', editing.id);
     if (error) { show(error.message, 'error'); return; }
-    await logAudit('update', 'users', editing.id, payload);
+    if (newPassword) {
+      if (newPassword.length < 6) { show(t('weakPassword'), 'error'); return; }
+      const { data: pwData, error: pwError } = await supabase.rpc('update_user_password', { p_user_id: editing.id, p_new_password: newPassword });
+      if (pwError) { show(`${t('unknownErrorCreatingUser')}: ${pwError.message}`, 'error'); return; }
+      const pwResult = pwData as { success: boolean; error?: string; detail?: string } | null;
+      if (!pwResult?.success) {
+        if (pwResult?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
+        else if (pwResult?.error === 'WEAK_PASSWORD') show(t('weakPassword'), 'error');
+        else show(`${t('unknownErrorCreatingUser')}: ${pwResult?.detail || 'unknown'}`, 'error');
+        return;
+      }
+    }
+    await logAudit('update', 'users', editing.id, { ...payload, password_changed: !!newPassword });
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
+    setNewPassword('');
+    load();
+  };
+
+  const remove = async () => {
+    if (!deleteId) return;
+    const target = items.find((u) => u.id === deleteId);
+    const { data, error } = await supabase.rpc('delete_user', { p_user_id: deleteId });
+    if (error) { show(`${t('unknownErrorDeletingUser')}: ${error.message}`, 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string } | null;
+    if (!result?.success) {
+      if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToDeleteUser'), 'error');
+      else if (result?.error === 'LAST_ADMIN') show(t('lastAdminWarning'), 'error');
+      else show(`${t('unknownErrorDeletingUser')}: ${result?.detail || 'unknown'}`, 'error');
+      return;
+    }
+    await logAudit('delete', 'users', deleteId, { email: target?.email });
+    show(t('deleteSuccess'), 'success');
     load();
   };
 
@@ -160,6 +194,7 @@ export function UsersPage() {
       <div className="flex gap-1">
         <button onClick={() => openEdit(u)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
         <button onClick={() => openPermissions(u)} className="p-1.5 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500" title={t('permissions')}><Settings className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(u.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('deleteUser')}><Trash2 className="w-4 h-4" /></button>
       </div>
     )},
   ];
@@ -200,6 +235,7 @@ export function UsersPage() {
               <option value="1">{t('active')}</option>
               <option value="0">{t('inactive')}</option>
             </Select>
+            <Input label={t('newPassword')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} minLength={6} />
             <div className="flex justify-end gap-2">
               <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
               <button onClick={save} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
@@ -303,6 +339,8 @@ export function UsersPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('deleteUser')} message={t('confirmDeleteUser')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
     </div>
   );
 }
