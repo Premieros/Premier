@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION create_user(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog
+SET search_path = public
 AS $$
 DECLARE
   v_user_id uuid;
@@ -104,7 +104,7 @@ CREATE OR REPLACE FUNCTION protect_last_admin()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog
+SET search_path = public
 AS $$
 DECLARE
   v_other_active_admins int;
