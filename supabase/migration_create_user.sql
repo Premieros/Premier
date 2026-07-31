@@ -29,6 +29,10 @@ DECLARE
   v_role text;
   v_hash text;
   v_pgc_schema text;
+  v_u_cols text;
+  v_u_vals text;
+  v_i_cols text;
+  v_i_vals text;
 BEGIN
   -- Only admins can create users
   IF NOT public.is_pos_admin() THEN
@@ -62,29 +66,67 @@ BEGIN
 
   v_user_id := gen_random_uuid();
 
-  -- Create the auth account (email confirmed so the user can log in immediately)
-  INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-    created_at, updated_at, is_anonymous, is_sso_user
-  ) VALUES (
-    NULL, v_user_id, 'authenticated', 'authenticated', p_email,
-    v_hash,
-    now(),
-    jsonb_build_object('provider', 'email', 'providers', array['email']),
-    jsonb_build_object('full_name', p_full_name),
-    now(), now(), false, false
-  );
+  -- Build the auth.users INSERT dynamically, including ONLY columns that exist
+  -- and are NOT generated. This adapts automatically to any Supabase version
+  -- (email / confirmed_at are generated columns on newer versions).
+  SELECT string_agg(c.col, ', ' ORDER BY c.ord), string_agg(c.val, ', ' ORDER BY c.ord)
+  INTO v_u_cols, v_u_vals
+  FROM (
+    SELECT cols.ordinal_position AS ord, quote_ident(cols.column_name) AS col,
+      CASE cols.column_name
+        WHEN 'instance_id' THEN 'NULL'
+        WHEN 'id' THEN quote_literal(v_user_id)
+        WHEN 'aud' THEN '''authenticated'''
+        WHEN 'role' THEN '''authenticated'''
+        WHEN 'email' THEN quote_literal(p_email)
+        WHEN 'encrypted_password' THEN quote_literal(v_hash)
+        WHEN 'email_confirmed_at' THEN 'now()'
+        WHEN 'raw_app_meta_data' THEN format('jsonb_build_object(''provider'',''email'',''providers'',array[''email'']::text[],''email'',%L)', p_email)
+        WHEN 'raw_user_meta_data' THEN format('jsonb_build_object(''full_name'',%L,''email'',%L)', p_full_name, p_email)
+        WHEN 'created_at' THEN 'now()'
+        WHEN 'updated_at' THEN 'now()'
+        WHEN 'is_anonymous' THEN 'false'
+        WHEN 'is_sso_user' THEN 'false'
+      END AS val
+    FROM information_schema.columns cols
+    WHERE cols.table_schema = 'auth' AND cols.table_name = 'users'
+      AND cols.is_generated = 'NEVER'
+      AND cols.column_name IN ('instance_id','id','aud','role','email','encrypted_password','email_confirmed_at','raw_app_meta_data','raw_user_meta_data','created_at','updated_at','is_anonymous','is_sso_user')
+  ) c;
 
-  -- Email identity row (required by GoTrue for email/password sign-in)
-  INSERT INTO auth.identities (
-    id, provider_id, user_id, identity_data, provider,
-    last_sign_in_at, created_at, updated_at, email
-  ) VALUES (
-    v_user_id, p_email, v_user_id,
-    jsonb_build_object('sub', v_user_id::text, 'email', p_email),
-    'email', now(), now(), now(), p_email
-  );
+  IF v_u_cols IS NULL OR v_u_vals IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'UNKNOWN_ERROR', 'detail', 'no insertable columns found for auth.users');
+  END IF;
+
+  EXECUTE 'INSERT INTO auth.users (' || v_u_cols || ') VALUES (' || v_u_vals || ')';
+
+  -- Build the auth.identities INSERT dynamically the same way
+  SELECT string_agg(c.col, ', ' ORDER BY c.ord), string_agg(c.val, ', ' ORDER BY c.ord)
+  INTO v_i_cols, v_i_vals
+  FROM (
+    SELECT cols.ordinal_position AS ord, quote_ident(cols.column_name) AS col,
+      CASE cols.column_name
+        WHEN 'id' THEN quote_literal(v_user_id)
+        WHEN 'provider_id' THEN quote_literal(p_email)
+        WHEN 'user_id' THEN quote_literal(v_user_id)
+        WHEN 'identity_data' THEN format('jsonb_build_object(''sub'',%L,''email'',%L)', v_user_id::text, p_email)
+        WHEN 'provider' THEN '''email'''
+        WHEN 'last_sign_in_at' THEN 'now()'
+        WHEN 'created_at' THEN 'now()'
+        WHEN 'updated_at' THEN 'now()'
+        WHEN 'email' THEN quote_literal(p_email)
+      END AS val
+    FROM information_schema.columns cols
+    WHERE cols.table_schema = 'auth' AND cols.table_name = 'identities'
+      AND cols.is_generated = 'NEVER'
+      AND cols.column_name IN ('id','provider_id','user_id','identity_data','provider','last_sign_in_at','created_at','updated_at','email')
+  ) c;
+
+  IF v_i_cols IS NULL OR v_i_vals IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'UNKNOWN_ERROR', 'detail', 'no insertable columns found for auth.identities');
+  END IF;
+
+  EXECUTE 'INSERT INTO auth.identities (' || v_i_cols || ') VALUES (' || v_i_vals || ')';
 
   -- Create the app profile. On any failure below, the whole transaction
   -- (including the auth account) is rolled back - no partial accounts.
