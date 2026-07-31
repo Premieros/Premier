@@ -19,7 +19,16 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
-    if (error) show(error, 'error');
+    if (error) {
+      let msg: string;
+      if (error.code === 'invalid_credentials') msg = t('invalidCredentials');
+      else if (error.code === 'email_not_confirmed') msg = t('emailNotConfirmed');
+      else if (error.code === 'user_not_found') msg = t('userNotFound');
+      else if (error.code === 'over_request_rate_limit') msg = t('rateLimited');
+      else if (error.code === 'email_address_invalid') msg = t('invalidCredentials');
+      else msg = `${t('loginFailed')} ${error.message}`;
+      show(msg, 'error');
+    }
     setLoading(false);
   };
 

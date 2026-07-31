@@ -298,6 +298,10 @@ export const translations = {
     confirmDeleteUser: 'هل أنت متأكد من حذف هذا المستخدم؟ سيتم حذف حسابه نهائياً.',
     noPermissionToDeleteUser: 'ليس لديك صلاحية لحذف المستخدمين.',
     unknownErrorDeletingUser: 'حدث خطأ أثناء حذف المستخدم.',
+    emailNotConfirmed: 'البريد الإلكتروني غير مؤكد بعد. تواصل مع المدير العام.',
+    rateLimited: 'محاولات كثيرة جداً. انتظر قليلاً ثم حاول مجدداً.',
+    loginFailed: 'فشل تسجيل الدخول.',
+    userNotFound: 'لا يوجد حساب بهذا البريد الإلكتروني.',
   },
   en: {
     appName: 'POS System',
@@ -583,6 +587,10 @@ export const translations = {
     confirmDeleteUser: 'Are you sure you want to delete this user? Their account will be permanently removed.',
     noPermissionToDeleteUser: 'You do not have permission to delete users.',
     unknownErrorDeletingUser: 'An error occurred while deleting the user.',
+    emailNotConfirmed: 'Email is not confirmed yet. Contact the admin.',
+    rateLimited: 'Too many attempts. Please wait a moment and try again.',
+    loginFailed: 'Login failed.',
+    userNotFound: 'No account found with this email.',
   },
 } as const;
 

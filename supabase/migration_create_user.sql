@@ -88,7 +88,7 @@ BEGIN
   FROM (
     SELECT cols.ordinal_position AS ord, quote_ident(cols.column_name) AS col,
       CASE cols.column_name
-        WHEN 'instance_id' THEN 'NULL'
+        WHEN 'instance_id' THEN '''00000000-0000-0000-0000-000000000000'''
         WHEN 'id' THEN quote_literal(v_user_id)
         WHEN 'aud' THEN '''authenticated'''
         WHEN 'role' THEN '''authenticated'''
@@ -125,8 +125,8 @@ BEGIN
   FROM (
     SELECT cols.ordinal_position AS ord, quote_ident(cols.column_name) AS col,
       CASE cols.column_name
-        WHEN 'id' THEN quote_literal(v_user_id)
-        WHEN 'provider_id' THEN quote_literal(v_email)
+        WHEN 'id' THEN 'gen_random_uuid()'
+        WHEN 'provider_id' THEN quote_literal(v_user_id::text)
         WHEN 'user_id' THEN quote_literal(v_user_id)
         WHEN 'identity_data' THEN format('jsonb_build_object(''sub'',%L,''email'',%L)', v_user_id::text, v_email)
         WHEN 'provider' THEN '''email'''
@@ -189,6 +189,14 @@ BEGIN
   ) THEN
     EXECUTE 'UPDATE auth.users SET email_confirmed_at = COALESCE(email_confirmed_at, now()) WHERE id IN (SELECT id FROM public.users)';
   END IF;
+
+  -- Fix instance_id: GoTrue looks users up by instance_id = default instance UUID,
+  -- NULL never matches, so the login lookup silently fails.
+  EXECUTE 'UPDATE auth.users SET instance_id = ''00000000-0000-0000-0000-000000000000'' WHERE id IN (SELECT id FROM public.users) AND instance_id IS NULL';
+
+  -- Fix email identities: GoTrue stores provider_id = user_id::text for the email
+  -- provider (same value as identity_data.sub), not the email address.
+  EXECUTE 'UPDATE auth.identities SET provider_id = user_id::text WHERE provider = ''email'' AND user_id IN (SELECT id FROM public.users) AND provider_id IS DISTINCT FROM user_id::text';
 
   -- Mark email as verified in metadata
   EXECUTE 'UPDATE auth.users SET raw_user_meta_data = jsonb_set(COALESCE(raw_user_meta_data, ''{}''::jsonb), ''{email_verified}'', ''true'', true) WHERE id IN (SELECT id FROM public.users)';
