@@ -3,8 +3,10 @@
 --
 -- NOTE: auth.admin_create_user() was REMOVED in modern Supabase auth versions,
 -- so we insert directly into auth.users + auth.identities with a bcrypt hash.
+-- The pgcrypto schema is resolved at runtime so this works on ANY project
+-- (extensions schema, public schema, etc).
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 -- ============ 1. CREATE USER RPC ============
 -- Only admins can create accounts. Runs in a single transaction:
@@ -20,14 +22,16 @@ CREATE OR REPLACE FUNCTION create_user(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog
 AS $$
 DECLARE
   v_user_id uuid;
   v_role text;
+  v_hash text;
+  v_pgc_schema text;
 BEGIN
   -- Only admins can create users
-  IF NOT is_pos_admin() THEN
+  IF NOT public.is_pos_admin() THEN
     RETURN jsonb_build_object('success', false, 'error', 'PERMISSION_DENIED');
   END IF;
 
@@ -35,9 +39,21 @@ BEGIN
   IF EXISTS (SELECT 1 FROM auth.users WHERE email = p_email) THEN
     RETURN jsonb_build_object('success', false, 'error', 'EMAIL_TAKEN');
   END IF;
-  IF EXISTS (SELECT 1 FROM users WHERE email = p_email) THEN
+  IF EXISTS (SELECT 1 FROM public.users WHERE email = p_email) THEN
     RETURN jsonb_build_object('success', false, 'error', 'EMAIL_TAKEN');
   END IF;
+
+  -- Locate the pgcrypto extension schema at runtime (any Supabase project)
+  SELECT extnamespace::regnamespace::text INTO v_pgc_schema
+  FROM pg_extension WHERE extname = 'pgcrypto';
+
+  IF v_pgc_schema IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'UNKNOWN_ERROR', 'detail', 'pgcrypto extension is not enabled');
+  END IF;
+
+  -- bcrypt-hash the password using the resolved pgcrypto schema
+  EXECUTE format('SELECT %I.crypt($1, %I.gen_salt($2, $3))', v_pgc_schema, v_pgc_schema)
+    INTO v_hash USING p_password, 'bf', 10;
 
   v_role := CASE
     WHEN p_role IN ('admin', 'manager', 'cashier', 'salesperson') THEN p_role
@@ -53,7 +69,7 @@ BEGIN
     created_at, updated_at, is_anonymous, is_sso_user
   ) VALUES (
     NULL, v_user_id, 'authenticated', 'authenticated', p_email,
-    crypt(p_password, gen_salt('bf', 10)),
+    v_hash,
     now(), now(),
     jsonb_build_object('provider', 'email', 'providers', array['email']),
     jsonb_build_object('full_name', p_full_name),
@@ -72,7 +88,7 @@ BEGIN
 
   -- Create the app profile. On any failure below, the whole transaction
   -- (including the auth account) is rolled back - no partial accounts.
-  INSERT INTO users (id, email, full_name, role, branch_id, is_active)
+  INSERT INTO public.users (id, email, full_name, role, branch_id, is_active)
   VALUES (v_user_id, p_email, p_full_name, v_role, p_branch_id, p_is_active);
 
   RETURN jsonb_build_object('success', true, 'user_id', v_user_id);
@@ -88,7 +104,7 @@ CREATE OR REPLACE FUNCTION protect_last_admin()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog
 AS $$
 DECLARE
   v_other_active_admins int;
@@ -96,7 +112,7 @@ BEGIN
   IF TG_OP = 'DELETE' THEN
     IF OLD.role = 'admin' AND OLD.is_active THEN
       SELECT count(*) INTO v_other_active_admins
-      FROM users
+      FROM public.users
       WHERE role = 'admin' AND is_active AND id <> OLD.id;
       IF v_other_active_admins = 0 THEN
         RAISE EXCEPTION 'LAST_ADMIN';
@@ -109,7 +125,7 @@ BEGIN
   IF OLD.role = 'admin' AND OLD.is_active
      AND (NEW.role IS DISTINCT FROM 'admin' OR NOT NEW.is_active) THEN
     SELECT count(*) INTO v_other_active_admins
-    FROM users
+    FROM public.users
     WHERE role = 'admin' AND is_active AND id <> OLD.id;
     IF v_other_active_admins = 0 THEN
       RAISE EXCEPTION 'LAST_ADMIN';
@@ -129,9 +145,9 @@ FOR EACH ROW EXECUTE FUNCTION protect_last_admin();
 -- their own profile. Reading profiles stays open for authenticated users.
 DROP POLICY IF EXISTS "auth_update_users" ON users;
 CREATE POLICY "auth_update_users" ON users FOR UPDATE TO authenticated
-  USING (is_pos_admin() OR id = auth.uid())
-  WITH CHECK (is_pos_admin() OR id = auth.uid());
+  USING (public.is_pos_admin() OR id = auth.uid())
+  WITH CHECK (public.is_pos_admin() OR id = auth.uid());
 
 DROP POLICY IF EXISTS "auth_delete_users" ON users;
 CREATE POLICY "auth_delete_users" ON users FOR DELETE TO authenticated
-  USING (is_pos_admin());
+  USING (public.is_pos_admin());
