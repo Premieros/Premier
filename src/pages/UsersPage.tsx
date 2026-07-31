@@ -76,12 +76,12 @@ export function UsersPage() {
       p_branch_id: addForm.branch_id || null,
       p_is_active: addForm.is_active,
     });
-    if (error) { show(t('unknownErrorCreatingUser'), 'error'); return; }
+    if (error) { show(`${t('unknownErrorCreatingUser')}: ${error.message}`, 'error'); return; }
     const result = data as { success: boolean; error?: string; detail?: string; user_id?: string } | null;
     if (!result?.success) {
       if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
       else if (result?.error === 'EMAIL_TAKEN') show(t('emailAlreadyUsed'), 'error');
-      else show(t('unknownErrorCreatingUser'), 'error');
+      else show(`${t('unknownErrorCreatingUser')}: ${result?.detail || 'unknown'}`, 'error');
       return;
     }
     await logAudit('create', 'users', result.user_id, { email });
