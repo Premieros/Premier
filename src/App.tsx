@@ -26,6 +26,7 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ defa
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ComponentsPage = lazy(() => import('./pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
 const ShiftsPage = lazy(() => import('./pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
+const BranchProductsPage = lazy(() => import('./pages/BranchProductsPage').then(m => ({ default: m.BranchProductsPage })));
 
 function PageLoader() {
   return (
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportsPage /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
+      <Route path="/branch-products" element={<ProtectedRoute permission="products.assign"><BranchProductsPage /></ProtectedRoute>} />
       <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

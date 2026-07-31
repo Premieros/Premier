@@ -93,13 +93,24 @@ export function PosPage() {
     let cancelled = false;
     async function loadData() {
       try {
-        const fixedBranch = branchFilter || user?.branch_id || '';
-        let pq = supabase.from('products').select('*, category:categories(*)').eq('is_active', true);
+        const fixedBranch = effectiveBranch;
+        let pq: any = null;
         let cusq = supabase.from('customers').select('*');
         let catq = supabase.from('categories').select('*');
-        if (fixedBranch) { pq = pq.eq('branch_id', fixedBranch); cusq = cusq.eq('branch_id', fixedBranch); catq = catq.eq('branch_id', fixedBranch); }
+        if (fixedBranch) {
+          // Sellable products come from the branch_products junction (per-branch price included)
+          pq = supabase
+            .from('branch_products')
+            .select('selling_price, is_active, product:products(*, category:categories(*))')
+            .eq('branch_id', fixedBranch)
+            .eq('is_active', true);
+          cusq = cusq.eq('branch_id', fixedBranch);
+          catq = catq.eq('branch_id', fixedBranch);
+        } else {
+          pq = supabase.from('products').select('*, category:categories(*)').eq('is_active', true);
+        }
         const [pRes, cRes, sRes, bRes, catRes] = await Promise.allSettled([
-          pq.order('name'),
+          fixedBranch ? pq : pq.order('name'),
           cusq.order('name'),
           supabase.from('settings').select('*').maybeSingle(),
           supabase.from('branches').select('*').eq('is_active', true).order('name'),
@@ -109,7 +120,16 @@ export function PosPage() {
 
         const errors: string[] = [];
         if (pRes.status === 'fulfilled' && pRes.value.error) errors.push('products: ' + pRes.value.error.message);
-        else if (pRes.status === 'fulfilled') setProducts((pRes.value.data as Product[]) || []);
+        else if (pRes.status === 'fulfilled') {
+          if (fixedBranch) {
+            const rows = ((pRes.value.data || []) as { selling_price: number | null; product: Product }[]).sort((a, b) =>
+              (a.product?.name || '').localeCompare(b.product?.name || '')
+            );
+            setProducts(rows.map((r) => ({ ...r.product, branch_selling_price: r.selling_price })));
+          } else {
+            setProducts((pRes.value.data as Product[]) || []);
+          }
+        }
         if (cRes.status === 'fulfilled' && cRes.value.error) errors.push('customers: ' + cRes.value.error.message);
         else if (cRes.status === 'fulfilled') setCustomers((cRes.value.data as Customer[]) || []);
         if (sRes.status === 'fulfilled' && sRes.value.error) errors.push('settings: ' + sRes.value.error.message);
@@ -128,7 +148,8 @@ export function PosPage() {
     }
     loadData();
     return () => { cancelled = true; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveBranch]);
 
   useEffect(() => {
     if (effectiveBranch) loadStock(effectiveBranch);
@@ -211,7 +232,7 @@ export function PosPage() {
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) return prev.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i));
-      return [...prev, { product, unit_name: 'piece', quantity: 1, unit_price: product.sale_price, discount_amount: 0, bonus_quantity: 0 }];
+      return [...prev, { product, unit_name: 'piece', quantity: 1, unit_price: product.branch_selling_price ?? product.sale_price, discount_amount: 0, bonus_quantity: 0 }];
     });
   };
 
@@ -413,7 +434,7 @@ export function PosPage() {
           <select
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
-            onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); }}
+            onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); }}
             className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
@@ -612,7 +633,7 @@ export function PosPage() {
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(p.sale_price, settings?.currency || 'EGP', lang)}</span>
+                          <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, settings?.currency || 'EGP', lang)}</span>
                           {!outOfStock && !noRecipe && (
                             <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Plus className="w-3.5 h-3.5 text-white" />

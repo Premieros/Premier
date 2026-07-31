@@ -53,12 +53,12 @@ export function ExpensesPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = items.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()) || e.category?.toLowerCase().includes(search.toLowerCase()));
-  const openAdd = () => { setEditing(null); setForm({ category: '', description: '', amount: 0, branch_id: user?.branch_id || '', payment_method: 'cash', expense_date: todayISO(), notes: '' }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ category: '', description: '', amount: 0, branch_id: branchFilter || '', payment_method: 'cash', expense_date: todayISO(), notes: '' }); setModalOpen(true); };
   const openEdit = (e: Expense) => { setEditing(e); setForm({ category: e.category || '', description: e.description || '', amount: e.amount, branch_id: e.branch_id || '', payment_method: e.payment_method, expense_date: e.expense_date, notes: e.notes || '' }); setModalOpen(true); };
 
   const save = async () => {
     if (!form.amount || form.amount <= 0) { show(t('required') + ': ' + t('amount'), 'error'); return; }
-    const payload = { ...form, branch_id: form.branch_id || null, created_by: user?.id || null };
+    const payload = { ...form, branch_id: branchFilter || form.branch_id || null, created_by: user?.id || null };
     if (editing) {
       const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
@@ -130,10 +130,12 @@ export function ExpensesPage() {
               <option value="card">{t('card')}</option>
               <option value="transfer">{t('transfer')}</option>
             </Select>
-            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
-              <option value="">--</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
+            {!branchFilter && (
+              <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+                <option value="">--</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            )}
           </div>
           <Input label={t('description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <Textarea label={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />

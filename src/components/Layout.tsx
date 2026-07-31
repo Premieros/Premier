@@ -4,6 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store,
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
+  ListChecks,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { to: '/shifts', icon: <Timer className="w-5 h-5" />, labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
   { to: '/reports', icon: <BarChart3 className="w-5 h-5" />, labelKey: 'reports', permission: 'reports.view', group: 'finance' },
   { to: '/users', icon: <UserCog className="w-5 h-5" />, labelKey: 'users', permission: 'users.view', group: 'admin' },
+  { to: '/branch-products', icon: <ListChecks className="w-5 h-5" />, labelKey: 'branchProducts', permission: 'products.assign', group: 'admin' },
   { to: '/audit-log', icon: <ScrollText className="w-5 h-5" />, labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
   { to: '/settings', icon: <Settings className="w-5 h-5" />, labelKey: 'settings', permission: 'settings.manage', group: 'admin' },
 ];

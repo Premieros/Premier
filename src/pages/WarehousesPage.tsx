@@ -42,12 +42,12 @@ export function WarehousesPage() {
   }
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditing(null); setForm({ name: '', branch_id: '', address: '', is_active: true }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ name: '', branch_id: branchFilter || '', address: '', is_active: true }); setModalOpen(true); };
   const openEdit = (w: Warehouse) => { setEditing(w); setForm({ name: w.name, branch_id: w.branch_id || '', address: w.address || '', is_active: w.is_active }); setModalOpen(true); };
 
   const save = async () => {
     if (!form.name) { show(t('required'), 'error'); return; }
-    const payload = { ...form, branch_id: form.branch_id || null };
+    const payload = { ...form, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
       const { error } = await supabase.from('warehouses').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
@@ -97,10 +97,12 @@ export function WarehousesPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <Input label={t('name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
-            <option value="">--</option>
-            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </Select>
+          {!branchFilter && (
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          )}
           <Input label={t('address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           <Select label={t('status')} value={form.is_active ? '1' : '0'} onChange={(e) => setForm({ ...form, is_active: e.target.value === '1' })}>
             <option value="1">{t('active')}</option>

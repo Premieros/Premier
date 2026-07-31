@@ -62,6 +62,18 @@ export interface Product {
   branch_id: string;
   created_at: string;
   category?: Category;
+  branch_selling_price?: number | null;
+}
+
+export interface BranchProduct {
+  id: string;
+  branch_id: string;
+  product_id: string;
+  is_active: boolean;
+  selling_price: number | null;
+  display_order: number;
+  created_at: string;
+  product?: Product;
 }
 
 export interface ProductUnit {
