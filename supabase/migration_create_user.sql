@@ -65,12 +65,12 @@ BEGIN
   -- Create the auth account (email confirmed so the user can log in immediately)
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmed_at, raw_app_meta_data, raw_user_meta_data,
+    email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
     created_at, updated_at, is_anonymous, is_sso_user
   ) VALUES (
     NULL, v_user_id, 'authenticated', 'authenticated', p_email,
     v_hash,
-    now(), now(),
+    now(),
     jsonb_build_object('provider', 'email', 'providers', array['email']),
     jsonb_build_object('full_name', p_full_name),
     now(), now(), false, false
