@@ -15,7 +15,7 @@ import { renderBarcode, generateQRCodeDataURL } from '../lib/barcode';
 import { logAudit } from '../lib/audit';
 import { generateBarcode } from '../lib/format';
 import { useBranchFilter } from '../lib/useBranchFilter';
-import type { Product, Category, ProductUnit, Settings } from '../lib/types';
+import type { Product, Category, ProductUnit, Settings, Branch } from '../lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
 
@@ -36,10 +36,12 @@ export function ProductsPage() {
   const barcodeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [currency, setCurrency] = useState('EGP');
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const [form, setForm] = useState({
     name: '', name_en: '', barcode: '', sku: '', category_id: '', description: '',
     cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready' as 'ready' | 'manufactured',
+    branch_id: '',
   });
   const [units, setUnits] = useState<ProductUnit[]>([]);
 
@@ -49,14 +51,16 @@ export function ProductsPage() {
       let pq = supabase.from('products').select('*, category:categories(*)');
       let cq = supabase.from('categories').select('*');
       if (branchFilter) { pq = pq.eq('branch_id', branchFilter); cq = cq.eq('branch_id', branchFilter); }
-      const [p, c, s] = await Promise.all([
+      const [p, c, s, b] = await Promise.all([
         pq.order('created_at', { ascending: false }),
         cq.order('name'),
         supabase.from('settings').select('*').maybeSingle(),
+        supabase.from('branches').select('*').order('name'),
       ]);
       setProducts((p.data as Product[]) || []);
       setCategories((c.data as Category[]) || []);
       if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+      setBranches((b.data as Branch[]) || []);
     } finally {
       setLoading(false);
     }
@@ -70,14 +74,14 @@ export function ProductsPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready' });
+    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready', branch_id: branchFilter || '' });
     setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
     setModalOpen(true);
   };
 
   const openEdit = async (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, product_type: p.product_type || 'ready' });
+    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, product_type: p.product_type || 'ready', branch_id: p.branch_id || branchFilter || '' });
     const { data: u } = await supabase.from('product_units').select('*').eq('product_id', p.id);
     setUnits((u as ProductUnit[]) || [{ id: '', product_id: p.id, unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: p.sale_price, cost_price: p.cost_price, barcode: p.barcode || '', is_base: true, created_at: '' }]);
     setModalOpen(true);
@@ -85,7 +89,7 @@ export function ProductsPage() {
 
   const save = async () => {
     if (!form.name) { show(t('required') + ': ' + t('name'), 'error'); return; }
-    const payload = { ...form, category_id: form.category_id || null };
+    const payload = { ...form, category_id: form.category_id || null, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
@@ -142,6 +146,7 @@ export function ProductsPage() {
         wholesale_price: Number(r.WholesalePrice || r.wholesale_price || 0),
         is_active: true,
         low_stock_threshold: Number(r.LowStockThreshold || 5),
+        branch_id: branchFilter || branches[0]?.id || null,
       })).filter(r => r.name);
       if (payload.length === 0) { show('No valid rows', 'error'); return; }
       const { error } = await supabase.from('products').insert(payload);
@@ -250,6 +255,12 @@ export function ProductsPage() {
               <option value="ready">{t('readyProduct')}</option>
               <option value="manufactured">{t('manufacturedProduct')}</option>
             </Select>
+            {!branchFilter && (
+              <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+                <option value="">--</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            )}
             <Input label={t('image') + ' URL'} value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
             <Input label={t('costPrice')} type="number" step="0.01" value={form.cost_price || ''} onChange={(e) => setForm({ ...form, cost_price: parseFloat(e.target.value) || 0 })} />
             <Input label={t('salePrice')} type="number" step="0.01" value={form.sale_price || ''} onChange={(e) => setForm({ ...form, sale_price: parseFloat(e.target.value) || 0 })} />

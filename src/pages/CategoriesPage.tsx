@@ -6,12 +6,12 @@ import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
-import { Input, Textarea } from '../components/Input';
+import { Input, Select, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { logAudit } from '../lib/audit';
 import { useBranchFilter } from '../lib/useBranchFilter';
-import type { Category } from '../lib/types';
+import type { Category, Branch } from '../lib/types';
 
 export function CategoriesPage() {
   const { t } = useLanguage();
@@ -24,32 +24,38 @@ export function CategoriesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
-  const [form, setForm] = useState({ name: '', name_en: '', description: '' });
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [form, setForm] = useState({ name: '', name_en: '', description: '', branch_id: '' });
 
   async function load() {
     setLoading(true);
     try {
       let q = supabase.from('categories').select('*');
       if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const { data } = await q.order('created_at', { ascending: false });
-      setItems((data as Category[]) || []);
+      const [data, b] = await Promise.all([
+        q.order('created_at', { ascending: false }),
+        supabase.from('branches').select('*').order('name'),
+      ]);
+      setItems((data.data as Category[]) || []);
+      setBranches((b.data as Branch[]) || []);
     } finally {
       setLoading(false);
     }
   }
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', description: '' }); setModalOpen(true); };
-  const openEdit = (c: Category) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', description: c.description || '' }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', description: '', branch_id: branchFilter || '' }); setModalOpen(true); };
+  const openEdit = (c: Category) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', description: c.description || '', branch_id: c.branch_id || branchFilter || '' }); setModalOpen(true); };
 
   const save = async () => {
     if (!form.name) { show(t('required'), 'error'); return; }
+    const payload = { ...form, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
-      const { error } = await supabase.from('categories').update(form).eq('id', editing.id);
+      const { error } = await supabase.from('categories').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('update', 'categories', editing.id);
     } else {
-      const { error } = await supabase.from('categories').insert(form);
+      const { error } = await supabase.from('categories').insert(payload);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('create', 'categories');
     }
@@ -113,6 +119,12 @@ export function CategoriesPage() {
           <Input label={t('name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label={t('nameEn')} value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} />
           <Textarea label={t('description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+          {!branchFilter && (
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
             <Button onClick={save}>{t('save')}</Button>

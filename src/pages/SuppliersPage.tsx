@@ -6,14 +6,14 @@ import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
-import { Input, Textarea } from '../components/Input';
+import { Input, Select, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency } from '../lib/format';
 import { exportToExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
 import { useBranchFilter } from '../lib/useBranchFilter';
-import type { Supplier, Settings } from '../lib/types';
+import type { Supplier, Settings, Branch } from '../lib/types';
 
 export function SuppliersPage() {
   const { t, lang } = useLanguage();
@@ -25,20 +25,23 @@ export function SuppliersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '' });
+  const [form, setForm] = useState({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: '' });
   const [currency, setCurrency] = useState('EGP');
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   async function load() {
     setLoading(true);
     try {
       let q = supabase.from('suppliers').select('*');
       if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const [res, s] = await Promise.all([
+      const [res, s, b] = await Promise.all([
         q.order('created_at', { ascending: false }),
         supabase.from('settings').select('*').maybeSingle(),
+        supabase.from('branches').select('*').order('name'),
       ]);
       setItems((res.data as Supplier[]) || []);
       if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+      setBranches((b.data as Branch[]) || []);
     } finally {
       setLoading(false);
     }
@@ -46,17 +49,18 @@ export function SuppliersPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = items.filter((s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.phone?.includes(search));
-  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '' }); setModalOpen(true); };
-  const openEdit = (s: Supplier) => { setEditing(s); setForm({ name: s.name, name_en: s.name_en || '', phone: s.phone || '', email: s.email || '', address: s.address || '', tax_number: s.tax_number || '', balance: s.balance, notes: s.notes || '' }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: branchFilter || '' }); setModalOpen(true); };
+  const openEdit = (s: Supplier) => { setEditing(s); setForm({ name: s.name, name_en: s.name_en || '', phone: s.phone || '', email: s.email || '', address: s.address || '', tax_number: s.tax_number || '', balance: s.balance, notes: s.notes || '', branch_id: s.branch_id || branchFilter || '' }); setModalOpen(true); };
 
   const save = async () => {
     if (!form.name) { show(t('required'), 'error'); return; }
+    const payload = { ...form, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
-      const { error } = await supabase.from('suppliers').update(form).eq('id', editing.id);
+      const { error } = await supabase.from('suppliers').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('update', 'suppliers', editing.id);
     } else {
-      const { error } = await supabase.from('suppliers').insert(form);
+      const { error } = await supabase.from('suppliers').insert(payload);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('create', 'suppliers');
     }
@@ -118,6 +122,12 @@ export function SuppliersPage() {
             <Input label={t('address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Input label="Tax Number" value={form.tax_number} onChange={(e) => setForm({ ...form, tax_number: e.target.value })} />
           </div>
+          {!branchFilter && (
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          )}
           <Textarea label={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>

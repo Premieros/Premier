@@ -6,14 +6,14 @@ import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
-import { Input, Textarea } from '../components/Input';
+import { Input, Select, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency } from '../lib/format';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
 import { useBranchFilter } from '../lib/useBranchFilter';
-import type { Customer, Settings } from '../lib/types';
+import type { Customer, Settings, Branch } from '../lib/types';
 
 export function CustomersPage() {
   const { t, lang } = useLanguage();
@@ -26,20 +26,23 @@ export function CustomersPage() {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [form, setForm] = useState({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '' });
+  const [form, setForm] = useState({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: '' });
   const [currency, setCurrency] = useState('EGP');
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   async function load() {
     setLoading(true);
     try {
       let q = supabase.from('customers').select('*');
       if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const [res, s] = await Promise.all([
+      const [res, s, b] = await Promise.all([
         q.order('created_at', { ascending: false }),
         supabase.from('settings').select('*').maybeSingle(),
+        supabase.from('branches').select('*').order('name'),
       ]);
       setItems((res.data as Customer[]) || []);
       if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+      setBranches((b.data as Branch[]) || []);
     } finally {
       setLoading(false);
     }
@@ -47,17 +50,18 @@ export function CustomersPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = items.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search));
-  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '' }); setModalOpen(true); };
-  const openEdit = (c: Customer) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', phone: c.phone || '', email: c.email || '', address: c.address || '', tax_number: c.tax_number || '', balance: c.balance, notes: c.notes || '' }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: branchFilter || '' }); setModalOpen(true); };
+  const openEdit = (c: Customer) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', phone: c.phone || '', email: c.email || '', address: c.address || '', tax_number: c.tax_number || '', balance: c.balance, notes: c.notes || '', branch_id: c.branch_id || branchFilter || '' }); setModalOpen(true); };
 
   const save = async () => {
     if (!form.name) { show(t('required'), 'error'); return; }
+    const payload = { ...form, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
-      const { error } = await supabase.from('customers').update(form).eq('id', editing.id);
+      const { error } = await supabase.from('customers').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('update', 'customers', editing.id);
     } else {
-      const { error } = await supabase.from('customers').insert(form);
+      const { error } = await supabase.from('customers').insert(payload);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('create', 'customers');
     }
@@ -82,7 +86,7 @@ export function CustomersPage() {
     if (!file) return;
     try {
       const rows = await importFromExcel(file);
-      const payload = rows.map((r) => ({ name: String(r.Name || r.name || ''), phone: String(r.Phone || r.phone || ''), email: String(r.Email || r.email || ''), address: String(r.Address || r.address || ''), tax_number: String(r.TaxNumber || ''), balance: Number(r.Balance || 0) })).filter((r) => r.name);
+      const payload = rows.map((r) => ({ name: String(r.Name || r.name || ''), phone: String(r.Phone || r.phone || ''), email: String(r.Email || r.email || ''), address: String(r.Address || r.address || ''), tax_number: String(r.TaxNumber || ''), balance: Number(r.Balance || 0), branch_id: branchFilter || branches[0]?.id || null })).filter((r) => r.name);
       const { error } = await supabase.from('customers').insert(payload);
       if (error) show(error.message, 'error');
       else { show(`${payload.length} ${t('import')} OK`, 'success'); load(); }
@@ -133,6 +137,12 @@ export function CustomersPage() {
             <Input label={t('address')} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Input label="Tax Number" value={form.tax_number} onChange={(e) => setForm({ ...form, tax_number: e.target.value })} />
           </div>
+          {!branchFilter && (
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          )}
           <Textarea label={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
