@@ -128,7 +128,7 @@ export function ReportsPage() {
         setChartData(Array.from(methodMap.entries()).map(([method, data]) => ({ name: METHOD_LABELS[method] || method, value: data.total })));
         setSummary({ total: (sales || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total), 0), count: (sales || []).length });
       } else if (reportType === 'sales_by_employee') {
-        let q = supabase.from('sales').select('cashier_id, total, users:users(full_name, email)').gte('created_at', fromTs).lte('created_at', toTs);
+        let q = supabase.from('sales').select('cashier_id, total, users:users!sales_cashier_id_fkey(full_name, email)').gte('created_at', fromTs).lte('created_at', toTs);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         const { data: sales } = await q;
         const empMap = new Map<string, { name: string; total: number; count: number }>();

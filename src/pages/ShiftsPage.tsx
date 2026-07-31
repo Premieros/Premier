@@ -53,7 +53,7 @@ export function ShiftsPage() {
 
     let q = supabase
       .from('shifts')
-      .select('id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at, branch:branches(id, name), cashier:users(id, full_name, email)')
+      .select('id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at, branch:branches(id, name), cashier:users!shifts_cashier_id_fkey(id, full_name, email)')
       .order('opened_at', { ascending: false });
     const effBranch = branchSel || branchFilter;
     if (effBranch) q = q.eq('branch_id', effBranch);
