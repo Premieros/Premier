@@ -1,5 +1,10 @@
 -- Migration: User Management - Admin creates users + disable self registration
 -- Run this in Supabase SQL Editor AFTER combined_setup.sql (requires is_pos_admin())
+--
+-- NOTE: auth.admin_create_user() was REMOVED in modern Supabase auth versions,
+-- so we insert directly into auth.users + auth.identities with a bcrypt hash.
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============ 1. CREATE USER RPC ============
 -- Only admins can create accounts. Runs in a single transaction:
@@ -18,7 +23,6 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_auth_result json;
   v_user_id uuid;
   v_role text;
 BEGIN
@@ -40,15 +44,31 @@ BEGIN
     ELSE 'cashier'
   END;
 
+  v_user_id := gen_random_uuid();
+
   -- Create the auth account (email confirmed so the user can log in immediately)
-  v_auth_result := auth.admin_create_user(
-    email := p_email,
-    password := p_password,
-    user_metadata := jsonb_build_object('full_name', p_full_name),
-    email_confirm := true
+  INSERT INTO auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, confirmed_at, raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at, is_anonymous, is_sso_user
+  ) VALUES (
+    NULL, v_user_id, 'authenticated', 'authenticated', p_email,
+    crypt(p_password, gen_salt('bf', 10)),
+    now(), now(),
+    jsonb_build_object('provider', 'email', 'providers', array['email']),
+    jsonb_build_object('full_name', p_full_name),
+    now(), now(), false, false
   );
 
-  v_user_id := (v_auth_result->>'id')::uuid;
+  -- Email identity row (required by GoTrue for email/password sign-in)
+  INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at, email
+  ) VALUES (
+    v_user_id, p_email, v_user_id,
+    jsonb_build_object('sub', v_user_id::text, 'email', p_email),
+    'email', now(), now(), now(), p_email
+  );
 
   -- Create the app profile. On any failure below, the whole transaction
   -- (including the auth account) is rolled back - no partial accounts.
