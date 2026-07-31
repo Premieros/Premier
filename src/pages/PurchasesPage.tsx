@@ -13,7 +13,7 @@ import { Modal } from '../components/Modal';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/format';
 import { exportToExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
-import type { Purchase, Supplier, Product, Warehouse, Branch, Settings } from '../lib/types';
+import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult } from '../lib/types';
 
 interface PurchaseFormItem {
   product_id: string;
@@ -94,49 +94,32 @@ export function PurchasesPage() {
 
     const invoiceNumber = generateInvoiceNumber('PUR');
     const total = validItems.reduce((s, i) => s + i.quantity * i.unit_cost, 0);
-    const purchaseData = {
-      invoice_number: invoiceNumber,
-      supplier_id: form.supplier_id,
-      branch_id: form.branch_id || null,
-      warehouse_id: form.warehouse_id || null,
-      buyer_id: user?.id || null,
-      subtotal: total,
-      discount_amount: 0,
-      tax_amount: 0,
-      total,
-      paid_amount: total,
-      payment_method: form.payment_method,
-      status: 'completed',
-      notes: form.notes,
-    };
 
-    const { data: purchase, error } = await supabase.from('purchases').insert(purchaseData).select().single();
+    const { data, error } = await supabase.rpc('process_purchase', {
+      p_invoice_number: invoiceNumber,
+      p_supplier_id: form.supplier_id,
+      p_branch_id: form.branch_id || null,
+      p_warehouse_id: form.warehouse_id || null,
+      p_subtotal: total,
+      p_discount_amount: 0,
+      p_tax_amount: 0,
+      p_total: total,
+      p_paid_amount: total,
+      p_payment_method: form.payment_method,
+      p_status: 'completed',
+      p_notes: form.notes,
+      p_items: validItems.map((i) => ({
+        product_id: i.product_id,
+        unit_name: i.unit_name,
+        quantity: i.quantity,
+        unit_cost: i.unit_cost,
+      })),
+    });
     if (error) { show(error.message, 'error'); return; }
+    const result = data as RpcResult | null;
+    if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
 
-    const itemsPayload = validItems.map((i) => ({
-      purchase_id: purchase.id,
-      product_id: i.product_id,
-      unit_name: i.unit_name,
-      quantity: i.quantity,
-      unit_cost: i.unit_cost,
-      total: i.quantity * i.unit_cost,
-    }));
-    const { error: itemsError } = await supabase.from('purchase_items').insert(itemsPayload);
-    if (itemsError) { show(itemsError.message, 'error'); return; }
-
-    // Update inventory
-    if (form.warehouse_id) {
-      for (const item of validItems) {
-        const { data: existing } = await supabase.from('inventory').select('*').eq('product_id', item.product_id).eq('warehouse_id', form.warehouse_id).maybeSingle();
-        if (existing) {
-          await supabase.from('inventory').update({ quantity: (existing.quantity || 0) + item.quantity, updated_at: new Date().toISOString() }).eq('id', existing.id);
-        } else {
-          await supabase.from('inventory').insert({ product_id: item.product_id, warehouse_id: form.warehouse_id, quantity: item.quantity });
-        }
-      }
-    }
-
-    await logAudit('create', 'purchases', purchase.id, { invoice: invoiceNumber, total });
+    await logAudit('create', 'purchases', result.purchase_id || '', { invoice: invoiceNumber, total });
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
     load();

@@ -37,7 +37,7 @@ export function ProductsPage() {
 
   const [form, setForm] = useState({
     name: '', name_en: '', barcode: '', sku: '', category_id: '', description: '',
-    cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5,
+    cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready' as 'ready' | 'manufactured',
   });
   const [units, setUnits] = useState<ProductUnit[]>([]);
 
@@ -65,14 +65,14 @@ export function ProductsPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5 });
+    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready' });
     setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
     setModalOpen(true);
   };
 
   const openEdit = async (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold });
+    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, product_type: p.product_type || 'ready' });
     const { data: u } = await supabase.from('product_units').select('*').eq('product_id', p.id);
     setUnits((u as ProductUnit[]) || [{ id: '', product_id: p.id, unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: p.sale_price, cost_price: p.cost_price, barcode: p.barcode || '', is_base: true, created_at: '' }]);
     setModalOpen(true);
@@ -115,6 +115,7 @@ export function ProductsPage() {
   const handleExport = () => {
     exportToExcel(products.map(p => ({
       Name: p.name, NameEn: p.name_en || '', Barcode: p.barcode || '', SKU: p.sku || '',
+      ProductType: p.product_type || 'ready',
       CostPrice: p.cost_price, SalePrice: p.sale_price, WholesalePrice: p.wholesale_price,
       Category: p.category?.name || '', Active: p.is_active, LowStockThreshold: p.low_stock_threshold,
     })), 'products');
@@ -130,6 +131,7 @@ export function ProductsPage() {
         name_en: String(r.NameEn || r.name_en || ''),
         barcode: String(r.Barcode || r.barcode || ''),
         sku: String(r.SKU || r.sku || ''),
+        product_type: String(r.ProductType || r.product_type || 'ready') === 'manufactured' ? 'manufactured' as const : 'ready' as const,
         cost_price: Number(r.CostPrice || r.cost_price || 0),
         sale_price: Number(r.SalePrice || r.sale_price || 0),
         wholesale_price: Number(r.WholesalePrice || r.wholesale_price || 0),
@@ -172,6 +174,9 @@ export function ProductsPage() {
           <p className="font-medium text-slate-800 dark:text-slate-200">{p.name}</p>
           <p className="text-xs text-slate-400">{p.barcode || '-'}</p>
         </div>
+        {p.product_type === 'manufactured' && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{t('manufactured')}</span>
+        )}
       </div>
     )},
     { key: 'category', header: t('category'), render: (p) => p.category?.name || '-' },
@@ -235,6 +240,10 @@ export function ProductsPage() {
             <Select label={t('category')} value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
               <option value="">--</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Select label={t('productType')} value={form.product_type} onChange={(e) => setForm({ ...form, product_type: e.target.value as 'ready' | 'manufactured' })}>
+              <option value="ready">{t('readyProduct')}</option>
+              <option value="manufactured">{t('manufacturedProduct')}</option>
             </Select>
             <Input label={t('image') + ' URL'} value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
             <Input label={t('costPrice')} type="number" step="0.01" value={form.cost_price || ''} onChange={(e) => setForm({ ...form, cost_price: parseFloat(e.target.value) || 0 })} />

@@ -15,15 +15,19 @@ import { logAudit } from '../lib/audit';
 import type { Inventory, Warehouse } from '../lib/types';
 
 export function InventoryPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isAr = lang === 'ar';
   const { show } = useToast();
   const [items, setItems] = useState<Inventory[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [componentIds, setComponentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
+  const [filterType, setFilterType] = useState('all');
   const [adjustModal, setAdjustModal] = useState<Inventory | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
+  const [adjustReason, setAdjustReason] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
@@ -31,12 +35,14 @@ export function InventoryPage() {
   async function load() {
     setLoading(true);
     try {
-      const [inv, wh] = await Promise.all([
+      const [inv, wh, pc] = await Promise.all([
         supabase.from('inventory').select('*, product:products(*), warehouse:warehouses(*)').order('updated_at', { ascending: false }),
         supabase.from('warehouses').select('*').order('name'),
+        supabase.from('product_components').select('component_product_id'),
       ]);
       setItems((inv.data as Inventory[]) || []);
       setWarehouses((wh.data as Warehouse[]) || []);
+      setComponentIds(new Set((pc.data || []).map((r: { component_product_id: string }) => r.component_product_id)));
     } finally {
       setLoading(false);
     }
@@ -45,6 +51,8 @@ export function InventoryPage() {
 
   const filtered = items.filter((i) => {
     if (filterWarehouse && i.warehouse_id !== filterWarehouse) return false;
+    if (filterType === 'components' && !componentIds.has(i.product_id)) return false;
+    if (filterType === 'ready' && (i.product?.product_type !== 'ready' || componentIds.has(i.product_id))) return false;
     if (!search) return true;
     return i.product?.name.toLowerCase().includes(search.toLowerCase()) || i.product?.barcode?.includes(search);
   });
@@ -52,12 +60,19 @@ export function InventoryPage() {
   const openAdjust = (inv: Inventory) => {
     setAdjustModal(inv);
     setAdjustQty(inv.quantity);
+    setAdjustReason('');
   };
 
   const saveAdjust = async () => {
     if (!adjustModal) return;
-    const { error } = await supabase.from('inventory').update({ quantity: adjustQty, updated_at: new Date().toISOString() }).eq('id', adjustModal.id);
+    const { data, error } = await supabase.rpc('adjust_stock', {
+      p_inventory_id: adjustModal.id,
+      p_new_quantity: adjustQty,
+      p_reason: adjustReason || null,
+    });
     if (error) { show(error.message, 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string } | null;
+    if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
     await logAudit('update', 'inventory', adjustModal.id, { from: adjustModal.quantity, to: adjustQty });
     show(t('saveSuccess'), 'success');
     setAdjustModal(null);
@@ -102,7 +117,15 @@ export function InventoryPage() {
         </div>
         <div>
           <p className="font-medium text-slate-800 dark:text-slate-200">{i.product?.name || '-'}</p>
-          <p className="text-xs text-slate-400">{i.product?.barcode || '-'}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs text-slate-400">{i.product?.barcode || '-'}</p>
+            {componentIds.has(i.product_id) && (
+              <span className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-medium text-slate-500 dark:text-slate-400">{t('component')}</span>
+            )}
+            {i.product?.product_type === 'manufactured' && (
+              <span className="px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[10px] font-medium text-purple-700 dark:text-purple-400">{t('manufactured')}</span>
+            )}
+          </div>
         </div>
       </div>
     )},
@@ -165,6 +188,11 @@ export function InventoryPage() {
             <option value="">{t('all')} - {t('warehouses')}</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
+          <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="sm:w-40">
+            <option value="all">{t('all')}</option>
+            <option value="ready">{t('readyProduct')}</option>
+            <option value="components">{t('component')}</option>
+          </Select>
         </div>
       </Card>
 
@@ -185,6 +213,7 @@ export function InventoryPage() {
               <p className="font-medium text-slate-800 dark:text-slate-200">{adjustModal.warehouse?.name}</p>
             </div>
             <Input label={t('currentStock')} type="number" step="0.0001" value={adjustQty} onChange={(e) => setAdjustQty(parseFloat(e.target.value) || 0)} />
+            <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? 'مثال: جرد، تالف، تصحيح' : 'e.g. count, damaged, correction'} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setAdjustModal(null)}>{t('cancel')}</Button>
               <Button onClick={saveAdjust}>{t('save')}</Button>

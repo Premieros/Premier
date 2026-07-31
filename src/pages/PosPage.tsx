@@ -10,7 +10,7 @@ import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { formatCurrency } from '../lib/format';
 import { logAudit } from '../lib/audit';
-import type { Product, Customer, CartItem, Settings, Branch, Category } from '../lib/types';
+import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult } from '../lib/types';
 
 export function PosPage() {
   const { t, lang } = useLanguage();
@@ -26,6 +26,7 @@ export function PosPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [recipeMap, setRecipeMap] = useState<Record<string, ProductComponent[]>>({});
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -109,6 +110,50 @@ export function PosPage() {
     if (effectiveBranch) loadStock(effectiveBranch);
   }, [effectiveBranch, loadStock]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const manufactured = products.filter((p) => p.product_type === 'manufactured');
+    if (manufactured.length === 0) { setRecipeMap({}); return; }
+    supabase
+      .from('product_components')
+      .select('*')
+      .in('product_id', manufactured.map((p) => p.id))
+      .then(({ data }) => {
+        if (cancelled) return;
+        const map: Record<string, ProductComponent[]> = {};
+        for (const row of (data || []) as ProductComponent[]) {
+          (map[row.product_id] = map[row.product_id] || []).push(row);
+        }
+        setRecipeMap(map);
+      });
+    return () => { cancelled = true; };
+  }, [products]);
+
+  // For manufactured products: how many units can be built from current component stock
+  const sellableStock = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of products) {
+      if (p.product_type !== 'manufactured') continue;
+      const comps = recipeMap[p.id] || [];
+      if (comps.length === 0) { map[p.id] = 0; continue; }
+      let min = Infinity;
+      for (const c of comps) {
+        const perUnit = Number(c.quantity) || 0;
+        if (perUnit <= 0) { min = 0; break; }
+        const possible = (stockMap[c.component_product_id] || 0) / perUnit;
+        if (possible < min) min = possible;
+      }
+      map[p.id] = min === Infinity ? 0 : Math.floor(min);
+    }
+    return map;
+  }, [products, recipeMap, stockMap]);
+
+  const getStock = useCallback((productId: string) => {
+    const prod = products.find((x) => x.id === productId);
+    if (prod?.product_type === 'manufactured') return sellableStock[productId] || 0;
+    return stockMap[productId] || 0;
+  }, [products, sellableStock, stockMap]);
+
   const filteredProducts = useMemo(() => {
     let result = products;
     if (selectedCategory) result = result.filter((p) => p.category_id === selectedCategory);
@@ -129,7 +174,11 @@ export function PosPage() {
   }, [products]);
 
   const addToCart = (product: Product) => {
-    const stock = stockMap[product.id] || 0;
+    const stock = getStock(product.id);
+    if (product.product_type === 'manufactured' && (recipeMap[product.id]?.length || 0) === 0) {
+      show(`${product.name}: ${t('noRecipe')}`, 'error');
+      return;
+    }
     const inCart = cart.find((i) => i.product.id === product.id)?.quantity || 0;
     if (inCart >= stock && stock > 0) {
       show(`${product.name}: ${t('insufficientStock')} (${stock})`, 'error');
@@ -143,7 +192,7 @@ export function PosPage() {
   };
 
   const updateQty = (productId: string, delta: number) => {
-    const stock = stockMap[productId] || 0;
+    const stock = getStock(productId);
     if (delta > 0 && stock > 0) {
       const inCart = cart.find((i) => i.product.id === productId)?.quantity || 0;
       if (inCart + delta > stock) { show(`${t('insufficientStock')} (${stock})`, 'error'); return; }
@@ -152,7 +201,7 @@ export function PosPage() {
   };
 
   const setQty = (productId: string, qty: number) => {
-    const stock = stockMap[productId] || 0;
+    const stock = getStock(productId);
     if (stock > 0 && qty > stock) { show(`${t('insufficientStock')} (${stock})`, 'error'); qty = stock; }
     setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, quantity: Math.max(1, qty) } : i)));
   };
@@ -184,67 +233,59 @@ export function PosPage() {
     const warehouseIds = (branchWarehouses || []).map((w: { id: string }) => w.id);
 
     for (const item of cart) {
-      const stock = stockMap[item.product.id] || 0;
+      const stock = getStock(item.product.id);
       if (stock < item.quantity) { show(`${item.product.name}: ${t('insufficientStock')} (${stock})`, 'error'); setCompleting(false); return; }
     }
 
     const invoiceNumber = `INV-${Date.now()}`;
-    const saleData = {
-      invoice_number: invoiceNumber, branch_id: effectiveBranch, warehouse_id: warehouseIds.length > 0 ? warehouseIds[0] : null,
-      customer_id: customerId || null, cashier_id: user?.id || null, salesperson_id: null,
-      subtotal, discount_amount: discountValue, discount_type: discountType === 'percent' ? 'percent' : 'amount',
-      tax_amount: taxAmount, bonus_amount: 0, total,
-      paid_amount: paymentMethod === 'credit' ? 0 : paidAmount || total,
-      payment_method: paymentMethod, status: 'completed',
-    };
-
-    const { data: sale, error } = await supabase.from('sales').insert(saleData).select().single();
-    if (error) { show(error.message, 'error'); setCompleting(false); return; }
-
-    const items = cart.map((i) => ({
-      sale_id: sale.id, product_id: i.product.id, unit_name: i.unit_name, quantity: i.quantity,
-      unit_price: i.unit_price, discount_amount: i.discount_amount, bonus_quantity: i.bonus_quantity,
+    const itemsPayload = cart.map((i) => ({
+      product_id: i.product.id,
+      unit_name: i.unit_name,
+      quantity: i.quantity,
+      unit_price: i.unit_price,
+      discount_amount: i.discount_amount,
+      bonus_quantity: i.bonus_quantity,
       total: i.quantity * i.unit_price - i.discount_amount,
     }));
-    const { error: itemsError } = await supabase.from('sale_items').insert(items);
-    if (itemsError) { show(itemsError.message, 'error'); setCompleting(false); return; }
 
-    for (const item of cart) {
-      const { data: productComps } = await supabase.from('product_components').select('component_product_id, quantity').eq('product_id', item.product.id);
-      if (productComps && productComps.length > 0) {
-        for (const comp of productComps) {
-          const compQty = Number(comp.quantity) * item.quantity;
-          const { data: compInv } = await supabase.from('inventory').select('id, quantity').eq('product_id', comp.component_product_id).in('warehouse_id', warehouseIds).gt('quantity', 0);
-          let compRemaining = compQty;
-          for (const w of (compInv || []) as { id: string; quantity: number }[]) {
-            if (compRemaining <= 0) break;
-            const deduct = Math.min(w.quantity, compRemaining);
-            await supabase.from('inventory').update({ quantity: w.quantity - deduct, updated_at: new Date().toISOString() }).eq('id', w.id);
-            compRemaining -= deduct;
-          }
-        }
-      } else {
-        const { data: warehouses } = await supabase.from('inventory').select('id, quantity').eq('product_id', item.product.id).in('warehouse_id', warehouseIds).gt('quantity', 0);
-        let remaining = item.quantity;
-        for (const w of (warehouses || []) as { id: string; quantity: number }[]) {
-          if (remaining <= 0) break;
-          const deduct = Math.min(w.quantity, remaining);
-          await supabase.from('inventory').update({ quantity: w.quantity - deduct, updated_at: new Date().toISOString() }).eq('id', w.id);
-          remaining -= deduct;
-        }
-      }
+    const paidAmountToUse = paymentMethod === 'credit' ? 0 : paidAmount || total;
+
+    const { data, error } = await supabase.rpc('process_sale', {
+      p_invoice_number: invoiceNumber,
+      p_branch_id: effectiveBranch,
+      p_warehouse_id: warehouseIds.length > 0 ? warehouseIds[0] : null,
+      p_customer_id: customerId || null,
+      p_salesperson_id: null,
+      p_subtotal: subtotal,
+      p_discount_amount: discountValue,
+      p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+      p_tax_amount: taxAmount,
+      p_bonus_amount: 0,
+      p_total: total,
+      p_paid_amount: paidAmountToUse,
+      p_payment_method: paymentMethod,
+      p_status: 'completed',
+      p_items: itemsPayload,
+    });
+    if (error) { show(error.message, 'error'); setCompleting(false); return; }
+    const result = data as RpcResult | null;
+    if (!result?.success) {
+      show(result?.detail || result?.error || t('error'), 'error');
+      setCompleting(false);
+      return;
     }
+    const saleId = result.sale_id || '';
 
-    await logAudit('create', 'sales', sale.id, { invoice: invoiceNumber, total });
+    await logAudit('create', 'sales', saleId, { invoice: invoiceNumber, total });
 
     setLastReceipt({
       invoice: invoiceNumber,
       items: cart.map((i) => ({ name: i.product.name, qty: i.quantity, price: i.unit_price, total: i.quantity * i.unit_price - i.discount_amount })),
       subtotal, discount: discountValue, tax: taxAmount, total,
-      paid: saleData.paid_amount, change, date: new Date().toISOString(),
+      paid: paidAmountToUse, change, date: new Date().toISOString(),
       customerName: customers.find((c) => c.id === customerId)?.name || '',
     });
-    setReceiptSaleId(sale.id);
+    setReceiptSaleId(saleId);
     setCheckoutOpen(false);
     clearCart();
     setDiscountAmount(0);
@@ -475,28 +516,32 @@ export function PosPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredProducts.map((p) => {
-                  const stock = stockMap[p.id] || 0;
+                  const isManufactured = p.product_type === 'manufactured';
+                  const noRecipe = isManufactured && (recipeMap[p.id]?.length || 0) === 0;
+                  const stock = isManufactured ? (sellableStock[p.id] || 0) : (stockMap[p.id] || 0);
                   const outOfStock = stock <= 0;
                   return (
                     <button
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      disabled={outOfStock}
+                      disabled={outOfStock || noRecipe}
                       className={`group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-200 ${
-                        outOfStock
+                        outOfStock || noRecipe
                           ? 'opacity-50 cursor-not-allowed'
                           : 'hover:shadow-lg hover:shadow-teal-500/10 hover:-translate-y-1 hover:border-teal-400 dark:hover:border-teal-600 active:scale-[0.97]'
                       }`}
                     >
                       {/* Stock badge */}
                       <div className={`absolute top-2 ${isAr ? 'left-2' : 'right-2'} z-10 px-2 py-0.5 rounded-full text-xs font-bold backdrop-blur-sm ${
-                        outOfStock
-                          ? 'bg-red-500/90 text-white'
-                          : stock <= (p.low_stock_threshold || 5)
-                            ? 'bg-amber-400/90 text-amber-900'
-                            : 'bg-emerald-400/90 text-emerald-900'
-                      }`}>
-                        {stock}
+                        noRecipe
+                          ? 'bg-slate-500/90 text-white'
+                          : outOfStock
+                            ? 'bg-red-500/90 text-white'
+                            : stock <= (p.low_stock_threshold || 5)
+                              ? 'bg-amber-400/90 text-amber-900'
+                              : 'bg-emerald-400/90 text-emerald-900'
+                      }`} title={isManufactured ? t('sellableQty') : t('stock')}>
+                        {isManufactured ? (noRecipe ? t('noRecipe') : `~${stock}`) : stock}
                       </div>
 
                       {/* Image */}
@@ -511,10 +556,15 @@ export function PosPage() {
                       {/* Info */}
                       <div className="p-2.5">
                         <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">{p.name}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {isManufactured && (
+                            <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[10px] font-medium text-purple-700 dark:text-purple-400">{t('manufactured')}</span>
+                          )}
+                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
+                        </div>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(p.sale_price, settings?.currency || 'EGP', lang)}</span>
-                          {!outOfStock && (
+                          {!outOfStock && !noRecipe && (
                             <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Plus className="w-3.5 h-3.5 text-white" />
                             </div>

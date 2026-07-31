@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List } from 'lucide-react';
+import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +13,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 
 import type { Settings, Branch } from '../lib/types';
 
-type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices';
+type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock';
 
 const PIE_COLORS = ['#0d9488', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', '#14b8a6'];
 
@@ -191,6 +191,118 @@ export function ReportsPage() {
         setData(rows);
         setChartData([]);
         setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[5] || 0), 0), count: rows.length });
+      } else if (reportType === 'component_consumption') {
+        let q = supabase.from('stock_transactions').select('product_id, quantity, unit_cost, created_at, product:products(name), warehouse:warehouses(name)').eq('component_flow', true).eq('transaction_type', 'sale').gte('created_at', fromTs).lte('created_at', toTs);
+        if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
+        const { data: tx } = await q;
+        const map = new Map<string, { name: string; qty: number; cost: number; count: number }>();
+        (tx || []).forEach((t: Record<string, unknown>) => {
+          const product = t.product as { name?: string } | null;
+          const name = product?.name || (lang === 'ar' ? 'غير معروف' : 'Unknown');
+          const e = map.get(name) || { name, qty: 0, cost: 0, count: 0 };
+          const qty = -Number(t.quantity);
+          e.qty += qty;
+          e.cost += qty * Number(t.unit_cost || 0);
+          e.count += 1;
+          map.set(name, e);
+        });
+        const rows = Array.from(map.values()).sort((a, b) => b.qty - a.qty).map((e) => ({
+          [lang === 'ar' ? 'المكوّن' : 'Component']: e.name,
+          [lang === 'ar' ? 'الكمية المستهلكة' : 'Consumed Qty']: e.qty,
+          [lang === 'ar' ? 'تكلفة الاستهلاك' : 'Consumption Cost']: e.cost,
+          [lang === 'ar' ? 'عدد الحركات' : 'Movements']: e.count,
+        }));
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[1]) })));
+        setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[2]), 0), count: rows.length });
+      } else if (reportType === 'top_consumed_components') {
+        let q = supabase.from('stock_transactions').select('product_id, quantity, product:products(name)').eq('component_flow', true).eq('transaction_type', 'sale').gte('created_at', fromTs).lte('created_at', toTs);
+        if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
+        const { data: tx } = await q;
+        const map = new Map<string, { name: string; qty: number }>();
+        (tx || []).forEach((t: Record<string, unknown>) => {
+          const product = t.product as { name?: string } | null;
+          const name = product?.name || (lang === 'ar' ? 'غير معروف' : 'Unknown');
+          const e = map.get(name) || { name, qty: 0 };
+          e.qty += -Number(t.quantity);
+          map.set(name, e);
+        });
+        const rows = Array.from(map.values()).sort((a, b) => b.qty - a.qty).map((p) => ({
+          [lang === 'ar' ? 'المكوّن' : 'Component']: p.name,
+          [lang === 'ar' ? 'الكمية المستهلكة' : 'Consumed Qty']: p.qty,
+        }));
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((p) => ({ name: p.name, value: p.qty })));
+        setSummary({ total: rows.length, count: rows.length });
+      } else if (reportType === 'top_consumed_products') {
+        let itemsQuery = supabase.from('sale_items').select('quantity, product:products(name), sale:sales(created_at, branch_id)');
+        if (effectiveBranchFilter) itemsQuery = itemsQuery.eq('sale.branch_id', effectiveBranchFilter);
+        const { data: items } = await itemsQuery;
+        const filtered = (items || []).filter((item: Record<string, unknown>) => {
+          const sale = item.sale as { created_at: string } | null;
+          if (!sale) return false;
+          return sale.created_at >= fromTs && sale.created_at <= toTs;
+        });
+        const prodMap = new Map<string, { name: string; quantity: number }>();
+        filtered.forEach((item: Record<string, unknown>) => {
+          const product = item.product as { name: string } | null;
+          const name = product?.name || (lang === 'ar' ? 'غير معروف' : 'Unknown');
+          const existing = prodMap.get(name) || { name, quantity: 0 };
+          existing.quantity += Number(item.quantity);
+          prodMap.set(name, existing);
+        });
+        const rows = Array.from(prodMap.values()).sort((a, b) => b.quantity - a.quantity).map((p) => ({
+          [lang === 'ar' ? 'المنتج' : 'Product']: p.name,
+          [lang === 'ar' ? 'الكمية' : 'Quantity']: p.quantity,
+        }));
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((p) => ({ name: p.name, value: p.quantity })));
+        setSummary({ total: rows.length, count: rows.length });
+      } else if (reportType === 'recipe_costs') {
+        const [rec, prod] = await Promise.all([
+          supabase.from('product_components').select('product_id, component_product_id, quantity'),
+          supabase.from('products').select('id, name, sale_price, cost_price, product_type'),
+        ]);
+        const productsById = new Map<string, Record<string, unknown>>();
+        (prod.data || []).forEach((p) => productsById.set(p.id as string, p));
+        const costMap = new Map<string, number>();
+        (rec.data || []).forEach((r: Record<string, unknown>) => {
+          const pid = r.product_id as string;
+          const cp = productsById.get(r.component_product_id as string) as { cost_price?: number } | undefined;
+          costMap.set(pid, (costMap.get(pid) || 0) + Number(cp?.cost_price || 0) * Number(r.quantity));
+        });
+        const rows = Array.from(costMap.entries()).map(([pid, cost]) => {
+          const p = productsById.get(pid) as { name?: string; sale_price?: number } | undefined;
+          const sale = Number(p?.sale_price || 0);
+          return {
+            [lang === 'ar' ? 'المنتج' : 'Product']: p?.name || '-',
+            [lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost']: cost,
+            [lang === 'ar' ? 'سعر البيع' : 'Sale Price']: sale,
+            [lang === 'ar' ? 'الهامش' : 'Margin']: sale - cost,
+          };
+        }).sort((a, b) => Number(Object.values(b)[3]) - Number(Object.values(a)[3]));
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[3]) })));
+        setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[1]), 0), count: rows.length });
+      } else if (reportType === 'low_stock') {
+        const { data: inv } = await supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold, product_type), warehouse:warehouses(name)');
+        const rows = (inv || [])
+          .map((i: Record<string, unknown>) => {
+            const product = i.product as { name: string; barcode: string | null; low_stock_threshold: number } | null;
+            const warehouse = i.warehouse as { name: string } | null;
+            return { product, warehouse: warehouse?.name || '', qty: Number(i.quantity), threshold: product?.low_stock_threshold || 5, barcode: product?.barcode || '' };
+          })
+          .filter((r) => r.qty <= r.threshold)
+          .map((r) => ({
+            [lang === 'ar' ? 'المنتج' : 'Product']: r.product?.name || '-',
+            [lang === 'ar' ? 'الباركود' : 'Barcode']: r.barcode,
+            [lang === 'ar' ? 'المستودع' : 'Warehouse']: r.warehouse,
+            [lang === 'ar' ? 'الكمية' : 'Quantity']: r.qty,
+            [lang === 'ar' ? 'الحد الأدنى' : 'Low Stock Threshold']: r.threshold,
+          }));
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[3]) })));
+        setSummary({ total: 0, count: rows.length });
       }
     } finally { setLoading(false); }
   }
@@ -207,11 +319,16 @@ export function ReportsPage() {
     { key: 'expenses', label: t('expensesReport'), icon: <Receipt className="w-4 h-4" /> },
     { key: 'profit', label: t('profitReport'), icon: <BarChart3 className="w-4 h-4" /> },
     { key: 'inventory', label: t('inventoryReport'), icon: <Package className="w-4 h-4" /> },
+    { key: 'component_consumption', label: t('componentConsumptionReport'), icon: <Layers className="w-4 h-4" /> },
+    { key: 'recipe_costs', label: t('recipeCostReport'), icon: <FileText className="w-4 h-4" /> },
+    { key: 'top_consumed_components', label: t('topConsumedComponentsReport'), icon: <TrendingDown className="w-4 h-4" /> },
+    { key: 'top_consumed_products', label: t('topConsumedProductsReport'), icon: <Package className="w-4 h-4" /> },
+    { key: 'low_stock', label: t('lowStockReport'), icon: <AlertTriangle className="w-4 h-4" /> },
   ];
 
   const isPie = reportType === 'expenses' || reportType === 'profit' || reportType === 'sales_by_payment';
 
-  const moneyKeys = [lang === 'ar' ? 'الإجمالي' : 'Total', lang === 'ar' ? 'المبلغ' : 'Amount', lang === 'ar' ? 'الربح' : 'Profit', lang === 'ar' ? 'المبيعات' : 'Sales', lang === 'ar' ? 'المشتريات' : 'Purchases', lang === 'ar' ? 'المصروفات' : 'Expenses', lang === 'ar' ? 'الإيراد' : 'Revenue', lang === 'ar' ? 'المدفوع' : 'Paid', lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Invoice'];
+  const moneyKeys = [lang === 'ar' ? 'الإجمالي' : 'Total', lang === 'ar' ? 'المبلغ' : 'Amount', lang === 'ar' ? 'الربح' : 'Profit', lang === 'ar' ? 'المبيعات' : 'Sales', lang === 'ar' ? 'المشتريات' : 'Purchases', lang === 'ar' ? 'المصروفات' : 'Expenses', lang === 'ar' ? 'الإيراد' : 'Revenue', lang === 'ar' ? 'المدفوع' : 'Paid', lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Invoice', lang === 'ar' ? 'تكلفة الاستهلاك' : 'Consumption Cost', lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost', lang === 'ar' ? 'سعر البيع' : 'Sale Price', lang === 'ar' ? 'الهامش' : 'Margin'];
 
   return (
     <div>

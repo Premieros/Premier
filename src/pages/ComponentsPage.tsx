@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Package } from 'lucide-react';
+import { Plus, Trash2, Package, Edit2, AlertTriangle, Layers } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
@@ -8,7 +8,7 @@ import { Button } from '../components/Button';
 import { Input, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { formatCurrency } from '../lib/format';
+import { formatCurrency, formatNumber } from '../lib/format';
 import { logAudit } from '../lib/audit';
 import type { Product, ProductComponent } from '../lib/types';
 
@@ -23,18 +23,28 @@ export function ComponentsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [components, setComponents] = useState<ComponentWithProduct[]>([]);
+  const [inventoryMap, setInventoryMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editModal, setEditModal] = useState<{ id: string; quantity: number } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ component_product_id: '', quantity: 1 });
 
-  const availableComponents = products.filter(
+  const manufacturedProducts = products.filter((p) => p.product_type === 'manufactured');
+
+  const availableComponents = manufacturedProducts.filter(
     (p) => p.id !== selectedProductId && !components.some((c) => c.component_product_id === p.id)
   );
 
   async function loadProducts() {
     const { data } = await supabase.from('products').select('*').eq('is_active', true).order('name');
     setProducts((data as Product[]) || []);
+    const { data: inv } = await supabase.from('inventory').select('product_id, quantity');
+    const map: Record<string, number> = {};
+    for (const r of (inv || []) as { product_id: string; quantity: number }[]) {
+      map[r.product_id] = (map[r.product_id] || 0) + Number(r.quantity);
+    }
+    setInventoryMap(map);
     setLoading(false);
   }
 
@@ -76,6 +86,17 @@ export function ComponentsPage() {
     loadComponents(selectedProductId);
   };
 
+  const saveEditQty = async () => {
+    if (!editModal) return;
+    if (editModal.quantity <= 0) { show(t('required'), 'error'); return; }
+    const { error } = await supabase.from('product_components').update({ quantity: editModal.quantity }).eq('id', editModal.id);
+    if (error) { show(error.message, 'error'); return; }
+    await logAudit('update', 'product_components', editModal.id, { quantity: editModal.quantity });
+    show(t('saveSuccess'), 'success');
+    setEditModal(null);
+    loadComponents(selectedProductId);
+  };
+
   const selectedProduct = products.find((p) => p.id === selectedProductId);
   const componentCost = components.reduce((sum, c) => {
     const price = c.component_product?.cost_price || 0;
@@ -89,12 +110,12 @@ export function ComponentsPage() {
       <Card>
         <div className="mb-4">
           <Select
-            label={isAr ? 'اختر منتجاً لإدارة مكوناته' : 'Select product to manage components'}
+            label={t('manufacturedOnly')}
             value={selectedProductId}
             onChange={(e) => setSelectedProductId(e.target.value)}
           >
-            <option value="">-- {isAr ? 'اختر منتج' : 'Select product'} --</option>
-            {products.map((p) => (
+            <option value="">-- {isAr ? 'اختر منتج مصنّع' : 'Select manufactured product'} --</option>
+            {manufacturedProducts.map((p) => (
               <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.cost_price, 'EGP', lang)})</option>
             ))}
           </Select>
@@ -102,6 +123,13 @@ export function ComponentsPage() {
 
         {!loading && selectedProductId && (
           <>
+            {components.length === 0 && (
+              <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <p>{isAr ? 'هذا المنتج مصنّع لكن لا توجد له وصفة — لن يمكن بيعه حتى تُضيف مكوناته.' : 'This product is manufactured but has no recipe — it cannot be sold until components are added.'}</p>
+              </div>
+            )}
+
             {/* Product info */}
             {selectedProduct && (
               <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
@@ -152,9 +180,18 @@ export function ComponentsPage() {
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{c.component_product?.name || '-'}</p>
                       <p className="text-xs text-slate-400">{formatCurrency(c.component_product?.cost_price || 0, 'EGP', lang)} × {c.quantity}</p>
                     </div>
+                    <div className="flex items-center gap-1 text-xs" title={t('componentStock')}>
+                      <Layers className="w-3.5 h-3.5 text-slate-400" />
+                      <span className={inventoryMap[c.component_product_id] > 0 ? 'text-teal-600 dark:text-teal-400 font-semibold' : 'text-red-500 font-semibold'}>
+                        {formatNumber(inventoryMap[c.component_product_id] || 0)}
+                      </span>
+                    </div>
                     <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
                       {formatCurrency((c.component_product?.cost_price || 0) * Number(c.quantity), 'EGP', lang)}
                     </span>
+                    <button onClick={() => setEditModal({ id: c.id, quantity: Number(c.quantity) })} className="p-2 text-slate-400 hover:text-blue-500">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                     <button onClick={() => setDeleteId(c.id)} className="p-2 text-slate-400 hover:text-red-500">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -168,10 +205,26 @@ export function ComponentsPage() {
         {!loading && !selectedProductId && (
           <div className="text-center py-16 text-slate-400">
             <Package className="w-16 h-16 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">{isAr ? 'اختر منتجاً لإدارة مكوناته' : 'Select a product to manage its components'}</p>
+            <p className="text-sm">{isAr ? 'اختر منتجاً مصنّعاً لإدارة مكوناته' : 'Select a manufactured product to manage its components'}</p>
           </div>
         )}
       </Card>
+
+      {/* Edit Quantity Modal */}
+      <Modal open={!!editModal} onClose={() => setEditModal(null)} title={t('editComponentQty')} size="sm">
+        {editModal && (
+          <div className="space-y-4">
+            <Input
+              label={t('componentQuantity')}
+              type="number"
+              value={editModal.quantity}
+              onChange={(e) => setEditModal({ ...editModal, quantity: parseFloat(e.target.value) || 1 })}
+              min={0.001}
+            />
+            <Button className="w-full" onClick={saveEditQty}>{t('save')}</Button>
+          </div>
+        )}
+      </Modal>
 
       {/* Add Component Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('addComponent')} size="sm">

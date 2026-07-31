@@ -30,6 +30,8 @@ export interface Category {
   created_at: string;
 }
 
+export type ProductType = 'ready' | 'manufactured';
+
 export interface Product {
   id: string;
   name: string;
@@ -44,6 +46,7 @@ export interface Product {
   image_url: string | null;
   is_active: boolean;
   low_stock_threshold: number;
+  product_type: ProductType;
   created_at: string;
   category?: Category;
 }
@@ -235,4 +238,34 @@ export interface ProductComponent {
   quantity: number;
   created_at: string;
   component_product?: Product;
+}
+
+export interface StockTransaction {
+  id: string;
+  product_id: string;
+  warehouse_id: string | null;
+  branch_id: string | null;
+  transaction_type: 'sale' | 'purchase' | 'adjustment';
+  component_flow: boolean;
+  reference_type: string;
+  reference_id: string | null;
+  quantity: number;
+  before_quantity: number;
+  after_quantity: number;
+  unit_cost: number | null;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  product?: Product;
+  warehouse?: Warehouse;
+}
+
+export interface RpcResult {
+  success: boolean;
+  error?: string;
+  detail?: string;
+  sale_id?: string;
+  purchase_id?: string;
+  invoice_number?: string;
+  no_change?: boolean;
 }
