@@ -1,27 +1,37 @@
+import { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import { Layout } from './components/Layout';
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { PosPage } from './pages/PosPage';
-import { ProductsPage } from './pages/ProductsPage';
-import { CategoriesPage } from './pages/CategoriesPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { WarehousesPage } from './pages/WarehousesPage';
-import { BranchesPage } from './pages/BranchesPage';
-import { PurchasesPage } from './pages/PurchasesPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { SuppliersPage } from './pages/SuppliersPage';
-import { ExpensesPage } from './pages/ExpensesPage';
-import { SalesPage } from './pages/SalesPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { UsersPage } from './pages/UsersPage';
-import { AuditLogPage } from './pages/AuditLogPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { ComponentsPage } from './pages/ComponentsPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const PosPage = lazy(() => import('./pages/PosPage').then(m => ({ default: m.PosPage })));
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })));
+const InventoryPage = lazy(() => import('./pages/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const WarehousesPage = lazy(() => import('./pages/WarehousesPage').then(m => ({ default: m.WarehousesPage })));
+const BranchesPage = lazy(() => import('./pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
+const PurchasesPage = lazy(() => import('./pages/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
+const CustomersPage = lazy(() => import('./pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
+const SalesPage = lazy(() => import('./pages/SalesPage').then(m => ({ default: m.SalesPage })));
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ComponentsPage = lazy(() => import('./pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, adminOnly, fullscreen }: { children: React.ReactNode; adminOnly?: boolean; fullscreen?: boolean }) {
   const { session, loading, user } = useAuth();
@@ -47,7 +57,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/pos" element={<ProtectedRoute fullscreen><PosPage /></ProtectedRoute>} />
@@ -69,6 +80,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 
