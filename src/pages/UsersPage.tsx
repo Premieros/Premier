@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Edit2, Search, Shield, Settings } from 'lucide-react';
+import { Edit2, Plus, Search, Shield, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
+import { Button } from '../components/Button';
 import { Input, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { formatDate } from '../lib/format';
@@ -30,6 +31,8 @@ export function UsersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [form, setForm] = useState({ full_name: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [addModal, setAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
   const [permModal, setPermModal] = useState<AppUser | null>(null);
   const [permForm, setPermForm] = useState<Record<string, boolean>>({});
 
@@ -56,8 +59,45 @@ export function UsersPage() {
     setModalOpen(true);
   };
 
+  const openAdd = () => {
+    setAddForm({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+    setAddModal(true);
+  };
+
+  const createNewUser = async () => {
+    const email = addForm.email.trim();
+    if (!addForm.full_name || !email || !addForm.password) { show(t('required'), 'error'); return; }
+    if (addForm.password.length < 6) { show(t('required'), 'error'); return; }
+    const { data, error } = await supabase.rpc('create_user', {
+      p_email: email,
+      p_password: addForm.password,
+      p_full_name: addForm.full_name,
+      p_role: addForm.role,
+      p_branch_id: addForm.branch_id || null,
+      p_is_active: addForm.is_active,
+    });
+    if (error) { show(t('unknownErrorCreatingUser'), 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string; user_id?: string } | null;
+    if (!result?.success) {
+      if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
+      else if (result?.error === 'EMAIL_TAKEN') show(t('emailAlreadyUsed'), 'error');
+      else show(t('unknownErrorCreatingUser'), 'error');
+      return;
+    }
+    await logAudit('create', 'users', result.user_id, { email });
+    show(t('saveSuccess'), 'success');
+    setAddModal(false);
+    load();
+  };
+
   const save = async () => {
     if (!editing) return;
+    const demoting = editing.role === 'admin' && form.role !== 'admin';
+    const deactivating = editing.role === 'admin' && editing.is_active && !form.is_active;
+    if (demoting || deactivating) {
+      const otherAdmins = items.filter((u) => u.id !== editing.id && u.role === 'admin' && u.is_active).length;
+      if (otherAdmins === 0) { show(t('lastAdminWarning'), 'error'); return; }
+    }
     const payload = { full_name: form.full_name, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
     const { error } = await supabase.from('users').update(payload).eq('id', editing.id);
     if (error) { show(error.message, 'error'); return; }
@@ -126,7 +166,9 @@ export function UsersPage() {
 
   return (
     <div>
-      <PageHeader title={t('users')} />
+      <PageHeader title={t('users')} actions={
+        <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addUser')}</Button>
+      } />
       <Card className="mb-4 p-4">
         <div className="relative">
           <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
@@ -164,6 +206,30 @@ export function UsersPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Add User Modal */}
+      <Modal open={addModal} onClose={() => setAddModal(false)} title={t('addUser')}>
+        <div className="space-y-4">
+          <Input label={t('fullName')} value={addForm.full_name} onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })} required />
+          <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
+          <Input label={t('password')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} required minLength={6} />
+          <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as Role })}>
+            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
+          </Select>
+          <Select label={t('branch')} value={addForm.branch_id} onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })}>
+            <option value="">--</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </Select>
+          <Select label={t('status')} value={addForm.is_active ? '1' : '0'} onChange={(e) => setAddForm({ ...addForm, is_active: e.target.value === '1' })}>
+            <option value="1">{t('active')}</option>
+            <option value="0">{t('inactive')}</option>
+          </Select>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setAddModal(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+            <button onClick={createNewUser} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+          </div>
+        </div>
       </Modal>
 
       {/* Permissions Modal */}

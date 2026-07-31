@@ -14,9 +14,14 @@ export function AuditLogPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(200).then(({ data }) => {
-      setItems((data as AuditLog[]) || []);
-    }).catch(() => {}).finally(() => { setLoading(false); });
+    (async () => {
+      try {
+        const { data } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(200);
+        setItems((data as AuditLog[]) || []);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const filtered = items.filter((a) => !search || a.action.toLowerCase().includes(search.toLowerCase()) || a.entity?.toLowerCase().includes(search.toLowerCase()) || a.user_email?.toLowerCase().includes(search.toLowerCase()));

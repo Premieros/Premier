@@ -7,27 +7,19 @@ import { Input } from '../components/Input';
 import { useToast } from '../components/Toast';
 
 export function LoginPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const { show } = useToast();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const isAr = lang === 'ar';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    if (mode === 'signin') {
-      const { error } = await signIn(email, password);
-      if (error) show(error, 'error');
-    } else {
-      const { error } = await signUp(email, password, fullName);
-      if (error) show(error, 'error');
-      else show(t('saveSuccess'), 'success');
-    }
+    const { error } = await signIn(email, password);
+    if (error) show(error, 'error');
     setLoading(false);
   };
 
@@ -88,26 +80,14 @@ export function LoginPage() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-8">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                {mode === 'signin' ? (isAr ? 'مرحباً بك' : 'Welcome back') : t('createAccount')}
+                {isAr ? 'مرحباً بك' : 'Welcome back'}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {mode === 'signin'
-                  ? (isAr ? 'سجّل دخولك للوصول لنظام نقاط البيع' : 'Sign in to access the POS system')
-                  : (isAr ? 'أنشئ حساباً جديداً' : 'Create a new account')}
+                {isAr ? 'سجّل دخولك للوصول لنظام نقاط البيع' : 'Sign in to access the POS system'}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
-                <Input
-                  label={t('fullName')}
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder={isAr ? 'الاسم الكامل' : 'Full Name'}
-                />
-              )}
               <Input
                 label={t('email')}
                 type="email"
@@ -130,21 +110,12 @@ export function LoginPage() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    {mode === 'signin' ? t('signIn') : t('signUp')}
+                    {t('signIn')}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                className="text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors"
-              >
-                {mode === 'signin' ? t('noAccount') : t('haveAccount')}
-              </button>
-            </div>
           </div>
         </div>
       </div>

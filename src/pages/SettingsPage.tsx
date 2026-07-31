@@ -24,18 +24,23 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    supabase.from('settings').select('*').maybeSingle().then(({ data }) => {
-      if (data) {
-        setSettings(data as SettingsType);
-        setForm({
-          store_name: data.store_name, store_name_en: data.store_name_en || '',
-          store_address: data.store_address || '', store_phone: data.store_phone || '',
-          currency: data.currency, tax_rate: data.tax_rate, tax_enabled: data.tax_enabled,
-          receipt_header: data.receipt_header || '', receipt_footer: data.receipt_footer || '',
-          logo_url: data.logo_url || '',
-        });
+    (async () => {
+      try {
+        const { data } = await supabase.from('settings').select('*').maybeSingle();
+        if (data) {
+          setSettings(data as SettingsType);
+          setForm({
+            store_name: data.store_name, store_name_en: data.store_name_en || '',
+            store_address: data.store_address || '', store_phone: data.store_phone || '',
+            currency: data.currency, tax_rate: data.tax_rate, tax_enabled: data.tax_enabled,
+            receipt_header: data.receipt_header || '', receipt_footer: data.receipt_footer || '',
+            logo_url: data.logo_url || '',
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-    }).catch(() => {}).finally(() => { setLoading(false); });
+    })();
   }, []);
 
   const save = async () => {

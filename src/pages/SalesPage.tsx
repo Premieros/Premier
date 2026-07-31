@@ -6,7 +6,7 @@ import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
-import { Input, Select, Textarea } from '../components/Input';
+import { Select, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency, formatDateTime } from '../lib/format';
@@ -60,7 +60,7 @@ export function SalesPage() {
         .order('created_at', { ascending: false });
       if (branchFilter) q = q.eq('branch_id', branchFilter);
       const { data } = await q;
-      setItems((data as SaleRow[]) || []);
+      setItems((data as unknown as SaleRow[]) || []);
     } finally {
       setLoading(false);
     }

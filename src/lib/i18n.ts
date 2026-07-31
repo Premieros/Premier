@@ -285,6 +285,11 @@ export const translations = {
     topConsumedComponentsReport: 'أكثر المكونات استهلاكاً',
     topConsumedProductsReport: 'أكثر المنتجات مبيعاً',
     lowStockReport: 'تنبيهات انخفاض المخزون',
+    addUser: 'إضافة مستخدم',
+    emailAlreadyUsed: 'هذا البريد الإلكتروني مستخدم بالفعل.',
+    noPermissionToCreateUser: 'ليس لديك صلاحية لإنشاء المستخدمين.',
+    unknownErrorCreatingUser: 'حدث خطأ أثناء إنشاء المستخدم.',
+    lastAdminWarning: 'لا يمكنك حذف أو تعطيل أو تخفيض آخر مدير عام نشط.',
   },
   en: {
     appName: 'POS System',
@@ -557,6 +562,11 @@ export const translations = {
     topConsumedComponentsReport: 'Top Consumed Components',
     topConsumedProductsReport: 'Top Sold Products',
     lowStockReport: 'Low Stock Alerts',
+    addUser: 'Add User',
+    emailAlreadyUsed: 'This email is already in use.',
+    noPermissionToCreateUser: 'You do not have permission to create users.',
+    unknownErrorCreatingUser: 'An error occurred while creating the user.',
+    lastAdminWarning: 'You cannot delete, deactivate, or demote the last active admin.',
   },
 } as const;
 

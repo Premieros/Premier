@@ -232,7 +232,7 @@ export function ReportsPage() {
           [lang === 'ar' ? 'الكمية المستهلكة' : 'Consumed Qty']: p.qty,
         }));
         setData(rows);
-        setChartData(rows.slice(0, 10).map((p) => ({ name: p.name, value: p.qty })));
+        setChartData(rows.slice(0, 10).map((p) => ({ name: String(p.name), value: Number(p.qty) })));
         setSummary({ total: rows.length, count: rows.length });
       } else if (reportType === 'top_consumed_products') {
         let itemsQuery = supabase.from('sale_items').select('quantity, product:products(name), sale:sales(created_at, branch_id)');
@@ -256,7 +256,7 @@ export function ReportsPage() {
           [lang === 'ar' ? 'الكمية' : 'Quantity']: p.quantity,
         }));
         setData(rows);
-        setChartData(rows.slice(0, 10).map((p) => ({ name: p.name, value: p.quantity })));
+        setChartData(rows.slice(0, 10).map((p) => ({ name: String(p.name), value: Number(p.quantity) })));
         setSummary({ total: rows.length, count: rows.length });
       } else if (reportType === 'recipe_costs') {
         const [rec, prod] = await Promise.all([
@@ -379,7 +379,7 @@ export function ReportsPage() {
                 <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={(e: { name?: string }) => e.name || ''}>
                   {chartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(value: number) => formatCurrency(value, currency, lang)} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(value) => formatCurrency(Number(value ?? 0), currency, lang)} />
                 <Legend />
               </PieChart>
             ) : (
@@ -387,7 +387,7 @@ export function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(value: number) => formatCurrency(value, currency, lang)} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(value) => formatCurrency(Number(value ?? 0), currency, lang)} />
                 <Bar dataKey="value" fill="#0d9488" radius={[4, 4, 0, 0]} />
               </BarChart>
             )}

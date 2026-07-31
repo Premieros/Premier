@@ -13,7 +13,7 @@ import { logAudit } from '../lib/audit';
 import type { Category } from '../lib/types';
 
 export function CategoriesPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { show } = useToast();
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
