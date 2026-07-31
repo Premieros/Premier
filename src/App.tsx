@@ -5,6 +5,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import { Layout } from './components/Layout';
+import { hasPermission, type Permission } from './lib/permissions';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -24,6 +25,7 @@ const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ComponentsPage = lazy(() => import('./pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
+const ShiftsPage = lazy(() => import('./pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
 
 function PageLoader() {
   return (
@@ -33,7 +35,7 @@ function PageLoader() {
   );
 }
 
-function ProtectedRoute({ children, adminOnly, fullscreen }: { children: React.ReactNode; adminOnly?: boolean; fullscreen?: boolean }) {
+function ProtectedRoute({ children, permission, fullscreen }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean }) {
   const { session, loading, user } = useAuth();
   if (loading) {
     return (
@@ -43,7 +45,7 @@ function ProtectedRoute({ children, adminOnly, fullscreen }: { children: React.R
     );
   }
   if (!session) return <Navigate to="/login" replace />;
-  if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (permission && !hasPermission(user?.role, user?.permissions, permission)) return <Navigate to="/dashboard" replace />;
   if (fullscreen) return <>{children}</>;
   return <Layout>{children}</Layout>;
 }
@@ -60,23 +62,24 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/pos" element={<ProtectedRoute fullscreen><PosPage /></ProtectedRoute>} />
-      <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
-      <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
-      <Route path="/components" element={<ProtectedRoute><ComponentsPage /></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-      <Route path="/warehouses" element={<ProtectedRoute adminOnly><WarehousesPage /></ProtectedRoute>} />
-      <Route path="/branches" element={<ProtectedRoute adminOnly><BranchesPage /></ProtectedRoute>} />
-      <Route path="/purchases" element={<ProtectedRoute><PurchasesPage /></ProtectedRoute>} />
-      <Route path="/customers" element={<ProtectedRoute><CustomersPage /></ProtectedRoute>} />
-      <Route path="/suppliers" element={<ProtectedRoute><SuppliersPage /></ProtectedRoute>} />
-      <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
-      <Route path="/sales" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
-      <Route path="/audit-log" element={<ProtectedRoute adminOnly><AuditLogPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} />
+      <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosPage /></ProtectedRoute>} />
+      <Route path="/products" element={<ProtectedRoute permission="products.view"><ProductsPage /></ProtectedRoute>} />
+      <Route path="/categories" element={<ProtectedRoute permission="categories.view"><CategoriesPage /></ProtectedRoute>} />
+      <Route path="/components" element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute permission="inventory.view"><InventoryPage /></ProtectedRoute>} />
+      <Route path="/warehouses" element={<ProtectedRoute permission="warehouses.view"><WarehousesPage /></ProtectedRoute>} />
+      <Route path="/branches" element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
+      <Route path="/purchases" element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
+      <Route path="/customers" element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />
+      <Route path="/suppliers" element={<ProtectedRoute permission="suppliers.view"><SuppliersPage /></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute permission="expenses.view"><ExpensesPage /></ProtectedRoute>} />
+      <Route path="/sales" element={<ProtectedRoute permission="sales.view"><SalesPage /></ProtectedRoute>} />
+      <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportsPage /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
+      <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

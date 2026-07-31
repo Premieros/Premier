@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatNumber, formatDateTime } from '../lib/format';
 import { useBranchFilter } from '../lib/useBranchFilter';
+import { isAdminRole } from '../lib/permissions';
 import { Modal } from '../components/Modal';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -129,6 +130,7 @@ export function DashboardPage() {
   const [currency, setCurrency] = useState('EGP');
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
+  const isSimple = user?.role === 'cashier' || user?.role === 'customer_display';
 
   const [dateRange, setDateRange] = useState<DateRange>('today');
   const [customFrom, setCustomFrom] = useState('');
@@ -138,7 +140,7 @@ export function DashboardPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState<string>('');
-  const effectiveBranchFilter = user?.role === 'admin' ? (adminBranchFilter || null) : branchFilter;
+  const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
 
   const getDateRange = useCallback(() => {
     const now = new Date();
@@ -183,7 +185,7 @@ export function DashboardPage() {
       const { data: settingsData } = await supabase.from('settings').select('*').maybeSingle();
       if (settingsData) setCurrency((settingsData as Settings).currency || 'EGP');
 
-      if (user?.role === 'admin' && branches.length === 0) {
+      if (isAdminRole(user?.role) && branches.length === 0) {
         const { data: br } = await supabase.from('branches').select('*').order('name');
         setBranches((br as Branch[]) || []);
       }
@@ -543,7 +545,7 @@ export function DashboardPage() {
               <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="px-3 py-1.5 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200" />
             </div>
           )}
-          {user?.role === 'admin' && branches.length > 0 && (
+          {isAdminRole(user?.role) && branches.length > 0 && (
             <select
               value={adminBranchFilter}
               onChange={(e) => setAdminBranchFilter(e.target.value)}
@@ -602,6 +604,7 @@ export function DashboardPage() {
       </div>
 
       {/* KPI Cards - Row 2 */}
+      {!isSimple && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title={t('totalSales')}
@@ -639,8 +642,10 @@ export function DashboardPage() {
           lang={lang}
         />
       </div>
+      )}
 
       {/* Charts Row */}
+      {!isSimple && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
@@ -715,8 +720,45 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Simple recent sales for cashier / customer display */}
+      {isSimple && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100">{t('recentSales')}</h3>
+            </div>
+            <Link to="/sales" className="text-xs font-medium text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+              {t('viewReport')}
+              {isAr ? <ChevronLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+            </Link>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+            {data.recentSales.length === 0 && <p className="text-sm text-slate-400 text-center py-8">{t('noRecentSales')}</p>}
+            {data.recentSales.map((sale) => (
+              <div key={sale.id} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900/40 dark:to-teal-800/40 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{sale.invoice_number}</p>
+                    <p className="text-xs text-slate-400">{formatDateTime(sale.created_at, lang)}</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(sale.total, currency, lang)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom Row */}
+      {!isSimple && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -810,9 +852,10 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Low Stock Alert */}
-      {data.lowStockItems.length > 0 && (
+      {!isSimple && data.lowStockItems.length > 0 && (
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border border-amber-200 dark:border-amber-800/50 p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">

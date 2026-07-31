@@ -2,6 +2,19 @@
 -- Run this file ONCE in Supabase SQL Editor
 -- It applies Phase 1 + Phase 2 migrations
 -- AFTER combined_setup.sql has been run
+--
+-- RECOMMENDED FULL EXECUTION ORDER:
+--   1. combined_setup.sql
+--   2. run_all_migrations.sql   (this file)
+--   3. migration_components.sql
+--   4. migration_inventory_v2.sql
+--   5. migration_create_user.sql
+--   6. migration_user_password_delete.sql
+--   7. migration_fix_login.sql          (diagnose/repair new-user logins)
+--   8. migration_enterprise_core.sql    (branch isolation + roles + shifts)
+--
+-- On an existing production database, run the individual migration files in
+-- that same order rather than re-running this whole file.
 -- ============================================
 
 -- ============ PHASE 1: RLS FIXES ============

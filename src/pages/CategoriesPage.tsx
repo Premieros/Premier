@@ -10,11 +10,13 @@ import { Input, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { logAudit } from '../lib/audit';
+import { useBranchFilter } from '../lib/useBranchFilter';
 import type { Category } from '../lib/types';
 
 export function CategoriesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
+  const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -27,7 +29,9 @@ export function CategoriesPage() {
   async function load() {
     setLoading(true);
     try {
-      const { data } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
+      let q = supabase.from('categories').select('*');
+      if (branchFilter) q = q.eq('branch_id', branchFilter);
+      const { data } = await q.order('created_at', { ascending: false });
       setItems((data as Category[]) || []);
     } finally {
       setLoading(false);

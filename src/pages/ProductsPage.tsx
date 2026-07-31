@@ -14,6 +14,7 @@ import { exportToExcel, importFromExcel } from '../lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '../lib/barcode';
 import { logAudit } from '../lib/audit';
 import { generateBarcode } from '../lib/format';
+import { useBranchFilter } from '../lib/useBranchFilter';
 import type { Product, Category, ProductUnit, Settings } from '../lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
@@ -21,6 +22,7 @@ const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'g
 export function ProductsPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const branchFilter = useBranchFilter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +46,12 @@ export function ProductsPage() {
   async function load() {
     setLoading(true);
     try {
+      let pq = supabase.from('products').select('*, category:categories(*)');
+      let cq = supabase.from('categories').select('*');
+      if (branchFilter) { pq = pq.eq('branch_id', branchFilter); cq = cq.eq('branch_id', branchFilter); }
       const [p, c, s] = await Promise.all([
-        supabase.from('products').select('*, category:categories(*)').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('name'),
+        pq.order('created_at', { ascending: false }),
+        cq.order('name'),
         supabase.from('settings').select('*').maybeSingle(),
       ]);
       setProducts((p.data as Product[]) || []);

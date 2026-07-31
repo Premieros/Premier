@@ -1,7 +1,18 @@
 export type Language = 'ar' | 'en';
 export type Theme = 'light' | 'dark';
 
-export type Role = 'admin' | 'manager' | 'cashier' | 'salesperson';
+export type Role =
+  | 'super_admin'
+  | 'owner'
+  | 'branch_manager'
+  | 'cashier'
+  | 'warehouse_manager'
+  | 'kitchen'
+  | 'accountant'
+  | 'customer_display';
+
+export type ShiftStatus = 'open' | 'closed';
+export type ShiftOperationType = 'sale' | 'refund' | 'expense' | 'cash_in' | 'cash_out' | 'opening';
 
 export interface Branch {
   id: string;
@@ -27,6 +38,7 @@ export interface Category {
   name: string;
   name_en: string | null;
   description: string | null;
+  branch_id: string;
   created_at: string;
 }
 
@@ -47,6 +59,7 @@ export interface Product {
   is_active: boolean;
   low_stock_threshold: number;
   product_type: ProductType;
+  branch_id: string;
   created_at: string;
   category?: Category;
 }
@@ -84,6 +97,7 @@ export interface Customer {
   tax_number: string | null;
   balance: number;
   notes: string | null;
+  branch_id: string;
   created_at: string;
 }
 
@@ -97,6 +111,7 @@ export interface Supplier {
   tax_number: string | null;
   balance: number;
   notes: string | null;
+  branch_id: string;
   created_at: string;
 }
 
@@ -201,6 +216,36 @@ export interface AuditLog {
   entity: string | null;
   entity_id: string | null;
   details: Record<string, unknown> | null;
+  branch_id: string | null;
+  created_at: string;
+}
+
+export interface Shift {
+  id: string;
+  branch_id: string;
+  cashier_id: string;
+  opened_at: string;
+  closed_at: string | null;
+  opening_amount: number;
+  expected_amount: number;
+  actual_amount: number | null;
+  difference: number;
+  status: ShiftStatus;
+  notes: string | null;
+  created_at: string;
+  branch?: Branch;
+  cashier?: AppUser;
+}
+
+export interface ShiftOperation {
+  id: string;
+  shift_id: string;
+  operation_type: ShiftOperationType;
+  amount: number;
+  payment_method: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -268,4 +313,20 @@ export interface RpcResult {
   purchase_id?: string;
   invoice_number?: string;
   no_change?: boolean;
+  open?: boolean;
+  shift_id?: string;
+  expected?: number;
+  actual?: number;
+  difference?: number;
+  shift?: {
+    id: string;
+    branch_id: string;
+    cashier_id: string;
+    opened_at: string;
+    opening_amount: number;
+    expected: number;
+    cash_sales: number;
+    total_sales: number;
+    notes: string | null;
+  };
 }

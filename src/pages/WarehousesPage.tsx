@@ -10,11 +10,13 @@ import { Input, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { logAudit } from '../lib/audit';
+import { useBranchFilter } from '../lib/useBranchFilter';
 import type { Warehouse, Branch } from '../lib/types';
 
 export function WarehousesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
+  const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Warehouse[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +28,10 @@ export function WarehousesPage() {
   async function load() {
     setLoading(true);
     try {
+      let wq = supabase.from('warehouses').select('*, branch:branches(*)');
+      if (branchFilter) wq = wq.eq('branch_id', branchFilter);
       const [w, b] = await Promise.all([
-        supabase.from('warehouses').select('*, branch:branches(*)').order('created_at', { ascending: false }),
+        wq.order('created_at', { ascending: false }),
         supabase.from('branches').select('*').order('name'),
       ]);
       setItems((w.data as Warehouse[]) || []);

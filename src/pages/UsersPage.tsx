@@ -11,20 +11,29 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatDate } from '../lib/format';
 import { logAudit } from '../lib/audit';
-import { ALL_PERMISSIONS, PERMISSION_LABELS, PERMISSION_GROUPS, DEFAULT_ROLE_PERMISSIONS, type Permission } from '../lib/permissions';
+import { useAuth } from '../context/AuthContext';
+import { ALL_PERMISSIONS, PERMISSION_LABELS, PERMISSION_GROUPS, DEFAULT_ROLE_PERMISSIONS, isAdminRole, type Permission } from '../lib/permissions';
 import type { AppUser, Branch, Role } from '../lib/types';
 
-const ROLES: Role[] = ['admin', 'manager', 'cashier', 'salesperson'];
+const ROLES: Role[] = ['super_admin', 'owner', 'branch_manager', 'cashier', 'warehouse_manager', 'kitchen', 'accountant', 'customer_display'];
 const ROLE_LABELS: Record<Role, { ar: string; en: string }> = {
-  admin: { ar: 'مدير عام', en: 'Admin' },
-  manager: { ar: 'مدير', en: 'Manager' },
+  super_admin: { ar: 'مدير عام', en: 'Super Admin' },
+  owner: { ar: 'مالك', en: 'Owner' },
+  branch_manager: { ar: 'مدير فرع', en: 'Branch Manager' },
   cashier: { ar: 'أمين صندوق', en: 'Cashier' },
-  salesperson: { ar: 'بائع', en: 'Salesperson' },
+  warehouse_manager: { ar: 'مدير مخازن', en: 'Warehouse Manager' },
+  kitchen: { ar: 'المطبخ', en: 'Kitchen' },
+  accountant: { ar: 'محاسب', en: 'Accountant' },
+  customer_display: { ar: 'شاشة العرض', en: 'Customer Display' },
 };
+
+const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
 
 export function UsersPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const { user: me } = useAuth();
+  const isAdmin = isAdminRole(me?.role);
   const [items, setItems] = useState<AppUser[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +51,10 @@ export function UsersPage() {
   async function load() {
     setLoading(true);
     try {
+      const usersQuery = supabase.from('users').select('*').order('created_at', { ascending: false });
+      if (!isAdmin && me?.branch_id) usersQuery.eq('branch_id', me.branch_id);
       const [u, b] = await Promise.all([
-        supabase.from('users').select('*').order('created_at', { ascending: false }),
+        usersQuery,
         supabase.from('branches').select('*').order('name'),
       ]);
       setItems((u.data as AppUser[]) || []);
@@ -64,7 +75,7 @@ export function UsersPage() {
   };
 
   const openAdd = () => {
-    setAddForm({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+    setAddForm({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
     setAddModal(true);
   };
 
@@ -72,6 +83,9 @@ export function UsersPage() {
     const email = addForm.email.trim();
     if (!addForm.full_name || !email || !addForm.password) { show(t('required'), 'error'); return; }
     if (addForm.password.length < 6) { show(t('required'), 'error'); return; }
+    if (!isAdmin && (addForm.role === 'super_admin' || addForm.role === 'owner')) {
+      show(t('noPermissionToCreateUser'), 'error'); return;
+    }
     const { data, error } = await supabase.rpc('create_user', {
       p_email: email,
       p_password: addForm.password,
@@ -96,10 +110,12 @@ export function UsersPage() {
 
   const save = async () => {
     if (!editing) return;
-    const demoting = editing.role === 'admin' && form.role !== 'admin';
-    const deactivating = editing.role === 'admin' && editing.is_active && !form.is_active;
+    if (!isAdmin && (form.role === 'super_admin' || form.role === 'owner')) { show(t('noPermissionToCreateUser'), 'error'); return; }
+    const isAdminTarget = ADMIN_ROLES.includes(editing.role as Role);
+    const demoting = isAdminTarget && !ADMIN_ROLES.includes(form.role as Role);
+    const deactivating = isAdminTarget && editing.is_active && !form.is_active;
     if (demoting || deactivating) {
-      const otherAdmins = items.filter((u) => u.id !== editing.id && u.role === 'admin' && u.is_active).length;
+      const otherAdmins = items.filter((u) => u.id !== editing.id && ADMIN_ROLES.includes(u.role as Role) && u.is_active).length;
       if (otherAdmins === 0) { show(t('lastAdminWarning'), 'error'); return; }
     }
     const payload = { full_name: form.full_name, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
@@ -175,6 +191,8 @@ export function UsersPage() {
     });
   };
 
+  const roleOptions = isAdmin ? ROLES : ROLES.filter((r) => !ADMIN_ROLES.includes(r));
+
   const columns: Column<AppUser>[] = [
     { key: 'email', header: t('email'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.email}</span> },
     { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
@@ -225,9 +243,9 @@ export function UsersPage() {
             </div>
             <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
+              {roleOptions.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
             </Select>
-            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })} disabled={!isAdmin}>
               <option value="">--</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
@@ -251,9 +269,9 @@ export function UsersPage() {
           <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
           <Input label={t('password')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} required minLength={6} />
           <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as Role })}>
-            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
+            {roleOptions.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]?.[lang] || r}</option>)}
           </Select>
-          <Select label={t('branch')} value={addForm.branch_id} onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })}>
+          <Select label={t('branch')} value={addForm.branch_id} onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })} disabled={!isAdmin}>
             <option value="">--</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>

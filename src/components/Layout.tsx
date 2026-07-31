@@ -3,39 +3,41 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store,
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
-  Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown,
+  Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useCan, type Permission } from '../lib/permissions';
 import type { TranslationKey } from '../lib/i18n';
 
 interface NavItem {
   to: string;
   icon: ReactNode;
   labelKey: TranslationKey;
-  adminOnly?: boolean;
+  permission?: Permission;
   group?: string;
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', group: 'main' },
-  { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', group: 'main' },
-  { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', group: 'catalog' },
-  { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', group: 'catalog' },
-  { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', group: 'catalog' },
-  { to: '/inventory', icon: <Boxes className="w-5 h-5" />, labelKey: 'inventory', group: 'operations' },
-  { to: '/warehouses', icon: <Warehouse className="w-5 h-5" />, labelKey: 'warehouses', adminOnly: true, group: 'operations' },
-  { to: '/branches', icon: <Store className="w-5 h-5" />, labelKey: 'branches', adminOnly: true, group: 'operations' },
-  { to: '/purchases', icon: <Truck className="w-5 h-5" />, labelKey: 'purchases', group: 'operations' },
-  { to: '/customers', icon: <Users className="w-5 h-5" />, labelKey: 'customers', group: 'people' },
-  { to: '/suppliers', icon: <Building2 className="w-5 h-5" />, labelKey: 'suppliers', group: 'people' },
-  { to: '/expenses', icon: <Receipt className="w-5 h-5" />, labelKey: 'expenses', group: 'finance' },
-  { to: '/sales', icon: <FileText className="w-5 h-5" />, labelKey: 'salesInvoices', group: 'finance' },
-  { to: '/reports', icon: <BarChart3 className="w-5 h-5" />, labelKey: 'reports', group: 'finance' },
-  { to: '/users', icon: <UserCog className="w-5 h-5" />, labelKey: 'users', adminOnly: true, group: 'admin' },
-  { to: '/audit-log', icon: <ScrollText className="w-5 h-5" />, labelKey: 'auditLog', adminOnly: true, group: 'admin' },
-  { to: '/settings', icon: <Settings className="w-5 h-5" />, labelKey: 'settings', adminOnly: true, group: 'admin' },
+  { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
+  { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', permission: 'pos.sell', group: 'main' },
+  { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
+  { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
+  { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', permission: 'components.view', group: 'catalog' },
+  { to: '/inventory', icon: <Boxes className="w-5 h-5" />, labelKey: 'inventory', permission: 'inventory.view', group: 'operations' },
+  { to: '/warehouses', icon: <Warehouse className="w-5 h-5" />, labelKey: 'warehouses', permission: 'warehouses.view', group: 'operations' },
+  { to: '/branches', icon: <Store className="w-5 h-5" />, labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
+  { to: '/purchases', icon: <Truck className="w-5 h-5" />, labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
+  { to: '/customers', icon: <Users className="w-5 h-5" />, labelKey: 'customers', permission: 'customers.view', group: 'people' },
+  { to: '/suppliers', icon: <Building2 className="w-5 h-5" />, labelKey: 'suppliers', permission: 'suppliers.view', group: 'people' },
+  { to: '/expenses', icon: <Receipt className="w-5 h-5" />, labelKey: 'expenses', permission: 'expenses.view', group: 'finance' },
+  { to: '/sales', icon: <FileText className="w-5 h-5" />, labelKey: 'salesInvoices', permission: 'sales.view', group: 'finance' },
+  { to: '/shifts', icon: <Timer className="w-5 h-5" />, labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
+  { to: '/reports', icon: <BarChart3 className="w-5 h-5" />, labelKey: 'reports', permission: 'reports.view', group: 'finance' },
+  { to: '/users', icon: <UserCog className="w-5 h-5" />, labelKey: 'users', permission: 'users.view', group: 'admin' },
+  { to: '/audit-log', icon: <ScrollText className="w-5 h-5" />, labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
+  { to: '/settings', icon: <Settings className="w-5 h-5" />, labelKey: 'settings', permission: 'settings.manage', group: 'admin' },
 ];
 
 const groupLabels: Record<string, { ar: string; en: string }> = {
@@ -51,14 +53,14 @@ export function Layout({ children }: { children: ReactNode }) {
   const { t, lang, setLang } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const can = useCan();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
   const isAr = lang === 'ar';
 
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
   const currentTitle = visibleNavItems.find((n) => n.to === location.pathname)?.labelKey || 'dashboard';
 
   const toggleGroup = (group: string) => {
@@ -148,13 +150,15 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-2">
             {/* POS Quick Access */}
-            <button
-              onClick={() => navigate('/pos')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white text-sm font-bold shadow-lg shadow-teal-500/25 transition-all active:scale-95"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('pos')}</span>
-            </button>
+            {can('pos.sell') && (
+              <button
+                onClick={() => navigate('/pos')}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white text-sm font-bold shadow-lg shadow-teal-500/25 transition-all active:scale-95"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('pos')}</span>
+              </button>
+            )}
 
             <div className="w-px h-7 bg-slate-200 dark:bg-slate-700 mx-1" />
 

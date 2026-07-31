@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranchFilter } from '../lib/useBranchFilter';
+import { isAdminRole } from '../lib/permissions';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
@@ -45,9 +46,27 @@ export function PosPage() {
   const [selectedBranch, setSelectedBranch] = useState(branchFilter || '');
   const [loadError, setLoadError] = useState('');
   const [catSidebarOpen, setCatSidebarOpen] = useState(true);
+  const [activeShift, setActiveShift] = useState<{ id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number } | null>(null);
+  const [shiftChecked, setShiftChecked] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
+
+  const isCashier = user?.role === 'cashier';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isCashier) { setShiftChecked(true); setActiveShift(null); return; }
+    if (!effectiveBranch) { setShiftChecked(true); setActiveShift(null); return; }
+    setShiftChecked(false);
+    supabase.rpc('get_active_shift', { p_branch_id: effectiveBranch }).then(({ data }) => {
+      if (cancelled) return;
+      const res = data as RpcResult | null;
+      setActiveShift(res?.open ? (res.shift as unknown as { id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number }) : null);
+      setShiftChecked(true);
+    });
+    return () => { cancelled = true; };
+  }, [isCashier, effectiveBranch]);
 
   const loadStock = useCallback(async (branchId: string) => {
     if (!branchId) { setStockMap({}); return; }
@@ -74,12 +93,17 @@ export function PosPage() {
     let cancelled = false;
     async function loadData() {
       try {
+        const fixedBranch = branchFilter || user?.branch_id || '';
+        let pq = supabase.from('products').select('*, category:categories(*)').eq('is_active', true);
+        let cusq = supabase.from('customers').select('*');
+        let catq = supabase.from('categories').select('*');
+        if (fixedBranch) { pq = pq.eq('branch_id', fixedBranch); cusq = cusq.eq('branch_id', fixedBranch); catq = catq.eq('branch_id', fixedBranch); }
         const [pRes, cRes, sRes, bRes, catRes] = await Promise.allSettled([
-          supabase.from('products').select('*, category:categories(*)').eq('is_active', true).order('name'),
-          supabase.from('customers').select('*').order('name'),
+          pq.order('name'),
+          cusq.order('name'),
           supabase.from('settings').select('*').maybeSingle(),
           supabase.from('branches').select('*').eq('is_active', true).order('name'),
-          supabase.from('categories').select('*').order('name'),
+          catq.order('name'),
         ]);
         if (cancelled) return;
 
@@ -227,6 +251,7 @@ export function PosPage() {
   const completeSale = async () => {
     if (cart.length === 0 || completing) return;
     if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
+    if (isCashier && !activeShift) { show(t('shiftRequired'), 'error'); return; }
     setCompleting(true);
 
     const { data: branchWarehouses } = await supabase.from('warehouses').select('id').eq('branch_id', effectiveBranch).eq('is_active', true);
@@ -253,6 +278,7 @@ export function PosPage() {
     const { data, error } = await supabase.rpc('process_sale', {
       p_invoice_number: invoiceNumber,
       p_branch_id: effectiveBranch,
+      p_shift_id: activeShift?.id || null,
       p_warehouse_id: warehouseIds.length > 0 ? warehouseIds[0] : null,
       p_customer_id: customerId || null,
       p_salesperson_id: null,
@@ -386,8 +412,9 @@ export function PosPage() {
           <Tag className="w-4 h-4 text-slate-400" />
           <select
             value={effectiveBranch}
+            disabled={!isAdminRole(user?.role)}
             onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); }}
-            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
@@ -418,6 +445,28 @@ export function PosPage() {
           <span className="text-sm font-medium text-slate-600 dark:text-slate-300 hidden sm:inline">{user?.full_name || user?.email}</span>
         </div>
       </header>
+
+      {/* ===== SHIFT STATUS BANNER (cashier) ===== */}
+      {isCashier && shiftChecked && (
+        <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-sm border-b ${
+          activeShift
+            ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300'
+            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+        }`}>
+          <Timer className="w-4 h-4" />
+          {activeShift ? (
+            <>
+              <span className="font-semibold">{t('open')} · {new Date(activeShift.opened_at).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span>
+              <span className="hidden sm:inline text-xs opacity-80">{t('expectedAmount')}: {formatCurrency(activeShift.expected, settings?.currency || 'EGP', lang)}</span>
+            </>
+          ) : (
+            <span className="font-semibold">{t('noOpenShift')}</span>
+          )}
+          <button onClick={() => navigate('/shifts')} className="ms-auto text-xs font-bold underline underline-offset-2 hover:opacity-80">
+            {activeShift ? t('closeShift') : t('openShift')}
+          </button>
+        </div>
+      )}
 
       {/* ===== MAIN CONTENT ===== */}
       <div className="flex-1 flex min-h-0">

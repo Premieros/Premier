@@ -12,11 +12,13 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency } from '../lib/format';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
+import { useBranchFilter } from '../lib/useBranchFilter';
 import type { Customer, Settings } from '../lib/types';
 
 export function CustomersPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -30,8 +32,10 @@ export function CustomersPage() {
   async function load() {
     setLoading(true);
     try {
+      let q = supabase.from('customers').select('*');
+      if (branchFilter) q = q.eq('branch_id', branchFilter);
       const [res, s] = await Promise.all([
-        supabase.from('customers').select('*').order('created_at', { ascending: false }),
+        q.order('created_at', { ascending: false }),
         supabase.from('settings').select('*').maybeSingle(),
       ]);
       setItems((res.data as Customer[]) || []);

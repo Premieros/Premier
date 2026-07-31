@@ -12,11 +12,13 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency } from '../lib/format';
 import { exportToExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
+import { useBranchFilter } from '../lib/useBranchFilter';
 import type { Supplier, Settings } from '../lib/types';
 
 export function SuppliersPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -29,8 +31,10 @@ export function SuppliersPage() {
   async function load() {
     setLoading(true);
     try {
+      let q = supabase.from('suppliers').select('*');
+      if (branchFilter) q = q.eq('branch_id', branchFilter);
       const [res, s] = await Promise.all([
-        supabase.from('suppliers').select('*').order('created_at', { ascending: false }),
+        q.order('created_at', { ascending: false }),
         supabase.from('settings').select('*').maybeSingle(),
       ]);
       setItems((res.data as Supplier[]) || []);

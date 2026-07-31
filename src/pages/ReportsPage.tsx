@@ -9,6 +9,7 @@ import { Input } from '../components/Input';
 import { formatCurrency, formatDate, todayISO } from '../lib/format';
 import { exportToExcel } from '../lib/excel';
 import { useBranchFilter } from '../lib/useBranchFilter';
+import { isAdminRole } from '../lib/permissions';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 
 import type { Settings, Branch } from '../lib/types';
@@ -31,10 +32,10 @@ export function ReportsPage() {
   const [currency, setCurrency] = useState('EGP');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState<string>('');
-  const effectiveBranchFilter = user?.role === 'admin' ? (adminBranchFilter || null) : branchFilter;
+  const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
 
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (isAdminRole(user?.role)) {
       supabase.from('branches').select('*').order('name').then(({ data }) => setBranches((data as Branch[]) || []));
     }
   }, [user?.role]);
@@ -347,7 +348,7 @@ export function ReportsPage() {
           <div className="flex flex-wrap items-end gap-4">
             <Input label={t('from')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <Input label={t('to')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            {user?.role === 'admin' && branches.length > 0 && (
+            {isAdminRole(user?.role) && branches.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('filterByBranch')}</label>
                 <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
