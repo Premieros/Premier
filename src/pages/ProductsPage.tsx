@@ -89,7 +89,7 @@ export function ProductsPage() {
 
   const save = async () => {
     if (!form.name) { show(t('required') + ': ' + t('name'), 'error'); return; }
-    const payload = { ...form, category_id: form.category_id || null, branch_id: branchFilter || form.branch_id || null };
+    const payload = { ...form, category_id: form.category_id || null, branch_id: form.branch_id || branchFilter || null };
     if (editing) {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
