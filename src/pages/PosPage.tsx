@@ -94,23 +94,21 @@ export function PosPage() {
     async function loadData() {
       try {
         const fixedBranch = effectiveBranch;
-        let pq: any = null;
         let cusq = supabase.from('customers').select('*');
         let catq = supabase.from('categories').select('*');
+        const productQuery = fixedBranch
+          ? supabase
+              .from('branch_products')
+              .select('selling_price, is_active, product:products(*, category:categories(*))')
+              .eq('branch_id', fixedBranch)
+              .eq('is_active', true)
+          : supabase.from('products').select('*, category:categories(*)').eq('is_active', true).order('name');
         if (fixedBranch) {
-          // Sellable products come from the branch_products junction (per-branch price included)
-          pq = supabase
-            .from('branch_products')
-            .select('selling_price, is_active, product:products(*, category:categories(*))')
-            .eq('branch_id', fixedBranch)
-            .eq('is_active', true);
           cusq = cusq.eq('branch_id', fixedBranch);
           catq = catq.eq('branch_id', fixedBranch);
-        } else {
-          pq = supabase.from('products').select('*, category:categories(*)').eq('is_active', true);
         }
         const [pRes, cRes, sRes, bRes, catRes] = await Promise.allSettled([
-          fixedBranch ? pq : pq.order('name'),
+          productQuery,
           cusq.order('name'),
           supabase.from('settings').select('*').maybeSingle(),
           supabase.from('branches').select('*').eq('is_active', true).order('name'),

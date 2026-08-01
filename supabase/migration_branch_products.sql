@@ -435,3 +435,7 @@ BEGIN
   END;
 END;
 $$;
+
+-- Refresh the PostgREST schema cache so new tables/constraints (shifts, users FKs, branch_products)
+-- are immediately available to the API without a manual reload.
+NOTIFY pgrst, 'reload schema';

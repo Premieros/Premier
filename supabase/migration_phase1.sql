@@ -7,32 +7,32 @@
 DROP POLICY IF EXISTS "auth_delete_audit_log" ON audit_log;
 CREATE POLICY "auth_delete_audit_log" ON audit_log FOR DELETE TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_active AND role IN ('super_admin', 'owner'))
   );
 
 -- audit_log: UPDATE should be admin-only
 DROP POLICY IF EXISTS "auth_update_audit_log" ON audit_log;
 CREATE POLICY "auth_update_audit_log" ON audit_log FOR UPDATE TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_active AND role IN ('super_admin', 'owner'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_active AND role IN ('super_admin', 'owner'))
   );
 
 -- users: INSERT allowed for self (own profile) or admin
 DROP POLICY IF EXISTS "auth_insert_users" ON users;
 CREATE POLICY "auth_insert_users" ON users FOR INSERT TO authenticated
   WITH CHECK (
-    id = auth.uid()
-    OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    (id = auth.uid() AND role = 'cashier' AND branch_id IS NULL)
+    OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_active AND role IN ('super_admin', 'owner'))
   );
 
 -- users: DELETE should be admin-only
 DROP POLICY IF EXISTS "auth_delete_users" ON users;
 CREATE POLICY "auth_delete_users" ON users FOR DELETE TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_active AND role IN ('super_admin', 'owner'))
   );
 
 -- ============ MISSING FOREIGN KEYS ============

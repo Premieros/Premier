@@ -13,6 +13,7 @@ import { Modal } from '../components/Modal';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/format';
 import { exportToExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
+import { useCan } from '../lib/permissions';
 import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult } from '../lib/types';
 
 interface PurchaseFormItem {
@@ -27,6 +28,7 @@ export function PurchasesPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const { show } = useToast();
+  const can = useCan();
   const [items, setItems] = useState<Purchase[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -154,7 +156,9 @@ export function PurchasesPage() {
       <PageHeader title={t('purchases')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          {can('purchases.manage') && (
+            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          )}
         </>
       } />
       <Card className="mb-4 p-4">

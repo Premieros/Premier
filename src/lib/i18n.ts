@@ -260,6 +260,7 @@ export const translations = {
     selectItems: 'حدد العناصر للحذف',
     selected: 'محدد',
     selectBranchFirst: 'يجب اختيار الفرع أولاً',
+    cannotDeleteCompleted: 'لا يمكن حذف الفواتير المكتملة',
     // Branch Product Assignment
     branchProducts: 'تخصيص منتجات الفروع',
     assignProducts: 'تخصيص المنتجات',
@@ -269,6 +270,7 @@ export const translations = {
     notAssigned: 'غير مخصص',
     assignmentsSaved: 'تم حفظ تخصيصات المنتجات',
     selectBranchToStart: 'اختر فرعاً لبدء تخصيص منتجاته',
+    clickToView: 'انقر لعرض التفاصيل',
     // Inventory v2 (Dual Inventory)
     productType: 'نوع المنتج',
     readyProduct: 'منتج جاهز',
@@ -587,6 +589,7 @@ export const translations = {
     selectItems: 'Select items to delete',
     selected: 'Selected',
     selectBranchFirst: 'Please select a branch first',
+    cannotDeleteCompleted: 'Completed invoices cannot be deleted',
     // Branch Product Assignment
     branchProducts: 'Branch Product Assignment',
     assignProducts: 'Assign Products',

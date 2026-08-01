@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency, formatDateTime } from '../lib/format';
 import { logAudit } from '../lib/audit';
 import { useBranchFilter } from '../lib/useBranchFilter';
+import { useCan } from '../lib/permissions';
 import type { Settings, Customer } from '../lib/types';
 
 interface SaleRow {
@@ -32,6 +33,7 @@ export function SalesPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
   const branchFilter = useBranchFilter();
+  const can = useCan();
   const [items, setItems] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -104,6 +106,12 @@ export function SalesPage() {
 
   const remove = async () => {
     if (!deleteId) return;
+    const sale = items.find((i) => i.id === deleteId);
+    if (sale?.status === 'completed') {
+      show(t('cannotDeleteCompleted'), 'error');
+      setDeleteId(null);
+      return;
+    }
     try {
       await supabase.from('sale_items').delete().eq('sale_id', deleteId);
       const { error } = await supabase.from('sales').delete().eq('id', deleteId);
@@ -120,12 +128,15 @@ export function SalesPage() {
   const removeSelected = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    for (const id of ids) {
+    const deletable = items.filter((i) => ids.includes(i.id) && i.status !== 'completed').map((i) => i.id);
+    const blocked = ids.length - deletable.length;
+    for (const id of deletable) {
       await supabase.from('sale_items').delete().eq('sale_id', id);
       await supabase.from('sales').delete().eq('id', id);
       await logAudit('delete', 'sales', id);
     }
-    show(t('deleteSuccess'), 'success');
+    if (blocked > 0) show(t('cannotDeleteCompleted'), 'error');
+    else show(t('deleteSuccess'), 'success');
     setSelectedIds(new Set());
     setDeleteSelectedConfirm(false);
     load();
@@ -160,12 +171,16 @@ export function SalesPage() {
     )},
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => openViewSale(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}>
-          <Edit2 className="w-4 h-4" />
-        </button>
-        <button onClick={() => setDeleteId(r.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {can('refunds.approve') && (
+          <button onClick={() => openViewSale(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}>
+            <Edit2 className="w-4 h-4" />
+          </button>
+        )}
+        {can('refunds.approve') && r.status !== 'completed' && (
+          <button onClick={() => setDeleteId(r.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
     )},
   ];

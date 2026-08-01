@@ -1221,3 +1221,7 @@ EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('success', false, 'error', 'UNKNOWN_ERROR', 'detail', SQLERRM);
 END;
 $$;
+
+-- Refresh the PostgREST schema cache so new tables/constraints (shifts, users FKs)
+-- are immediately available to the API without a manual reload.
+NOTIFY pgrst, 'reload schema';

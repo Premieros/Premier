@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranchFilter } from '../lib/useBranchFilter';
 import { useToast } from '../components/Toast';
+import { useCan } from '../lib/permissions';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
@@ -23,6 +24,7 @@ export function ExpensesPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const { show } = useToast();
+  const can = useCan();
   const [items, setItems] = useState<Expense[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,13 +60,13 @@ export function ExpensesPage() {
 
   const save = async () => {
     if (!form.amount || form.amount <= 0) { show(t('required') + ': ' + t('amount'), 'error'); return; }
-    const payload = { ...form, branch_id: branchFilter || form.branch_id || null, created_by: user?.id || null };
+    const base = { ...form, branch_id: branchFilter || form.branch_id || null };
     if (editing) {
-      const { error } = await supabase.from('expenses').update(payload).eq('id', editing.id);
+      const { error } = await supabase.from('expenses').update(base).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       await logAudit('update', 'expenses', editing.id);
     } else {
-      const { error } = await supabase.from('expenses').insert(payload);
+      const { error } = await supabase.from('expenses').insert({ ...base, created_by: user?.id || null });
       if (error) { show(error.message, 'error'); return; }
       await logAudit('create', 'expenses');
     }
@@ -92,8 +94,12 @@ export function ExpensesPage() {
     { key: 'payment_method', header: t('paymentMethod'), render: (e) => <span className="capitalize">{e.payment_method}</span> },
     { key: 'actions', header: t('actions'), render: (e) => (
       <div className="flex gap-1">
-        <button onClick={() => openEdit(e)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(e.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        {can('expenses.manage') && (
+          <button onClick={() => openEdit(e)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+        )}
+        {can('expenses.manage') && (
+          <button onClick={() => setDeleteId(e.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        )}
       </div>
     )},
   ];
@@ -103,7 +109,9 @@ export function ExpensesPage() {
       <PageHeader title={t('expenses')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          {can('expenses.manage') && (
+            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          )}
         </>
       } />
       <Card className="mb-4 p-4">

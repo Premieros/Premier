@@ -3,6 +3,7 @@ import { Search, Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
+import { useCan } from '../lib/permissions';
 import { PageHeader, Card } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
@@ -18,6 +19,7 @@ export function InventoryPage() {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const { show } = useToast();
+  const can = useCan();
   const [items, setItems] = useState<Inventory[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [componentIds, setComponentIds] = useState<Set<string>>(new Set());
@@ -154,12 +156,16 @@ export function InventoryPage() {
     }},
     { key: 'actions', header: t('actions'), render: (i) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => openAdjust(i)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('adjustStock')}>
-          <Edit2 className="w-4 h-4" />
-        </button>
-        <button onClick={() => setDeleteId(i.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {can('inventory.manage') && (
+          <button onClick={() => openAdjust(i)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('adjustStock')}>
+            <Edit2 className="w-4 h-4" />
+          </button>
+        )}
+        {can('inventory.manage') && (
+          <button onClick={() => setDeleteId(i.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
     )},
   ];
@@ -169,7 +175,7 @@ export function InventoryPage() {
       <PageHeader title={t('inventory')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-          {selectedIds.size > 0 && (
+          {can('inventory.manage') && selectedIds.size > 0 && (
             <Button variant="danger" size="sm" onClick={() => setDeleteSelectedConfirm(true)}>
               <Trash2 className="w-4 h-4" /> {t('deleteSelected')} ({selectedIds.size})
             </Button>
@@ -198,7 +204,7 @@ export function InventoryPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')}
-          onRowClick={openAdjust} showCheckbox selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
+          onRowClick={can('inventory.manage') ? openAdjust : undefined} showCheckbox={can('inventory.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
       </Card>
 
       <Modal open={!!adjustModal} onClose={() => setAdjustModal(null)} title={t('adjustStock')} size="sm">

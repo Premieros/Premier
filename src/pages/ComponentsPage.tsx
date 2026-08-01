@@ -3,6 +3,7 @@ import { Plus, Trash2, Package, Edit2, AlertTriangle, Layers } from 'lucide-reac
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
+import { useCan } from '../lib/permissions';
 import { PageHeader, Card } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { Input, Select } from '../components/Input';
@@ -10,7 +11,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatCurrency, formatNumber } from '../lib/format';
 import { logAudit } from '../lib/audit';
-import type { Product, ProductComponent } from '../lib/types';
+import type { Product, ProductComponent, Settings } from '../lib/types';
 
 interface ComponentWithProduct extends ProductComponent {
   component_product?: Product;
@@ -20,6 +21,8 @@ export function ComponentsPage() {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const { show } = useToast();
+  const can = useCan();
+  const [currency, setCurrency] = useState('EGP');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [components, setComponents] = useState<ComponentWithProduct[]>([]);
@@ -37,8 +40,12 @@ export function ComponentsPage() {
   );
 
   async function loadProducts() {
-    const { data } = await supabase.from('products').select('*').eq('is_active', true).order('name');
-    setProducts((data as Product[]) || []);
+    const [p, s] = await Promise.all([
+      supabase.from('products').select('*').eq('is_active', true).order('name'),
+      supabase.from('settings').select('*').maybeSingle(),
+    ]);
+    setProducts((p.data as Product[]) || []);
+    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
     const { data: inv } = await supabase.from('inventory').select('product_id, quantity');
     const map: Record<string, number> = {};
     for (const r of (inv || []) as { product_id: string; quantity: number }[]) {
@@ -116,7 +123,7 @@ export function ComponentsPage() {
           >
             <option value="">-- {isAr ? 'اختر منتج مصنّع' : 'Select manufactured product'} --</option>
             {manufacturedProducts.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.cost_price, 'EGP', lang)})</option>
+              <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.cost_price, currency, lang)})</option>
             ))}
           </Select>
         </div>
@@ -138,12 +145,12 @@ export function ComponentsPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProduct.name}</p>
-                  <p className="text-xs text-slate-400">{isAr ? 'سعر البيع' : 'Sale Price'}: {formatCurrency(selectedProduct.sale_price, 'EGP', lang)} | {isAr ? 'التكلفة' : 'Cost'}: {formatCurrency(selectedProduct.cost_price, 'EGP', lang)}</p>
+                  <p className="text-xs text-slate-400">{isAr ? 'سعر البيع' : 'Sale Price'}: {formatCurrency(selectedProduct.sale_price, currency, lang)} | {isAr ? 'التكلفة' : 'Cost'}: {formatCurrency(selectedProduct.cost_price, currency, lang)}</p>
                 </div>
                 <div className="text-end">
                   <p className="text-xs text-slate-400">{isAr ? 'تكلفة المكونات' : 'Component Cost'}</p>
                   <p className={`font-bold ${componentCost > selectedProduct.sale_price ? 'text-red-500' : 'text-teal-600'}`}>
-                    {formatCurrency(componentCost, 'EGP', lang)}
+                    {formatCurrency(componentCost, currency, lang)}
                   </p>
                 </div>
               </div>
@@ -154,7 +161,7 @@ export function ComponentsPage() {
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                 {isAr ? 'المكونات' : 'Components'} ({components.length})
               </h3>
-              <Button onClick={() => { setForm({ component_product_id: '', quantity: 1 }); setModalOpen(true); }} disabled={!availableComponents.length}>
+              <Button onClick={() => { setForm({ component_product_id: '', quantity: 1 }); setModalOpen(true); }} disabled={!availableComponents.length || !can('components.manage')}>
                 <Plus className="w-4 h-4" /> {t('addComponent')}
               </Button>
             </div>
@@ -178,7 +185,7 @@ export function ComponentsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{c.component_product?.name || '-'}</p>
-                      <p className="text-xs text-slate-400">{formatCurrency(c.component_product?.cost_price || 0, 'EGP', lang)} × {c.quantity}</p>
+                      <p className="text-xs text-slate-400">{formatCurrency(c.component_product?.cost_price || 0, currency, lang)} × {c.quantity}</p>
                     </div>
                     <div className="flex items-center gap-1 text-xs" title={t('componentStock')}>
                       <Layers className="w-3.5 h-3.5 text-slate-400" />
@@ -187,14 +194,18 @@ export function ComponentsPage() {
                       </span>
                     </div>
                     <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
-                      {formatCurrency((c.component_product?.cost_price || 0) * Number(c.quantity), 'EGP', lang)}
+                      {formatCurrency((c.component_product?.cost_price || 0) * Number(c.quantity), currency, lang)}
                     </span>
-                    <button onClick={() => setEditModal({ id: c.id, quantity: Number(c.quantity) })} className="p-2 text-slate-400 hover:text-blue-500">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeleteId(c.id)} className="p-2 text-slate-400 hover:text-red-500">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {can('components.manage') && (
+                      <button onClick={() => setEditModal({ id: c.id, quantity: Number(c.quantity) })} className="p-2 text-slate-400 hover:text-blue-500">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {can('components.manage') && (
+                      <button onClick={() => setDeleteId(c.id)} className="p-2 text-slate-400 hover:text-red-500">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -236,7 +247,7 @@ export function ComponentsPage() {
           >
             <option value="">-- {t('selectComponentProduct')} --</option>
             {availableComponents.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.cost_price, 'EGP', lang)})</option>
+              <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.cost_price, currency, lang)})</option>
             ))}
           </Select>
           <Input

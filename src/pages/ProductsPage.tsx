@@ -90,20 +90,28 @@ export function ProductsPage() {
   const save = async () => {
     if (!form.name) { show(t('required') + ': ' + t('name'), 'error'); return; }
     const payload = { ...form, category_id: form.category_id || null, branch_id: form.branch_id || branchFilter || null };
+    const unitPayload = units.filter(u => u.unit_name).map((u) => ({
+      unit_name: u.unit_name,
+      unit_name_en: u.unit_name_en || u.unit_name,
+      conversion_factor: u.conversion_factor,
+      sale_price: u.sale_price,
+      cost_price: u.cost_price,
+      barcode: u.barcode || null,
+      is_base: u.is_base,
+    }));
     if (editing) {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
-      await supabase.from('product_units').delete().eq('product_id', editing.id);
-      if (units.length > 0) {
-        await supabase.from('product_units').insert(units.filter(u => u.unit_name).map(u => ({ ...u, id: undefined, product_id: editing.id })));
-      }
+      const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: editing.id, p_units: unitPayload });
+      if (unitError) { show(unitError.message, 'error'); return; }
       await logAudit('update', 'products', editing.id, { name: form.name });
       show(t('saveSuccess'), 'success');
     } else {
       const { data, error } = await supabase.from('products').insert(payload).select().single();
       if (error) { show(error.message, 'error'); return; }
-      if (units.length > 0) {
-        await supabase.from('product_units').insert(units.filter(u => u.unit_name).map(u => ({ ...u, id: undefined, product_id: data.id })));
+      if (unitPayload.length > 0) {
+        const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: data.id, p_units: unitPayload });
+        if (unitError) { show(unitError.message, 'error'); return; }
       }
       await logAudit('create', 'products', data.id, { name: form.name });
       show(t('saveSuccess'), 'success');
