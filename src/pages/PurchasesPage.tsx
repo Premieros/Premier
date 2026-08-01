@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { Plus, Trash2, Search, Eye, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -165,7 +165,7 @@ export function PurchasesPage() {
         <div className="relative">
           <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
       </Card>
       <Card className="p-4">
@@ -261,7 +261,7 @@ export function PurchasesPage() {
             </div>
             <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-700">
               <span>{t('total')}</span>
-              <span className="text-teal-600 dark:text-teal-400">{formatCurrency(viewModal.total, currency, lang)}</span>
+              <span className="text-brand-600 dark:text-brand-400">{formatCurrency(viewModal.total, currency, lang)}</span>
             </div>
           </div>
         )}

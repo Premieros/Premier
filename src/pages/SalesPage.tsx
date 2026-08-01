@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Search, Trash2, FileText, Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -147,7 +147,7 @@ export function SalesPage() {
   const columns: Column<SaleRow>[] = [
     { key: 'invoice_number', header: t('invoiceNumber'), render: (r) => (
       <div className="flex items-center gap-2">
-        <FileText className="w-4 h-4 text-teal-500" />
+        <FileText className="w-4 h-4 text-brand-500" />
         <span className="font-medium text-slate-800 dark:text-slate-200">{r.invoice_number}</span>
       </div>
     )},
@@ -201,7 +201,7 @@ export function SalesPage() {
         <div className="relative">
           <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isAr ? 'بحث برقم الفاتورة أو اسم العميل...' : 'Search by invoice number or customer...'}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
       </Card>
 
@@ -215,7 +215,7 @@ export function SalesPage() {
         {viewSale && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <FileText className="w-8 h-8 text-teal-500" />
+              <FileText className="w-8 h-8 text-brand-500" />
               <div>
                 <p className="font-bold text-lg text-slate-800 dark:text-slate-200">{viewSale.invoice_number}</p>
                 <p className="text-sm text-slate-500">{formatDateTime(viewSale.created_at, lang)}</p>
@@ -271,7 +271,7 @@ export function SalesPage() {
             )}
 
             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>{t('total')}</span><span className="font-bold text-teal-600">{formatCurrency(viewSale.total, currency, lang)}</span></div>
+              <div className="flex justify-between text-sm"><span>{t('total')}</span><span className="font-bold text-brand-600">{formatCurrency(viewSale.total, currency, lang)}</span></div>
               <div className="flex justify-between text-sm"><span>{isAr ? 'المدفوع' : 'Paid'}</span><span>{formatCurrency(viewSale.paid_amount, currency, lang)}</span></div>
               {viewSale.total - viewSale.paid_amount > 0 && (
                 <div className="flex justify-between text-sm text-red-600"><span>{isAr ? 'المتبقي' : 'Remaining'}</span><span>{formatCurrency(viewSale.total - viewSale.paid_amount, currency, lang)}</span></div>

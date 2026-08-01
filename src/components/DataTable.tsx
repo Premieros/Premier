@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+﻿import { type ReactNode } from 'react';
 
 export interface Column<T> {
   key: string;
@@ -23,7 +23,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
     return (
       <div className="flex items-center justify-center py-16">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-3 border-teal-500 border-t-transparent" />
+          <div className="animate-spin rounded-full h-8 w-8 border-3 border-brand-500 border-t-transparent" />
           <p className="text-sm text-slate-400">Loading...</p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
             {showCheckbox && (
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-teal-600 focus:ring-teal-500" />
+                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500" />
               </th>
             )}
             {columns.map((col) => (
@@ -88,13 +88,13 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
                 if (showCheckbox && (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
                 onRowClick?.(row);
               }}
-              className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-teal-50/50 dark:bg-teal-900/10' : ''}`}
+              className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
             >
               {showCheckbox && (
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={!!(row.id && selectedIds?.has(row.id))}
                     onChange={() => row.id && toggleRow(row.id)}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-teal-600 focus:ring-teal-500" />
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500" />
                 </td>
               )}
               {columns.map((col) => (

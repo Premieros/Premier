@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Search, Save, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -198,7 +198,7 @@ export function BranchProductsPage() {
               <div className="relative flex-1 min-w-52">
                 <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-                  className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                  className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
               </div>
               <Button variant="outline" size="sm" onClick={selectAll} disabled={filtered.length === 0}>
                 <CheckSquare className="w-4 h-4" /> {t('selectAll')}
@@ -213,7 +213,7 @@ export function BranchProductsPage() {
           <Card className="p-4">
             {loading ? (
               <div className="flex justify-center py-10">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -226,7 +226,7 @@ export function BranchProductsPage() {
                   return (
                     <div key={p.id} className="flex flex-wrap items-center gap-3 py-3">
                       <input type="checkbox" checked={checked} onChange={(e) => toggleAssign(p.id, e.target.checked)}
-                        className="w-5 h-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
+                        className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
                       <div className="flex-1 min-w-40">
                         <p className="font-semibold text-slate-800 dark:text-white text-sm">
                           {isAr ? (p.name || p.name_en) : (p.name_en || p.name)}
@@ -247,7 +247,7 @@ export function BranchProductsPage() {
                           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                             <input type="checkbox" checked={entry.is_active}
                               onChange={(e) => updateEntry(p.id, { is_active: e.target.checked })}
-                              className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
                             {t('active')}
                           </label>
                         </div>

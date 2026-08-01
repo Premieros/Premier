@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Search, Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -188,7 +188,7 @@ export function InventoryPage() {
           <div className="relative flex-1">
             <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
           </div>
           <Select value={filterWarehouse} onChange={(e) => setFilterWarehouse(e.target.value)} className="sm:w-48">
             <option value="">{t('all')} - {t('warehouses')}</option>

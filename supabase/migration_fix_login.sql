@@ -1,5 +1,5 @@
 -- Migration: Fix login for users created by create_user RPC
--- Run this in Supabase SQL Editor AFTER migration_create_user.sql.
+-- Run this in Supabase SQL Editor AFTER migration_enterprise_core.sql.
 --
 -- Even after the instance_id / provider_id fixes, a freshly created account can
 -- still fail to sign in when ANY piece of the auth.users row is inconsistent

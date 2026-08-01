@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+﻿import { type ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store,
@@ -91,7 +91,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/25">
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-slate-900 dark:text-white text-sm">{t('appName')}</span>
@@ -120,7 +120,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/25'
+                        ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/25'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`
                   }
@@ -155,7 +155,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {can('pos.sell') && (
               <button
                 onClick={() => navigate('/pos')}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white text-sm font-bold shadow-lg shadow-teal-500/25 transition-all active:scale-95"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-sm font-bold shadow-lg shadow-brand-500/25 transition-all active:scale-95"
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('pos')}</span>
@@ -186,7 +186,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">{user?.full_name || user?.email}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">{user?.role}</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-teal-500/20">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-brand-500/20">
                 {(user?.full_name || user?.email || '?')[0].toUpperCase()}
               </div>
             </div>

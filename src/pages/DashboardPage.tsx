@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+﻿import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShoppingCart, TrendingUp, Receipt, Package, AlertTriangle,
@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatNumber, formatDateTime } from '../lib/format';
+import { getBrandColor } from '../lib/brandColor';
 import { useBranchFilter } from '../lib/useBranchFilter';
 import { isAdminRole } from '../lib/permissions';
 import { Modal } from '../components/Modal';
@@ -48,7 +49,7 @@ interface DetailRow {
 
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const PIE_COLORS = ['#0d9488', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899'];
+const PIE_COLORS = [getBrandColor(600), '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899'];
 
 function CustomTooltip({ active, payload, label, currency, lang }: {
   active?: boolean;
@@ -111,7 +112,7 @@ function KpiCard({
       </div>
       {onClick && (
         <div className="absolute bottom-2 end-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="text-xs text-teal-600 dark:text-teal-400 font-medium flex items-center gap-1">
+          <span className="text-xs text-brand-600 dark:text-brand-400 font-medium flex items-center gap-1">
             {lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}
             <ArrowUpRight className="w-3 h-3" />
           </span>
@@ -435,7 +436,7 @@ export function DashboardPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600" />
           <p className="text-sm text-slate-400">{isAr ? 'جاري التحميل...' : 'Loading...'}</p>
         </div>
       </div>
@@ -466,12 +467,12 @@ export function DashboardPage() {
     <div className="space-y-6 relative">
       {refreshing && (
         <div className="absolute top-2 end-2 z-50 flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur px-3 py-1.5 rounded-full shadow-md border border-slate-200 dark:border-slate-700">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600" />
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-600" />
           <span className="text-xs text-slate-500">{isAr ? 'جاري التحديث...' : 'Refreshing...'}</span>
         </div>
       )}
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-800 dark:from-teal-700 dark:via-teal-800 dark:to-slate-900 shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 dark:from-brand-700 dark:via-brand-800 dark:to-slate-900 shadow-xl">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -top-8 -right-8 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-12 -left-12 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl" />
@@ -479,24 +480,24 @@ export function DashboardPage() {
         <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-teal-100" />
-              <span className="text-sm text-teal-100 font-medium">{greeting}</span>
+              <Sparkles className="w-4 h-4 text-brand-100" />
+              <span className="text-sm text-brand-100 font-medium">{greeting}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
               {user?.full_name || (isAr ? 'مرحباً بك' : 'Welcome')}
             </h1>
-            <p className="text-teal-100/80 text-sm mt-1">
+            <p className="text-brand-100/80 text-sm mt-1">
               {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="bg-white/15 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/20">
-              <p className="text-xs text-teal-100 font-medium mb-0.5">{isAr ? 'ربح الفترة' : "Period Profit"}</p>
+              <p className="text-xs text-brand-100 font-medium mb-0.5">{isAr ? 'ربح الفترة' : "Period Profit"}</p>
               <p className="text-xl font-bold text-white">{formatCurrency(todayProfit, currency, lang)}</p>
             </div>
             <Link
               to="/pos"
-              className="hidden sm:flex items-center gap-2 bg-white text-teal-700 hover:bg-teal-50 font-semibold text-sm px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+              className="hidden sm:flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-semibold text-sm px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
             >
               <ShoppingBag className="w-4 h-4" />
               {isAr ? 'بيع جديد' : 'New Sale'}
@@ -519,7 +520,7 @@ export function DashboardPage() {
                 onClick={() => setDateRange(r)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   dateRange === r
-                    ? 'bg-teal-600 text-white shadow-md'
+                    ? 'bg-brand-600 text-white shadow-md'
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
@@ -530,7 +531,7 @@ export function DashboardPage() {
               onClick={() => setDateRange('custom')}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
                 dateRange === 'custom'
-                  ? 'bg-teal-600 text-white shadow-md'
+                  ? 'bg-brand-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
             >
@@ -568,7 +569,7 @@ export function DashboardPage() {
           title={isAr ? 'مبيعات الفترة' : 'Period Sales'}
           value={formatCurrency(data.todaySales, currency, lang)}
           icon={<DollarSign className="w-5 h-5" />}
-          gradient="bg-gradient-to-br from-teal-500 to-teal-600"
+          gradient="bg-gradient-to-br from-brand-500 to-brand-600"
           trend={salesTrendPct !== null ? `${Math.abs(salesTrendPct).toFixed(1)}%` : undefined}
           trendUp={(salesTrendPct ?? 0) >= 0}
           subtitle={isAr ? 'مقارنة بالأمس' : 'vs yesterday'}
@@ -650,15 +651,15 @@ export function DashboardPage() {
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
-                <Activity className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
                 <h3 className="font-semibold text-slate-800 dark:text-slate-100">{t('salesTrend')}</h3>
                 <p className="text-xs text-slate-400">{isAr ? 'آخر 7 أيام' : 'Last 7 days'}</p>
               </div>
             </div>
-            <Link to="/reports" className="text-xs font-medium text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+            <Link to="/reports" className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
               {t('viewReport')}
               {isAr ? <ChevronLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
             </Link>
@@ -667,15 +668,15 @@ export function DashboardPage() {
             <AreaChart data={data.salesTrend} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
+                  <stop offset="0%" stopColor={getBrandColor(600)} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={getBrandColor(600)} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={50} />
               <Tooltip content={<CustomTooltip currency={currency} lang={lang} />} />
-              <Area type="monotone" dataKey="total" stroke="#0d9488" strokeWidth={2.5} fill="url(#salesGradient)" dot={{ fill: '#0d9488', r: 3 }} activeDot={{ r: 5, strokeWidth: 2 }} />
+              <Area type="monotone" dataKey="total" stroke={getBrandColor(600)} strokeWidth={2.5} fill="url(#salesGradient)" dot={{ fill: getBrandColor(600), r: 3 }} activeDot={{ r: 5, strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -727,12 +728,12 @@ export function DashboardPage() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               </div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">{t('recentSales')}</h3>
             </div>
-            <Link to="/sales" className="text-xs font-medium text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+            <Link to="/sales" className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
               {t('viewReport')}
               {isAr ? <ChevronLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
             </Link>
@@ -742,15 +743,15 @@ export function DashboardPage() {
             {data.recentSales.map((sale) => (
               <div key={sale.id} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900/40 dark:to-teal-800/40 flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 dark:from-brand-900/40 dark:to-brand-800/40 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{sale.invoice_number}</p>
                     <p className="text-xs text-slate-400">{formatDateTime(sale.created_at, lang)}</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(sale.total, currency, lang)}</span>
+                <span className="text-sm font-bold text-brand-600 dark:text-brand-400">{formatCurrency(sale.total, currency, lang)}</span>
               </div>
             ))}
           </div>
@@ -827,8 +828,8 @@ export function DashboardPage() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               </div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">{t('recentSales')}</h3>
             </div>
@@ -838,15 +839,15 @@ export function DashboardPage() {
             {data.recentSales.map((sale) => (
               <div key={sale.id} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900/40 dark:to-teal-800/40 flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 dark:from-brand-900/40 dark:to-brand-800/40 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{sale.invoice_number}</p>
                     <p className="text-xs text-slate-400">{formatDateTime(sale.created_at, lang)}</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(sale.total, currency, lang)}</span>
+                <span className="text-sm font-bold text-brand-600 dark:text-brand-400">{formatCurrency(sale.total, currency, lang)}</span>
               </div>
             ))}
           </div>
@@ -891,7 +892,7 @@ export function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link to="/pos" className="group flex flex-col items-center gap-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-lg hover:-translate-y-1 transition-all">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
             <ShoppingBag className="w-5 h-5" />
           </div>
           <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{isAr ? 'بيع جديد' : 'New Sale'}</span>
@@ -920,7 +921,7 @@ export function DashboardPage() {
       <Modal open={!!detailModal} onClose={() => setDetailModal(null)} title={getModalTitle()} size="xl">
         {detailLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" />
           </div>
         ) : detailData.length === 0 ? (
           <p className="text-center text-slate-400 py-12">{t('noData')}</p>
@@ -952,7 +953,7 @@ export function DashboardPage() {
                     <td className="py-3 px-2 text-slate-500 dark:text-slate-400">
                       {row.extra || '-'}
                     </td>
-                    <td className="py-3 px-2 text-end font-bold text-teal-600 dark:text-teal-400">
+                    <td className="py-3 px-2 text-end font-bold text-brand-600 dark:text-brand-400">
                       {row.total > 0 ? formatCurrency(row.total, currency, lang) : row.extra || '-'}
                     </td>
                     <td className="py-3 px-2 text-slate-400 dark:text-slate-500 text-xs">
@@ -966,7 +967,7 @@ export function DashboardPage() {
                   <td colSpan={2} className="py-3 px-2 text-slate-700 dark:text-slate-200">
                     {isAr ? 'الإجمالي' : 'Total'}
                   </td>
-                  <td className="py-3 px-2 text-end text-teal-600 dark:text-teal-400">
+                  <td className="py-3 px-2 text-end text-brand-600 dark:text-brand-400">
                     {formatCurrency(detailData.reduce((s, r) => s + r.total, 0), currency, lang)}
                   </td>
                   <td></td>

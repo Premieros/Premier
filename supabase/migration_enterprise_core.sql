@@ -1,6 +1,7 @@
 -- Migration: Enterprise Core - Full branch isolation + enterprise roles + shifts
--- Run this in Supabase SQL Editor AFTER migration_inventory_v2.sql,
--- migration_create_user.sql and migration_user_password_delete.sql.
+-- Run this in Supabase SQL Editor AFTER migration_inventory_v2.sql.
+-- (The legacy create_user / user_password_delete migrations are consolidated
+--  into this file: create_user, delete_user and update_user_password RPCs.)
 --
 -- WHAT THIS DOES
 -- 1. Helper functions: is_pos_admin() now means super_admin/owner and is

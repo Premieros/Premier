@@ -386,6 +386,9 @@ SELECT 'متجري', 'My Store', '', '', 'SAR', 15, true, 'أهلاً وسهلا
 WHERE NOT EXISTS (SELECT 1 FROM settings);
 
 -- ============ HELPER FUNCTION ============
+-- NOTE: is_pos_admin() is redefined by migration_enterprise_core.sql to mean
+-- super_admin / owner. The base definition below is superseded but harmless;
+-- always run migration_enterprise_core.sql after this file.
 CREATE OR REPLACE FUNCTION is_pos_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -395,7 +398,8 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role = 'admin'
+    AND users.is_active
+    AND users.role IN ('super_admin', 'owner')
   );
 $$;
 

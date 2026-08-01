@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+﻿import { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -199,7 +199,7 @@ export function ProductsPage() {
     )},
     { key: 'category', header: t('category'), render: (p) => p.category?.name || '-' },
     { key: 'cost_price', header: t('costPrice'), render: (p) => formatCurrency(p.cost_price, currency, lang) },
-    { key: 'sale_price', header: t('salePrice'), render: (p) => <span className="font-semibold text-teal-600 dark:text-teal-400">{formatCurrency(p.sale_price, currency, lang)}</span> },
+    { key: 'sale_price', header: t('salePrice'), render: (p) => <span className="font-semibold text-brand-600 dark:text-brand-400">{formatCurrency(p.sale_price, currency, lang)}</span> },
     { key: 'wholesale_price', header: t('wholesalePrice'), render: (p) => formatCurrency(p.wholesale_price, currency, lang) },
     { key: 'is_active', header: t('status'), render: (p) => (
       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
@@ -238,7 +238,7 @@ export function ProductsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
       </Card>

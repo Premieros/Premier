@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { formatCurrency } from '../lib/format';
 import { logAudit } from '../lib/audit';
+import { mergeEffectiveSettings, useSettings } from '../context/SettingsContext';
 import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult } from '../lib/types';
 
 export function PosPage() {
@@ -19,6 +20,7 @@ export function PosPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const { show } = useToast();
+  const { branchSettingsMap } = useSettings();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -51,6 +53,9 @@ export function PosPage() {
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
+  const effSettings: Settings | null = settings
+    ? mergeEffectiveSettings(settings, effectiveBranch ? branchSettingsMap[effectiveBranch] : null)
+    : null;
 
   const isCashier = user?.role === 'cashier';
 
@@ -255,7 +260,7 @@ export function PosPage() {
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.quantity * i.unit_price - i.discount_amount, 0), [cart]);
   const discountValue = discountType === 'percent' ? (subtotal * discountAmount) / 100 : discountAmount;
   const taxableAmount = subtotal - discountValue;
-  const taxRate = settings?.tax_enabled ? (settings?.tax_rate || 0) : 0;
+  const taxRate = effSettings?.tax_enabled ? (effSettings?.tax_rate || 0) : 0;
   const taxAmount = (taxableAmount * taxRate) / 100;
   const total = taxableAmount + taxAmount;
   const change = Math.max(0, paidAmount - total);
@@ -342,7 +347,7 @@ export function PosPage() {
   };
 
   const printReceipt = () => {
-    if (!lastReceipt || !settings) return;
+    if (!lastReceipt || !effSettings) return;
     const win = window.open('', '_blank', 'width=380,height=600');
     if (!win) return;
     win.document.write(`
@@ -364,26 +369,26 @@ export function PosPage() {
         .footer { margin-top: 10px; text-align: center; font-size: 10px; }
       </style></head>
       <body>
-        <div class="center header">${settings.store_name}</div>
-        ${settings.store_address ? `<div class="center sub">${settings.store_address}</div>` : ''}
-        ${settings.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${settings.store_phone}</div>` : ''}
-        ${settings.receipt_header ? `<div class="center sub">${settings.receipt_header}</div>` : ''}
+        <div class="center header">${effSettings.store_name}</div>
+        ${effSettings.store_address ? `<div class="center sub">${effSettings.store_address}</div>` : ''}
+        ${effSettings.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${effSettings.store_phone}</div>` : ''}
+        ${effSettings.receipt_header ? `<div class="center sub">${effSettings.receipt_header}</div>` : ''}
         <div class="divider"></div>
         <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${lastReceipt.invoice}</span></div>
         <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${new Date(lastReceipt.date).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span></div>
         ${lastReceipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${lastReceipt.customerName}</span></div>` : ''}
         <div class="divider"></div>
-        ${lastReceipt.items.map((i) => `<div class="item-row"><div class="item-name">${i.name}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, settings.currency, lang)}</span><span>${formatCurrency(i.total, settings.currency, lang)}</span></div></div>`).join('')}
+        ${lastReceipt.items.map((i) => `<div class="item-row"><div class="item-name">${i.name}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, effSettings.currency, lang)}</span><span>${formatCurrency(i.total, effSettings.currency, lang)}</span></div></div>`).join('')}
         <div class="divider"></div>
-        <div class="row"><span>${isAr ? 'المجموع الفرعي' : 'Subtotal'}</span><span>${formatCurrency(lastReceipt.subtotal, settings.currency, lang)}</span></div>
-        ${lastReceipt.discount > 0 ? `<div class="row"><span>${isAr ? 'الخصم' : 'Discount'}</span><span>-${formatCurrency(lastReceipt.discount, settings.currency, lang)}</span></div>` : ''}
-        ${lastReceipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${taxRate}%)</span><span>${formatCurrency(lastReceipt.tax, settings.currency, lang)}</span></div>` : ''}
+        <div class="row"><span>${isAr ? 'المجموع الفرعي' : 'Subtotal'}</span><span>${formatCurrency(lastReceipt.subtotal, effSettings.currency, lang)}</span></div>
+        ${lastReceipt.discount > 0 ? `<div class="row"><span>${isAr ? 'الخصم' : 'Discount'}</span><span>-${formatCurrency(lastReceipt.discount, effSettings.currency, lang)}</span></div>` : ''}
+        ${lastReceipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${taxRate}%)</span><span>${formatCurrency(lastReceipt.tax, effSettings.currency, lang)}</span></div>` : ''}
         <div class="divider"></div>
-        <div class="row total-row"><span>${isAr ? 'الإجمالي' : 'Total'}</span><span>${formatCurrency(lastReceipt.total, settings.currency, lang)}</span></div>
-        <div class="row"><span>${isAr ? 'المدفوع' : 'Paid'}</span><span>${formatCurrency(lastReceipt.paid, settings.currency, lang)}</span></div>
-        ${lastReceipt.change > 0 ? `<div class="row"><span>${isAr ? 'الباقي' : 'Change'}</span><span>${formatCurrency(lastReceipt.change, settings.currency, lang)}</span></div>` : ''}
+        <div class="row total-row"><span>${isAr ? 'الإجمالي' : 'Total'}</span><span>${formatCurrency(lastReceipt.total, effSettings.currency, lang)}</span></div>
+        <div class="row"><span>${isAr ? 'المدفوع' : 'Paid'}</span><span>${formatCurrency(lastReceipt.paid, effSettings.currency, lang)}</span></div>
+        ${lastReceipt.change > 0 ? `<div class="row"><span>${isAr ? 'الباقي' : 'Change'}</span><span>${formatCurrency(lastReceipt.change, effSettings.currency, lang)}</span></div>` : ''}
         <div class="divider"></div>
-        ${settings.receipt_footer ? `<div class="footer">${settings.receipt_footer}</div>` : ''}
+        ${effSettings.receipt_footer ? `<div class="footer">${effSettings.receipt_footer}</div>` : ''}
         <div class="footer">${isAr ? 'شكراً لزيارتكم' : 'Thank you!'}</div>
         <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
       </body></html>
@@ -392,7 +397,7 @@ export function PosPage() {
   };
 
   if (loading) {
-    return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent" /></div>;
+    return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-500 border-t-transparent" /></div>;
   }
 
   if (loadError) {
@@ -433,7 +438,7 @@ export function PosPage() {
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
             onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); }}
-            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
@@ -441,8 +446,8 @@ export function PosPage() {
         </div>
 
         {currentBranchName && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-800">
-            <span className="text-xs font-bold text-teal-700 dark:text-teal-300">{currentBranchName}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800">
+            <span className="text-xs font-bold text-brand-700 dark:text-brand-300">{currentBranchName}</span>
           </div>
         )}
 
@@ -450,11 +455,11 @@ export function PosPage() {
 
         {/* Cart summary in header */}
         {cart.length > 0 && (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
-            <ShoppingCart className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span className="text-sm font-bold text-teal-700 dark:text-teal-300">{cart.length}</span>
-            <span className="text-xs text-teal-500">|</span>
-            <span className="text-sm font-bold text-teal-700 dark:text-teal-300">{formatCurrency(total, settings?.currency || 'EGP', lang)}</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
+            <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+            <span className="text-sm font-bold text-brand-700 dark:text-brand-300">{cart.length}</span>
+            <span className="text-xs text-brand-500">|</span>
+            <span className="text-sm font-bold text-brand-700 dark:text-brand-300">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
           </div>
         )}
 
@@ -469,14 +474,14 @@ export function PosPage() {
       {isCashier && shiftChecked && (
         <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-sm border-b ${
           activeShift
-            ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300'
+            ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300'
             : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
         }`}>
           <Timer className="w-4 h-4" />
           {activeShift ? (
             <>
               <span className="font-semibold">{t('open')} · {new Date(activeShift.opened_at).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span>
-              <span className="hidden sm:inline text-xs opacity-80">{t('expectedAmount')}: {formatCurrency(activeShift.expected, settings?.currency || 'EGP', lang)}</span>
+              <span className="hidden sm:inline text-xs opacity-80">{t('expectedAmount')}: {formatCurrency(activeShift.expected, effSettings?.currency || 'EGP', lang)}</span>
             </>
           ) : (
             <span className="font-semibold">{t('noOpenShift')}</span>
@@ -501,7 +506,7 @@ export function PosPage() {
                 onClick={() => setSelectedCategory('')}
                 className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-all ${
                   selectedCategory === ''
-                    ? 'bg-teal-600 text-white shadow-sm'
+                    ? 'bg-brand-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
                 style={{ width: 'calc(100% - 8px)' }}
@@ -517,7 +522,7 @@ export function PosPage() {
                   onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-all ${
                     selectedCategory === cat.id
-                      ? 'bg-teal-600 text-white shadow-sm'
+                      ? 'bg-brand-600 text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   style={{ width: 'calc(100% - 8px)' }}
@@ -553,7 +558,7 @@ export function PosPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleBarcodeScan}
                 placeholder={isAr ? 'بحث عن منتج أو مسح الباركود...' : 'Search product or scan barcode...'}
-                className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute top-1/2 -translate-y-1/2 end-3 text-slate-400 hover:text-slate-600">
@@ -596,7 +601,7 @@ export function PosPage() {
                       className={`group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-200 ${
                         outOfStock || noRecipe
                           ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:shadow-lg hover:shadow-teal-500/10 hover:-translate-y-1 hover:border-teal-400 dark:hover:border-teal-600 active:scale-[0.97]'
+                          : 'hover:shadow-lg hover:shadow-brand-500/10 hover:-translate-y-1 hover:border-brand-400 dark:hover:border-brand-600 active:scale-[0.97]'
                       }`}
                     >
                       {/* Stock badge */}
@@ -617,7 +622,7 @@ export function PosPage() {
                         {p.image_url ? (
                           <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
-                          <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-teal-400 transition-colors" />
+                          <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-brand-400 transition-colors" />
                         )}
                       </div>
 
@@ -631,9 +636,9 @@ export function PosPage() {
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, settings?.currency || 'EGP', lang)}</span>
+                          <span className="text-sm font-bold text-brand-600 dark:text-brand-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, effSettings?.currency || 'EGP', lang)}</span>
                           {!outOfStock && !noRecipe && (
-                            <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Plus className="w-3.5 h-3.5 text-white" />
                             </div>
                           )}
@@ -652,8 +657,8 @@ export function PosPage() {
           {/* Cart Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('cart')}</h2>
@@ -683,7 +688,7 @@ export function PosPage() {
                   <div key={item.product.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.product.name}</p>
-                      <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, settings?.currency || 'EGP', lang)}</p>
+                      <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
                     </div>
                     <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
                       <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
@@ -700,7 +705,7 @@ export function PosPage() {
                       </button>
                     </div>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200 w-16 text-end">
-                      {formatCurrency(item.quantity * item.unit_price, settings?.currency || 'EGP', lang)}
+                      {formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}
                     </span>
                     <button onClick={() => removeFromCart(item.product.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                       <X className="w-4 h-4" />
@@ -718,23 +723,23 @@ export function PosPage() {
               <div className="space-y-1.5">
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>{t('subtotal')}</span>
-                  <span className="font-medium">{formatCurrency(subtotal, settings?.currency || 'EGP', lang)}</span>
+                  <span className="font-medium">{formatCurrency(subtotal, effSettings?.currency || 'EGP', lang)}</span>
                 </div>
                 {discountValue > 0 && (
                   <div className="flex justify-between text-sm text-red-500">
                     <span>{t('discount')}</span>
-                    <span className="font-medium">-{formatCurrency(discountValue, settings?.currency || 'EGP', lang)}</span>
+                    <span className="font-medium">-{formatCurrency(discountValue, effSettings?.currency || 'EGP', lang)}</span>
                   </div>
                 )}
                 {taxAmount > 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>{t('tax')} ({taxRate}%)</span>
-                    <span className="font-medium">{formatCurrency(taxAmount, settings?.currency || 'EGP', lang)}</span>
+                    <span className="font-medium">{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span>{t('total')}</span>
-                  <span className="text-teal-600 dark:text-teal-400">{formatCurrency(total, settings?.currency || 'EGP', lang)}</span>
+                  <span className="text-brand-600 dark:text-brand-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
                 </div>
               </div>
 
@@ -788,7 +793,7 @@ export function PosPage() {
       <Modal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} title={t('checkout')} size="md">
         <div className="space-y-4">
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 text-sm font-medium flex items-center gap-2">
-            <Tag className="w-4 h-4 text-teal-500" />
+            <Tag className="w-4 h-4 text-brand-500" />
             <span className="text-slate-600 dark:text-slate-300">{isAr ? 'الفرع' : 'Branch'}: </span>
             <span className="font-bold text-slate-800 dark:text-white">{currentBranchName}</span>
           </div>
@@ -798,7 +803,7 @@ export function PosPage() {
             <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               <option value="">--</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -811,7 +816,7 @@ export function PosPage() {
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'amount' | 'percent')}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
               >
                 <option value="amount">{t('amount')}</option>
                 <option value="percent">%</option>
@@ -824,7 +829,7 @@ export function PosPage() {
                 value={discountAmount || ''}
                 onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                 min={0}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -838,7 +843,7 @@ export function PosPage() {
                   onClick={() => setPaymentMethod(m)}
                   className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                     paymentMethod === m
-                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
+                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
                   }`}
                 >
@@ -860,24 +865,24 @@ export function PosPage() {
                 value={paidAmount || ''}
                 onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                 min={0}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-lg font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-lg font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
               />
             </div>
           )}
 
           {/* Summary */}
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('subtotal')}</span><span>{formatCurrency(subtotal, settings?.currency || 'EGP', lang)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('discount')}</span><span className="text-red-500">-{formatCurrency(discountValue, settings?.currency || 'EGP', lang)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('tax')}</span><span>{formatCurrency(taxAmount, settings?.currency || 'EGP', lang)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('subtotal')}</span><span>{formatCurrency(subtotal, effSettings?.currency || 'EGP', lang)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('discount')}</span><span className="text-red-500">-{formatCurrency(discountValue, effSettings?.currency || 'EGP', lang)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">{t('tax')}</span><span>{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span></div>
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-slate-200 dark:border-slate-600">
               <span>{t('total')}</span>
-              <span className="text-teal-600">{formatCurrency(total, settings?.currency || 'EGP', lang)}</span>
+              <span className="text-brand-600">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
             </div>
             {paymentMethod !== 'credit' && change > 0 && (
               <div className="flex justify-between text-sm font-bold text-emerald-600">
                 <span>{t('change')}</span>
-                <span>{formatCurrency(change, settings?.currency || 'EGP', lang)}</span>
+                <span>{formatCurrency(change, effSettings?.currency || 'EGP', lang)}</span>
               </div>
             )}
           </div>

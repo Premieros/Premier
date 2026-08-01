@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Edit2, Plus, Search, Shield, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -197,7 +197,7 @@ export function UsersPage() {
     { key: 'email', header: t('email'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.email}</span> },
     { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
     { key: 'role', header: t('role'), render: (u) => (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 capitalize">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 capitalize">
         <Shield className="w-3 h-3" /> {ROLE_LABELS[u.role]?.[lang] || u.role}
       </span>
     )},
@@ -226,7 +226,7 @@ export function UsersPage() {
         <div className="relative">
           <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
       </Card>
       <Card className="p-4">
@@ -256,7 +256,7 @@ export function UsersPage() {
             <Input label={t('newPassword')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} minLength={6} />
             <div className="flex justify-end gap-2">
               <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
-              <button onClick={save} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+              <button onClick={save} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
             </div>
           </div>
         )}
@@ -281,7 +281,7 @@ export function UsersPage() {
           </Select>
           <div className="flex justify-end gap-2">
             <button onClick={() => setAddModal(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
-            <button onClick={createNewUser} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+            <button onClick={createNewUser} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
           </div>
         </div>
       </Modal>
@@ -327,7 +327,7 @@ export function UsersPage() {
                           checked={allChecked}
                           ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked; }}
                           onChange={() => setGroupPermissions(group.permissions, !allChecked)}
-                          className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                         />
                         <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{group[lang]}</span>
                       </label>
@@ -339,7 +339,7 @@ export function UsersPage() {
                             type="checkbox"
                             checked={!!permForm[perm]}
                             onChange={() => togglePermission(perm)}
-                            className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                           />
                           <span className="text-sm text-slate-600 dark:text-slate-300">{PERMISSION_LABELS[perm]?.[lang] || perm}</span>
                         </label>
@@ -352,7 +352,7 @@ export function UsersPage() {
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
               <button onClick={() => setPermModal(null)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
-              <button onClick={savePermissions} className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium">{t('save')}</button>
+              <button onClick={savePermissions} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
             </div>
           </div>
         )}

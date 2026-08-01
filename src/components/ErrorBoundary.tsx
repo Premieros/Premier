@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+﻿import { Component, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props { children: ReactNode; }
@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">حدث خطأ</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{this.state.error.message}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-6 whitespace-pre-wrap text-start bg-slate-50 dark:bg-slate-900 p-3 rounded-xl max-h-40 overflow-auto">{this.state.error.stack}</p>
-            <button onClick={() => { this.setState({ error: null }); window.location.reload(); }} className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors">
+            <button onClick={() => { this.setState({ error: null }); window.location.reload(); }} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
               إعادة المحاولة
             </button>
           </div>

@@ -1,8 +1,9 @@
-import { Suspense, lazy } from 'react';
+﻿import { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { ToastProvider } from './components/Toast';
 import { Layout } from './components/Layout';
 import { hasPermission, type Permission } from './lib/permissions';
@@ -31,7 +32,7 @@ const BranchProductsPage = lazy(() => import('./pages/BranchProductsPage').then(
 function PageLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
     </div>
   );
 }
@@ -41,7 +42,7 @@ function ProtectedRoute({ children, permission, fullscreen }: { children: React.
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
       </div>
     );
   }
@@ -94,11 +95,13 @@ export default function App() {
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
-          <ToastProvider>
-            <HashRouter>
-              <AppRoutes />
-            </HashRouter>
-          </ToastProvider>
+          <SettingsProvider>
+            <ToastProvider>
+              <HashRouter>
+                <AppRoutes />
+              </HashRouter>
+            </ToastProvider>
+          </SettingsProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>

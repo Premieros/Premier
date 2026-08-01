@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Trash2, Package, Edit2, AlertTriangle, Layers } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -140,8 +140,8 @@ export function ComponentsPage() {
             {/* Product info */}
             {selectedProduct && (
               <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <div className="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProduct.name}</p>
@@ -149,7 +149,7 @@ export function ComponentsPage() {
                 </div>
                 <div className="text-end">
                   <p className="text-xs text-slate-400">{isAr ? 'تكلفة المكونات' : 'Component Cost'}</p>
-                  <p className={`font-bold ${componentCost > selectedProduct.sale_price ? 'text-red-500' : 'text-teal-600'}`}>
+                  <p className={`font-bold ${componentCost > selectedProduct.sale_price ? 'text-red-500' : 'text-brand-600'}`}>
                     {formatCurrency(componentCost, currency, lang)}
                   </p>
                 </div>
@@ -189,11 +189,11 @@ export function ComponentsPage() {
                     </div>
                     <div className="flex items-center gap-1 text-xs" title={t('componentStock')}>
                       <Layers className="w-3.5 h-3.5 text-slate-400" />
-                      <span className={inventoryMap[c.component_product_id] > 0 ? 'text-teal-600 dark:text-teal-400 font-semibold' : 'text-red-500 font-semibold'}>
+                      <span className={inventoryMap[c.component_product_id] > 0 ? 'text-brand-600 dark:text-brand-400 font-semibold' : 'text-red-500 font-semibold'}>
                         {formatNumber(inventoryMap[c.component_product_id] || 0)}
                       </span>
                     </div>
-                    <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
+                    <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                       {formatCurrency((c.component_product?.cost_price || 0) * Number(c.quantity), currency, lang)}
                     </span>
                     {can('components.manage') && (

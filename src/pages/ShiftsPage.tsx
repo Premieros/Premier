@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Timer, Play, Square, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import { Button } from '../components/Button';
 import { Input, Textarea, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { formatCurrency, formatDateTime } from '../lib/format';
+import { getBrandHex } from '../lib/brandColor';
 import { logAudit } from '../lib/audit';
 import type { Shift, Branch, Settings, RpcResult } from '../lib/types';
 
@@ -140,6 +141,7 @@ export function ShiftsPage() {
     const rowsHtml = rows.map(([k, v]) =>
       `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join('');
     const diffColor = Math.abs(shift.difference) > 0.009 ? '#dc2626' : '#16a34a';
+    const brandHex = getBrandHex(600);
     w.document.write(`<!doctype html>
 <html dir="${dir}" lang="${lang === 'ar' ? 'ar' : 'en'}">
 <head>
@@ -148,8 +150,8 @@ export function ShiftsPage() {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 32px; color: #1e293b; }
-  .head { text-align: center; border-bottom: 2px solid #0d9488; padding-bottom: 16px; margin-bottom: 20px; }
-  .head h1 { font-size: 20px; color: #0d9488; }
+  .head { text-align: center; border-bottom: 2px solid ${brandHex}; padding-bottom: 16px; margin-bottom: 20px; }
+  .head h1 { font-size: 20px; color: ${brandHex}; }
   .head p { color: #64748b; margin-top: 4px; font-size: 13px; }
   .store { text-align: center; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
@@ -158,7 +160,7 @@ export function ShiftsPage() {
   td.v { font-weight: 600; }
   .diff { color: ${diffColor}; font-size: 16px; }
   .foot { margin-top: 28px; text-align: center; font-size: 12px; color: #94a3b8; }
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #0d9488; color: #fff; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: ${brandHex}; color: #fff; }
 </style>
 </head>
 <body>
@@ -210,7 +212,7 @@ export function ShiftsPage() {
           <Printer className="w-4 h-4" />
         </button>
         {r.status === 'open' && can('shifts.close') && (
-          <button onClick={() => { setCloseTarget(r); setCloseForm({ actual_amount: r.expected_amount, notes: '' }); }} className="p-1.5 rounded-md hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-500" title={t('closeShift')}>
+          <button onClick={() => { setCloseTarget(r); setCloseForm({ actual_amount: r.expected_amount, notes: '' }); }} className="p-1.5 rounded-md hover:bg-brand-50 dark:hover:bg-brand-900/20 text-brand-500" title={t('closeShift')}>
             <Square className="w-4 h-4" />
           </button>
         )}
@@ -231,13 +233,13 @@ export function ShiftsPage() {
       } />
 
       {isCashier && openShifts.length > 0 && (
-        <Card className="mb-4 p-4 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-900/10">
+        <Card className="mb-4 p-4 border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-900/10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Timer className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              <Timer className="w-6 h-6 text-brand-600 dark:text-brand-400" />
               <div>
-                <p className="font-semibold text-teal-800 dark:text-teal-300">{t('open')} · {formatDateTime(openShifts[0].opened_at, lang)}</p>
-                <p className="text-sm text-teal-700 dark:text-teal-400">{t('expectedAmount')}: {formatCurrency(openShifts[0].expected_amount, currency, lang)}</p>
+                <p className="font-semibold text-brand-800 dark:text-brand-300">{t('open')} · {formatDateTime(openShifts[0].opened_at, lang)}</p>
+                <p className="text-sm text-brand-700 dark:text-brand-400">{t('expectedAmount')}: {formatCurrency(openShifts[0].expected_amount, currency, lang)}</p>
               </div>
             </div>
             {can('shifts.close') && (
@@ -254,7 +256,7 @@ export function ShiftsPage() {
           <div className="relative flex-1">
             <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isAr ? 'بحث بالفرع أو الكاشير...' : 'Search by branch or cashier...'}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
           </div>
           {!branchFilter && (
             <Select label={t('filterByBranch')} value={branchSel} onChange={(e) => setBranchSel(e.target.value)} className="sm:w-64">
@@ -294,9 +296,9 @@ export function ShiftsPage() {
                 <p className="text-xs text-slate-500 mb-1">{t('openingAmount')}</p>
                 <p className="font-semibold">{formatCurrency(closeTarget.opening_amount, currency, lang)}</p>
               </div>
-              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+              <div className="p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
                 <p className="text-xs text-slate-500 mb-1">{t('expectedAmount')}</p>
-                <p className="font-semibold text-teal-600">{formatCurrency(closeTarget.expected_amount, currency, lang)}</p>
+                <p className="font-semibold text-brand-600">{formatCurrency(closeTarget.expected_amount, currency, lang)}</p>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                 <p className="text-xs text-slate-500 mb-1">{t('cashSales')}</p>

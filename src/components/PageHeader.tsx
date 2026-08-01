@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+﻿import { type ReactNode } from 'react';
 import clsx from 'clsx';
 
 interface PageHeaderProps {
@@ -45,7 +45,7 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon, color = 'teal', trend }: StatCardProps) {
   const colorMap: Record<string, { bg: string; icon: string; border: string }> = {
-    teal: { bg: 'bg-teal-50 dark:bg-teal-900/20', icon: 'text-teal-600 dark:text-teal-400', border: 'border-teal-200 dark:border-teal-800' },
+    teal: { bg: 'bg-brand-50 dark:bg-brand-900/20', icon: 'text-brand-600 dark:text-brand-400', border: 'border-brand-200 dark:border-brand-800' },
     blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800' },
     amber: { bg: 'bg-amber-50 dark:bg-amber-900/20', icon: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' },
     red: { bg: 'bg-red-50 dark:bg-red-900/20', icon: 'text-red-600 dark:text-red-400', border: 'border-red-200 dark:border-red-800' },

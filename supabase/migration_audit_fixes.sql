@@ -970,6 +970,97 @@ BEGIN
     FOREIGN KEY (cashier_id) REFERENCES public.users(id) ON DELETE CASCADE;
 END $$;
 
+-- ============ 17. CORE USER FOREIGN KEYS ============
+-- Preserved from the (now consolidated) phase-1 migration so a fresh build
+-- always has referential integrity between users and the business tables.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sales_cashier_id_fkey') THEN
+    ALTER TABLE sales ADD CONSTRAINT sales_cashier_id_fkey
+      FOREIGN KEY (cashier_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sales_salesperson_id_fkey') THEN
+    ALTER TABLE sales ADD CONSTRAINT sales_salesperson_id_fkey
+      FOREIGN KEY (salesperson_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'purchases_buyer_id_fkey') THEN
+    ALTER TABLE purchases ADD CONSTRAINT purchases_buyer_id_fkey
+      FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'expenses_created_by_fkey') THEN
+    ALTER TABLE expenses ADD CONSTRAINT expenses_created_by_fkey
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'audit_log_user_id_fkey') THEN
+    ALTER TABLE audit_log ADD CONSTRAINT audit_log_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- ============ 18. SETTINGS EXPANSION ============
+-- Adds the configurable brand/pos/invoice/receipt/inventory columns to the
+-- global settings row and creates a per-branch settings table. Branch
+-- settings override the global ones where a value is set (NULL = fall back
+-- to the global setting).
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS brand_color text;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS pos_default_payment_method text DEFAULT 'cash';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS pos_barcode_autofocus boolean DEFAULT true;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS pos_line_discount boolean DEFAULT true;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix text DEFAULT 'INV-';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_next_number bigint DEFAULT 1;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_decimal_places integer DEFAULT 2;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_width_mm integer DEFAULT 58;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_copies integer DEFAULT 1;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_auto_print boolean DEFAULT true;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_show_tax boolean DEFAULT true;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_show_qr boolean DEFAULT true;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS low_stock_threshold numeric(12,2) DEFAULT 5;
+
+CREATE TABLE IF NOT EXISTS branch_settings (
+  branch_id uuid PRIMARY KEY REFERENCES branches(id) ON DELETE CASCADE,
+  receipt_header text,
+  receipt_footer text,
+  logo_url text,
+  tax_rate numeric(5,2),
+  tax_enabled boolean,
+  currency text,
+  low_stock_threshold numeric(12,2),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE branch_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "auth_select_branch_settings" ON branch_settings;
+CREATE POLICY "auth_select_branch_settings" ON branch_settings FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "auth_write_branch_settings" ON branch_settings;
+CREATE POLICY "auth_write_branch_settings" ON branch_settings FOR INSERT TO authenticated
+  WITH CHECK (is_pos_admin() OR (is_branch_manager() AND branch_id = get_branch_id()));
+DROP POLICY IF EXISTS "auth_write_branch_settings_upd" ON branch_settings;
+CREATE POLICY "auth_write_branch_settings_upd" ON branch_settings FOR UPDATE TO authenticated
+  USING (is_pos_admin() OR (is_branch_manager() AND branch_id = get_branch_id()))
+  WITH CHECK (is_pos_admin() OR (is_branch_manager() AND branch_id = get_branch_id()));
+DROP POLICY IF EXISTS "auth_write_branch_settings_del" ON branch_settings;
+CREATE POLICY "auth_write_branch_settings_del" ON branch_settings FOR DELETE TO authenticated
+  USING (is_pos_admin() OR (is_branch_manager() AND branch_id = get_branch_id()));
+
 -- ============ DONE ============
 -- Refresh the PostgREST schema cache so the new functions/constraints are
 -- immediately available to the API without a manual reload.

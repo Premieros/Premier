@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,6 +7,7 @@ import { PageHeader, Card } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { formatCurrency, formatDate, todayISO } from '../lib/format';
+import { getBrandColor } from '../lib/brandColor';
 import { exportToExcel } from '../lib/excel';
 import { useBranchFilter } from '../lib/useBranchFilter';
 import { isAdminRole } from '../lib/permissions';
@@ -16,7 +17,7 @@ import type { Settings, Branch } from '../lib/types';
 
 type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock';
 
-const PIE_COLORS = ['#0d9488', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', '#14b8a6'];
+const PIE_COLORS = [getBrandColor(600), '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', getBrandColor(500)];
 
 export function ReportsPage() {
   const { t, lang } = useLanguage();
@@ -340,7 +341,7 @@ export function ReportsPage() {
           <div className="flex flex-wrap gap-2">
             {reportTypes.map((rt) => (
               <button key={rt.key} onClick={() => setReportType(rt.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-teal-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
                 {rt.icon} {rt.label}
               </button>
             ))}
@@ -361,7 +362,7 @@ export function ReportsPage() {
             <div className="flex gap-4 text-sm">
               <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-2">
                 <span className="text-slate-500">{t('total')}: </span>
-                <span className="font-bold text-teal-600 dark:text-teal-400">{reportType === 'inventory' || reportType === 'detailed_invoices' ? formatCurrency(summary.total, currency, lang) : formatCurrency(summary.total, currency, lang)}</span>
+                <span className="font-bold text-brand-600 dark:text-brand-400">{reportType === 'inventory' || reportType === 'detailed_invoices' ? formatCurrency(summary.total, currency, lang) : formatCurrency(summary.total, currency, lang)}</span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-2">
                 <span className="text-slate-500">{t('count')}: </span>
@@ -389,7 +390,7 @@ export function ReportsPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                 <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(value) => formatCurrency(Number(value ?? 0), currency, lang)} />
-                <Bar dataKey="value" fill="#0d9488" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill={getBrandColor(600)} radius={[4, 4, 0, 0]} />
               </BarChart>
             )}
           </ResponsiveContainer>
@@ -398,7 +399,7 @@ export function ReportsPage() {
 
       <Card className="p-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" /></div>
+          <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div>
         ) : data.length === 0 ? (
           <div className="text-center py-12 text-slate-400 text-sm">{t('noData')}</div>
         ) : (
