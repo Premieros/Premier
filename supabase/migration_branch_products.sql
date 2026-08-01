@@ -48,12 +48,35 @@ CREATE POLICY "auth_insert_branch_products" ON branch_products FOR INSERT TO aut
   WITH CHECK (is_pos_admin());
 
 DROP POLICY IF EXISTS "auth_update_branch_products" ON branch_products;
+-- Branch staff may edit their own rows (price/active) but can never move a
+-- row to another branch or re-point it at a different product. `NEW` cannot
+-- be used inside a policy subquery, so validate against the pre-update row
+-- with a SECURITY DEFINER helper.
+CREATE OR REPLACE FUNCTION branch_products_can_update(p_row_id uuid, p_new_branch uuid, p_new_product uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_old_branch uuid;
+  v_old_product uuid;
+BEGIN
+  SELECT branch_id, product_id INTO v_old_branch, v_old_product
+  FROM public.branch_products WHERE id = p_row_id;
+  IF v_old_branch IS NULL THEN
+    RETURN false;
+  END IF;
+  RETURN v_old_branch = get_branch_id()
+    AND v_old_branch = p_new_branch
+    AND v_old_product = p_new_product;
+END;
+$$;
+
 CREATE POLICY "auth_update_branch_products" ON branch_products FOR UPDATE TO authenticated
   USING (is_pos_admin() OR branch_id = get_branch_id())
-  WITH CHECK (is_pos_admin() OR (
-    branch_id = get_branch_id()
-    AND product_id = (SELECT bp.product_id FROM branch_products bp WHERE bp.id = NEW.id)
-  ));
+  WITH CHECK (is_pos_admin() OR branch_products_can_update(id, branch_id, product_id));
 
 DROP POLICY IF EXISTS "auth_delete_branch_products" ON branch_products;
 CREATE POLICY "auth_delete_branch_products" ON branch_products FOR DELETE TO authenticated
