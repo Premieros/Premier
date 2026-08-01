@@ -1126,6 +1126,12 @@ ALTER TABLE sales ADD COLUMN IF NOT EXISTS refunded_amount numeric(14,2) NOT NUL
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS refunded_quantity numeric(14,4) NOT NULL DEFAULT 0;
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS refunded_amount numeric(14,2) NOT NULL DEFAULT 0;
 
+-- 20a.1 Allow 'refund' in the stock_transactions ledger (process_refund restocks
+-- via the same table; the original CHECK only allowed sale/purchase/adjustment).
+ALTER TABLE stock_transactions DROP CONSTRAINT IF EXISTS stock_transactions_transaction_type_check;
+ALTER TABLE stock_transactions ADD CONSTRAINT stock_transactions_transaction_type_check
+  CHECK (transaction_type IN ('sale', 'purchase', 'adjustment', 'refund'));
+
 -- 20b. Permission helper: does the current user hold a dotted permission?
 DROP FUNCTION IF EXISTS can_permission(text);
 CREATE OR REPLACE FUNCTION can_permission(p_permission text)
