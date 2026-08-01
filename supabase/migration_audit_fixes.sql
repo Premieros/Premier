@@ -1,6 +1,9 @@
 -- =============================================================
 -- Migration: Audit fixes (technical & relationship hardening)
 -- Run this in Supabase SQL Editor AFTER migration_branch_products.sql
+-- NOTE: This file is safe to re-run. Each function is DROP'd first so it
+-- works even when an older deployment defined the function with a different
+-- return type (avoids PostgreSQL error 42P13).
 --
 -- Fixes found by a full project audit:
 --   1. Branches can never be deleted when they own a catalog
@@ -54,6 +57,7 @@ ALTER TABLE public.customers  ADD CONSTRAINT customers_branch_id_fkey  FOREIGN K
 ALTER TABLE public.suppliers  ADD CONSTRAINT suppliers_branch_id_fkey  FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE RESTRICT;
 
 -- ============ 2. OPEN SHIFT: allow admins + branch managers ============
+DROP FUNCTION IF EXISTS open_shift(uuid, numeric, text);
 CREATE OR REPLACE FUNCTION open_shift(p_branch_id uuid, p_opening_amount numeric DEFAULT 0, p_notes text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -111,6 +115,9 @@ END;
 $$;
 
 -- ============ 3. GET ACTIVE SHIFT: fix cash-expenses ============
+-- DROP first: older deployments created get_active_shift with a different
+-- return type, which CREATE OR REPLACE cannot change (42P13).
+DROP FUNCTION IF EXISTS get_active_shift(uuid);
 CREATE OR REPLACE FUNCTION get_active_shift(p_branch_id uuid DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -168,6 +175,7 @@ END;
 $$;
 
 -- ============ 4. CLOSE SHIFT: reconcile cash_in / cash_out ============
+DROP FUNCTION IF EXISTS close_shift(uuid, numeric, text);
 CREATE OR REPLACE FUNCTION close_shift(p_shift_id uuid, p_actual_amount numeric, p_notes text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -332,6 +340,16 @@ CREATE POLICY "auth_delete_sales" ON sales FOR DELETE TO authenticated
 -- Client-supplied unit_price / subtotal / tax / total are ignored and
 -- recomputed from the catalog (branch override or products.sale_price) and
 -- the settings tax rate. Per-item discount is kept (clamped to the line total).
+DROP FUNCTION IF EXISTS process_sale(
+  text, uuid, uuid, uuid, uuid,
+  numeric, numeric, text, numeric, numeric,
+  numeric, numeric, text, text, jsonb
+);
+DROP FUNCTION IF EXISTS process_sale(
+  text, uuid, uuid, uuid, uuid,
+  numeric, numeric, text, numeric, numeric,
+  numeric, numeric, text, text, jsonb, uuid
+);
 CREATE OR REPLACE FUNCTION process_sale(
   p_invoice_number text,
   p_branch_id uuid,
@@ -611,6 +629,7 @@ END;
 $$;
 
 -- ============ 12. ADJUST STOCK: permission check ============
+DROP FUNCTION IF EXISTS adjust_stock(uuid, numeric, text);
 CREATE OR REPLACE FUNCTION adjust_stock(
   p_inventory_id uuid,
   p_new_quantity numeric,
@@ -672,6 +691,7 @@ END;
 $$;
 
 -- ============ 13. PROCESS PURCHASE: permission check ============
+DROP FUNCTION IF EXISTS process_purchase(text, uuid, uuid, uuid, numeric, numeric, numeric, numeric, numeric, text, text, text, jsonb);
 CREATE OR REPLACE FUNCTION process_purchase(
   p_invoice_number text,
   p_supplier_id uuid,
@@ -774,6 +794,7 @@ $$;
 -- ============ 14. ATOMIC PRODUCT-UNIT REPLACEMENT ============
 -- Used by ProductsPage so delete+insert of product_units runs in one
 -- transaction instead of two non-atomic HTTP requests.
+DROP FUNCTION IF EXISTS replace_product_units(uuid, jsonb);
 CREATE OR REPLACE FUNCTION replace_product_units(p_product_id uuid, p_units jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
