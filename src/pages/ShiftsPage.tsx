@@ -48,19 +48,36 @@ export function ShiftsPage() {
       ]);
       const settings = settingsRes.data as Settings | null;
       if (settings) { setCurrency(settings.currency || 'EGP'); setStoreName(settings.store_name || ''); }
-      setBranches((branchesRes.data as Branch[]) || []);
-    } catch { /* ignore */ }
+      const branchList = (branchesRes.data as Branch[]) || [];
+      setBranches(branchList);
 
-    let q = supabase
-      .from('shifts')
-      .select('id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at, branch:branches(id, name), cashier:users!shifts_cashier_id_fkey(id, full_name, email)')
-      .order('opened_at', { ascending: false });
-    const effBranch = branchSel || branchFilter;
-    if (effBranch) q = q.eq('branch_id', effBranch);
-    const { data, error } = await q;
-    if (error) { show(error.message, 'error'); }
-    setItems((data as unknown as Shift[]) || []);
-    setLoading(false);
+      // No PostgREST relationship embeds here: fetching shifts, branches and
+      // users independently and joining client-side is immune to schema-cache
+      // relationship errors (e.g. PGRST200 on shifts_cashier_id_fkey).
+      let q = supabase
+        .from('shifts')
+        .select('id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at')
+        .order('opened_at', { ascending: false });
+      const effBranch = branchSel || branchFilter;
+      if (effBranch) q = q.eq('branch_id', effBranch);
+
+      const [shiftsRes, usersRes] = await Promise.all([
+        q,
+        supabase.from('users').select('id, full_name, email'),
+      ]);
+      if (shiftsRes.error) { show(shiftsRes.error.message, 'error'); }
+      const cashierById = new Map(
+        ((usersRes.data as { id: string; full_name: string | null; email: string | null }[]) || [])
+          .map((u) => [u.id, u])
+      );
+      setItems(((shiftsRes.data as unknown as Shift[]) || []).map((s) => ({
+        ...s,
+        branch: branchList.find((b) => b.id === s.branch_id),
+        cashier: cashierById.get(s.cashier_id) as unknown as Shift['cashier'],
+      })));
+    } catch { /* ignore */ } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { load(); }, []);
 

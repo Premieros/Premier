@@ -846,6 +846,28 @@ BEGIN
 END;
 $$;
 
+-- ============ 15. SHIFTS FK GUARANTEE ============
+-- Legacy databases created the shifts table before this FK existed, so the
+-- PostgREST embed cashier:users!shifts_cashier_id_fkey fails with a
+-- "could not find a relationship" error (PGRST200) until the constraint is
+-- actually present. Drop any legacy shifts->users FK and re-add the
+-- canonical one so the relationship always resolves after schema reload.
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT conname FROM pg_constraint
+           WHERE conrelid = 'public.shifts'::regclass
+             AND contype = 'f'
+             AND confrelid = 'public.users'::regclass
+  LOOP
+    EXECUTE format('ALTER TABLE public.shifts DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+
+  ALTER TABLE public.shifts
+    ADD CONSTRAINT shifts_cashier_id_fkey
+    FOREIGN KEY (cashier_id) REFERENCES public.users(id) ON DELETE CASCADE;
+END $$;
+
 -- ============ DONE ============
 -- Refresh the PostgREST schema cache so the new functions/constraints are
 -- immediately available to the API without a manual reload.
