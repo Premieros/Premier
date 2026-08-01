@@ -1061,6 +1061,303 @@ DROP POLICY IF EXISTS "auth_write_branch_settings_del" ON branch_settings;
 CREATE POLICY "auth_write_branch_settings_del" ON branch_settings FOR DELETE TO authenticated
   USING (is_pos_admin() OR (is_branch_manager() AND branch_id = get_branch_id()));
 
+-- ============ 19. ROLE-BASED PERMISSIONS + ROLE CLEANUP ============
+-- Removes the kitchen / customer_display roles, drops the per-user
+-- permissions override (users.permissions) and introduces a DB-backed
+-- `roles` table so each role's permissions are editable from Settings.
+-- Any user on a removed role is safely demoted to cashier.
+
+-- 19a. Recreate the users.role CHECK without kitchen / customer_display.
+-- Demote any user still on a removed role BEFORE re-adding the constraint,
+-- otherwise ADD CONSTRAINT would fail on the existing violating rows.
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+
+UPDATE users SET role = 'cashier'
+  WHERE role NOT IN ('super_admin', 'owner', 'branch_manager', 'cashier', 'warehouse_manager', 'accountant');
+
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('super_admin', 'owner', 'branch_manager', 'cashier', 'warehouse_manager', 'accountant'));
+
+-- 19b. roles table (permission matrix, editable from Settings)
+CREATE TABLE IF NOT EXISTS roles (
+  role text PRIMARY KEY,
+  name_ar text NOT NULL,
+  name_en text NOT NULL,
+  permissions jsonb NOT NULL DEFAULT '[]'::jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "auth_select_roles" ON roles;
+CREATE POLICY "auth_select_roles" ON roles FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "auth_write_roles" ON roles;
+CREATE POLICY "auth_write_roles" ON roles FOR INSERT TO authenticated WITH CHECK (is_pos_admin());
+DROP POLICY IF EXISTS "auth_write_roles_upd" ON roles;
+CREATE POLICY "auth_write_roles_upd" ON roles FOR UPDATE TO authenticated USING (is_pos_admin()) WITH CHECK (is_pos_admin());
+DROP POLICY IF EXISTS "auth_write_roles_del" ON roles;
+CREATE POLICY "auth_write_roles_del" ON roles FOR DELETE TO authenticated USING (is_pos_admin());
+
+-- 19c. Seed defaults (ON CONFLICT preserves any edits made from Settings)
+INSERT INTO roles (role, name_ar, name_en, permissions) VALUES
+  ('super_admin', 'مدير عام', 'Super Admin',
+   '["dashboard.view","pos.sell","products.view","products.manage","products.assign","categories.view","categories.manage","components.view","components.manage","purchases.view","purchases.manage","inventory.view","inventory.manage","warehouses.view","warehouses.manage","customers.view","customers.manage","suppliers.view","suppliers.manage","expenses.view","expenses.manage","sales.view","refunds.approve","reports.view","shifts.view","shifts.open","shifts.close","shifts.manage","users.view","users.manage","audit.view","settings.manage","branches.manage"]'::jsonb),
+  ('owner', 'مالك', 'Owner',
+   '["dashboard.view","pos.sell","products.view","products.manage","products.assign","categories.view","categories.manage","components.view","components.manage","purchases.view","purchases.manage","inventory.view","inventory.manage","warehouses.view","warehouses.manage","customers.view","customers.manage","suppliers.view","suppliers.manage","expenses.view","expenses.manage","sales.view","refunds.approve","reports.view","shifts.view","shifts.open","shifts.close","shifts.manage","users.view","users.manage","audit.view","settings.manage","branches.manage"]'::jsonb),
+  ('branch_manager', 'مدير فرع', 'Branch Manager',
+   '["dashboard.view","pos.sell","products.view","products.manage","categories.view","categories.manage","components.view","components.manage","purchases.view","purchases.manage","inventory.view","inventory.manage","warehouses.view","warehouses.manage","customers.view","customers.manage","suppliers.view","suppliers.manage","expenses.view","expenses.manage","sales.view","refunds.approve","shifts.view","shifts.open","shifts.close","shifts.manage","reports.view","users.view","users.manage"]'::jsonb),
+  ('cashier', 'أمين صندوق', 'Cashier',
+   '["dashboard.view","pos.sell","products.view","customers.view","customers.manage","inventory.view","sales.view","shifts.view","shifts.open","shifts.close"]'::jsonb),
+  ('warehouse_manager', 'مدير مخازن', 'Warehouse Manager',
+   '["dashboard.view","products.view","products.manage","categories.view","categories.manage","components.view","components.manage","inventory.view","inventory.manage","warehouses.view","warehouses.manage","purchases.view","purchases.manage","suppliers.view","suppliers.manage","shifts.view"]'::jsonb),
+  ('accountant', 'محاسب', 'Accountant',
+   '["dashboard.view","sales.view","purchases.view","expenses.view","expenses.manage","inventory.view","customers.view","suppliers.view","reports.view","shifts.view"]'::jsonb)
+ON CONFLICT (role) DO NOTHING;
+
+-- 19d. Drop the per-user permission override column (role-only model)
+ALTER TABLE users DROP COLUMN IF EXISTS permissions;
+
+-- ============ 20. REFUNDS ============
+-- Tracks partial/full refunds on sales and restocks inventory using the
+-- same stock_transactions ledger written by process_sale (transaction_type
+-- 'refund'). Refund approvals follow the `refunds.approve` permission from
+-- the `roles` table (admins and branch managers by default).
+
+-- 20a. Refund tracking columns (idempotent)
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS refunded_amount numeric(14,2) NOT NULL DEFAULT 0;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS refunded_quantity numeric(14,4) NOT NULL DEFAULT 0;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS refunded_amount numeric(14,2) NOT NULL DEFAULT 0;
+
+-- 20b. Permission helper: does the current user hold a dotted permission?
+DROP FUNCTION IF EXISTS can_permission(text);
+CREATE OR REPLACE FUNCTION can_permission(p_permission text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT is_pos_admin() OR EXISTS (
+    SELECT 1 FROM users u
+    JOIN roles r ON r.role = u.role
+    WHERE u.id = auth.uid() AND r.permissions ? p_permission
+  );
+$$;
+
+-- 20c. process_refund: full refund when p_items is NULL/empty, partial otherwise.
+-- p_items format: [{"sale_item_id": uuid, "quantity": numeric}]
+DROP FUNCTION IF EXISTS process_refund(uuid, jsonb, text);
+CREATE OR REPLACE FUNCTION process_refund(
+  p_sale_id uuid,
+  p_items jsonb DEFAULT NULL,
+  p_reason text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_sale record;
+  v_user_branch uuid;
+  v_shift_id uuid;
+  v_refund_total numeric(14,2) := 0;
+  v_item record;
+  v_req jsonb;
+  v_item_id uuid;
+  v_req_qty numeric(14,4);
+  v_already numeric(14,4);
+  v_ref_qty numeric(14,4);
+  v_item_line_total numeric(14,2);
+  v_item_ref_amt numeric(14,2);
+  v_all_refunded boolean := true;
+  v_product_type text;
+  v_comp record;
+  v_restore record;
+  v_remaining numeric(14,4);
+  v_back numeric(14,4);
+  v_before numeric(14,4);
+  v_after numeric(14,4);
+  v_cost numeric(12,2);
+  v_warehouse_ids uuid[];
+  v_fallback_wh uuid;
+BEGIN
+  BEGIN
+    IF p_sale_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'INVALID_SALE');
+    END IF;
+
+    SELECT id, branch_id, warehouse_id, status, total, paid_amount
+      INTO v_sale FROM public.sales WHERE id = p_sale_id;
+    IF v_sale.id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'SALE_NOT_FOUND');
+    END IF;
+
+    IF v_sale.status = 'returned' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'ALREADY_RETURNED');
+    END IF;
+
+    -- Permission: refunds.approve (admins always pass)
+    IF NOT is_pos_admin() AND NOT can_permission('refunds.approve') THEN
+      RETURN jsonb_build_object('success', false, 'error', 'NOT_ALLOWED',
+        'detail', 'You need the refunds.approve permission.');
+    END IF;
+
+    -- Branch isolation
+    SELECT branch_id INTO v_user_branch FROM users WHERE id = auth.uid();
+    IF NOT is_pos_admin() AND v_user_branch IS NOT NULL
+       AND v_sale.branch_id IS NOT NULL AND v_user_branch <> v_sale.branch_id THEN
+      RETURN jsonb_build_object('success', false, 'error', 'BRANCH_MISMATCH');
+    END IF;
+
+    -- Active shift of the refunding operator (for the drawer log, optional)
+    SELECT id INTO v_shift_id FROM shifts
+      WHERE cashier_id = auth.uid() AND branch_id = v_sale.branch_id AND status = 'open'
+      ORDER BY opened_at DESC LIMIT 1;
+
+    SELECT array_agg(id) INTO v_warehouse_ids
+      FROM warehouses WHERE branch_id = v_sale.branch_id AND is_active = true;
+    SELECT id INTO v_fallback_wh FROM warehouses
+      WHERE branch_id = v_sale.branch_id AND is_active = true ORDER BY created_at LIMIT 1;
+
+    -- ===== VALIDATION PHASE =====
+    IF p_items IS NOT NULL AND jsonb_array_length(p_items) > 0 THEN
+      FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+      LOOP
+        v_item_id := (v_item->>'sale_item_id')::uuid;
+        v_req_qty := COALESCE((v_item->>'quantity')::numeric, 0);
+        IF v_req_qty <= 0 THEN
+          RETURN jsonb_build_object('success', false, 'error', 'INVALID_QUANTITY', 'sale_item_id', v_item_id);
+        END IF;
+        SELECT id, quantity, refunded_quantity INTO v_item
+          FROM sale_items WHERE id = v_item_id AND sale_id = p_sale_id;
+        IF v_item.id IS NULL THEN
+          RETURN jsonb_build_object('success', false, 'error', 'ITEM_NOT_FOUND', 'sale_item_id', v_item_id);
+        END IF;
+        v_already := COALESCE(v_item.refunded_quantity, 0);
+        IF v_req_qty > v_item.quantity - v_already THEN
+          RETURN jsonb_build_object('success', false, 'error', 'REFUND_EXCEEDS_QUANTITY',
+            'sale_item_id', v_item_id, 'max', v_item.quantity - v_already);
+        END IF;
+      END LOOP;
+    END IF;
+
+    -- ===== REFUND + RESTOCK PHASE =====
+    FOR v_item IN SELECT id, product_id, quantity, unit_price, discount_amount, refunded_quantity
+                  FROM sale_items WHERE sale_id = p_sale_id
+    LOOP
+      IF p_items IS NOT NULL AND jsonb_array_length(p_items) > 0 THEN
+        SELECT (v_req->>'quantity')::numeric INTO v_req_qty
+        FROM jsonb_array_elements(p_items) v_req
+        WHERE (v_req->>'sale_item_id')::uuid = v_item.id;
+        v_req_qty := COALESCE(v_req_qty, 0);
+      ELSE
+        v_req_qty := v_item.quantity - COALESCE(v_item.refunded_quantity, 0);
+      END IF;
+      IF v_req_qty <= 0 THEN CONTINUE; END IF;
+
+      v_item_line_total := v_item.quantity * v_item.unit_price - v_item.discount_amount;
+      IF v_item.quantity > 0 THEN
+        v_item_ref_amt := ROUND(v_item_line_total * v_req_qty / v_item.quantity, 2);
+      ELSE
+        v_item_ref_amt := 0;
+      END IF;
+      v_refund_total := v_refund_total + v_item_ref_amt;
+
+      UPDATE sale_items
+        SET refunded_quantity = COALESCE(refunded_quantity, 0) + v_req_qty,
+            refunded_amount = COALESCE(refunded_amount, 0) + v_item_ref_amt
+        WHERE id = v_item.id;
+
+      -- Restock
+      SELECT product_type INTO v_product_type FROM products WHERE id = v_item.product_id;
+      IF v_product_type = 'manufactured' THEN
+        FOR v_comp IN SELECT component_product_id, quantity FROM product_components WHERE product_id = v_item.product_id
+        LOOP
+          SELECT cost_price INTO v_cost FROM products WHERE id = v_comp.component_product_id;
+          v_remaining := COALESCE(v_comp.quantity, 0) * v_req_qty;
+          FOR v_restore IN SELECT warehouse_id, -quantity AS debited FROM stock_transactions
+            WHERE reference_type = 'sale' AND reference_id = p_sale_id
+              AND product_id = v_comp.component_product_id AND quantity < 0
+            ORDER BY -quantity DESC
+          LOOP
+            IF v_remaining <= 0 THEN EXIT; END IF;
+            v_back := LEAST(COALESCE(v_restore.debited, 0), v_remaining);
+            IF v_back <= 0 THEN CONTINUE; END IF;
+            UPDATE inventory SET quantity = quantity + v_back, updated_at = now()
+              WHERE product_id = v_comp.component_product_id AND warehouse_id = v_restore.warehouse_id;
+            SELECT quantity - v_back, quantity INTO v_before, v_after
+              FROM inventory WHERE product_id = v_comp.component_product_id AND warehouse_id = v_restore.warehouse_id;
+            INSERT INTO stock_transactions (product_id, warehouse_id, branch_id, transaction_type,
+              component_flow, reference_type, reference_id, quantity, before_quantity, after_quantity, unit_cost, reason, created_by)
+            VALUES (v_comp.component_product_id, v_restore.warehouse_id, v_sale.branch_id, 'refund',
+              true, 'refund', p_sale_id, v_back, v_before, v_after, v_cost, p_reason, auth.uid());
+            v_remaining := v_remaining - v_back;
+          END LOOP;
+          IF v_remaining > 0 AND v_fallback_wh IS NOT NULL THEN
+            INSERT INTO inventory (product_id, warehouse_id, quantity)
+            VALUES (v_comp.component_product_id, v_fallback_wh, v_remaining)
+            ON CONFLICT (product_id, warehouse_id) DO UPDATE SET quantity = inventory.quantity + v_remaining;
+            INSERT INTO stock_transactions (product_id, warehouse_id, branch_id, transaction_type,
+              component_flow, reference_type, reference_id, quantity, before_quantity, after_quantity, unit_cost, reason, created_by)
+            VALUES (v_comp.component_product_id, v_fallback_wh, v_sale.branch_id, 'refund',
+              true, 'refund', p_sale_id, v_remaining, 0, v_remaining, v_cost, p_reason, auth.uid());
+          END IF;
+        END LOOP;
+      ELSE
+        SELECT cost_price INTO v_cost FROM products WHERE id = v_item.product_id;
+        v_remaining := v_req_qty;
+        FOR v_restore IN SELECT warehouse_id, -quantity AS debited FROM stock_transactions
+          WHERE reference_type = 'sale' AND reference_id = p_sale_id
+            AND product_id = v_item.product_id AND quantity < 0
+          ORDER BY -quantity DESC
+        LOOP
+          IF v_remaining <= 0 THEN EXIT; END IF;
+          v_back := LEAST(COALESCE(v_restore.debited, 0), v_remaining);
+          IF v_back <= 0 THEN CONTINUE; END IF;
+          UPDATE inventory SET quantity = quantity + v_back, updated_at = now()
+            WHERE product_id = v_item.product_id AND warehouse_id = v_restore.warehouse_id;
+          SELECT quantity - v_back, quantity INTO v_before, v_after
+            FROM inventory WHERE product_id = v_item.product_id AND warehouse_id = v_restore.warehouse_id;
+          INSERT INTO stock_transactions (product_id, warehouse_id, branch_id, transaction_type,
+            component_flow, reference_type, reference_id, quantity, before_quantity, after_quantity, unit_cost, reason, created_by)
+          VALUES (v_item.product_id, v_restore.warehouse_id, v_sale.branch_id, 'refund',
+            false, 'refund', p_sale_id, v_back, v_before, v_after, v_cost, p_reason, auth.uid());
+          v_remaining := v_remaining - v_back;
+        END LOOP;
+        IF v_remaining > 0 AND v_fallback_wh IS NOT NULL THEN
+          INSERT INTO inventory (product_id, warehouse_id, quantity)
+          VALUES (v_item.product_id, v_fallback_wh, v_remaining)
+          ON CONFLICT (product_id, warehouse_id) DO UPDATE SET quantity = inventory.quantity + v_remaining;
+          INSERT INTO stock_transactions (product_id, warehouse_id, branch_id, transaction_type,
+            component_flow, reference_type, reference_id, quantity, before_quantity, after_quantity, unit_cost, reason, created_by)
+          VALUES (v_item.product_id, v_fallback_wh, v_sale.branch_id, 'refund',
+            false, 'refund', p_sale_id, v_remaining, 0, v_remaining, v_cost, p_reason, auth.uid());
+        END IF;
+      END IF;
+    END LOOP;
+
+    -- Update header: full refund flips the status, otherwise accumulate refunded_amount
+    SELECT bool_and(quantity = refunded_quantity) INTO v_all_refunded
+      FROM sale_items WHERE sale_id = p_sale_id;
+    UPDATE sales SET
+      refunded_amount = COALESCE(refunded_amount, 0) + v_refund_total,
+      status = CASE WHEN v_all_refunded THEN 'returned' ELSE status END,
+      notes = CASE WHEN p_reason IS NOT NULL THEN COALESCE(notes, '') || E'\n' || p_reason ELSE notes END
+      WHERE id = p_sale_id;
+
+    -- Log the cash-out into the active shift
+    IF v_shift_id IS NOT NULL AND v_refund_total > 0 THEN
+      INSERT INTO shift_operations (shift_id, operation_type, amount, payment_method, reference_type, reference_id, created_by)
+      VALUES (v_shift_id, 'refund', v_refund_total, 'cash', 'refund', p_sale_id, auth.uid());
+    END IF;
+
+    RETURN jsonb_build_object('success', true, 'sale_id', p_sale_id,
+      'refunded_amount', v_refund_total, 'fully_refunded', v_all_refunded);
+  EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', 'TRANSACTION_FAILED', 'detail', SQLERRM);
+  END;
+END;
+$$;
+
 -- ============ DONE ============
 -- Refresh the PostgREST schema cache so the new functions/constraints are
 -- immediately available to the API without a manual reload.

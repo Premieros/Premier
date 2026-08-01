@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { Search, Trash2, FileText, Edit2 } from 'lucide-react';
+import { Search, Trash2, FileText, Edit2, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../components/Toast';
@@ -20,13 +20,14 @@ interface SaleRow {
   invoice_number: string;
   total: number;
   paid_amount: number;
+  refunded_amount: number;
   payment_method: string;
   status: string;
   notes: string | null;
   created_at: string;
   customer_id: string | null;
   customer?: { name: string } | null;
-  sale_items?: { id: string; product_id: string | null; unit_name: string; quantity: number; unit_price: number; discount_amount: number; total: number; product?: { name: string } | null }[];
+  sale_items?: { id: string; product_id: string | null; unit_name: string; quantity: number; unit_price: number; discount_amount: number; refunded_quantity: number; refunded_amount: number; total: number; product?: { name: string } | null }[];
 }
 
 export function SalesPage() {
@@ -44,6 +45,10 @@ export function SalesPage() {
   const [viewSale, setViewSale] = useState<SaleRow | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editForm, setEditForm] = useState({ customer_id: '', payment_method: '', status: '', notes: '' });
+  const [refundSale, setRefundSale] = useState<SaleRow | null>(null);
+  const [refundQty, setRefundQty] = useState<Record<string, string>>({});
+  const [refundReason, setRefundReason] = useState('');
+  const [refunding, setRefunding] = useState(false);
   const isAr = lang === 'ar';
 
   async function load() {
@@ -58,7 +63,7 @@ export function SalesPage() {
 
       let q = supabase
         .from('sales')
-        .select('id, invoice_number, total, paid_amount, payment_method, status, notes, created_at, customer_id, customer:customers(name), sale_items(id, product_id, unit_name, quantity, unit_price, discount_amount, total, product:products(name))')
+        .select('id, invoice_number, total, paid_amount, refunded_amount, payment_method, status, notes, created_at, customer_id, customer:customers(name), sale_items(id, product_id, unit_name, quantity, unit_price, discount_amount, refunded_quantity, refunded_amount, total, product:products(name))')
         .order('created_at', { ascending: false });
       if (branchFilter) q = q.eq('branch_id', branchFilter);
       const { data } = await q;
@@ -87,6 +92,54 @@ export function SalesPage() {
       status: sale.status,
       notes: sale.notes || '',
     });
+  };
+
+  const openRefund = (sale: SaleRow) => {
+    setRefundSale(sale);
+    setRefundReason('');
+    const qty: Record<string, string> = {};
+    for (const item of sale.sale_items || []) {
+      qty[item.id] = String(item.quantity - (item.refunded_quantity || 0));
+    }
+    setRefundQty(qty);
+  };
+
+  const refundLineTotal = (item: NonNullable<SaleRow['sale_items']>[number]): number => {
+    const q = Math.max(0, Math.min(parseFloat(refundQty[item.id] || '0') || 0, item.quantity - (item.refunded_quantity || 0)));
+    return Math.round((item.total || 0) * q / (item.quantity || 1) * 100) / 100;
+  };
+
+  const refundTotal = () => {
+    let sum = 0;
+    for (const item of refundSale?.sale_items || []) sum += refundLineTotal(item);
+    return Math.round(sum * 100) / 100;
+  };
+
+  const submitRefund = async () => {
+    if (!refundSale) return;
+    const p_items: { sale_item_id: string; quantity: number }[] = [];
+    for (const item of refundSale.sale_items || []) {
+      const q = Math.max(0, Math.min(parseFloat(refundQty[item.id] || '0') || 0, item.quantity - (item.refunded_quantity || 0)));
+      if (q > 0) p_items.push({ sale_item_id: item.id, quantity: q });
+    }
+    if (p_items.length === 0) { show(isAr ? 'اختر كمية للمرتجع' : 'Choose a quantity to refund', 'error'); return; }
+    setRefunding(true);
+    const { data, error } = await supabase.rpc('process_refund', {
+      p_sale_id: refundSale.id,
+      p_items,
+      p_reason: refundReason.trim() || null,
+    });
+    setRefunding(false);
+    if (error) { show(error.message, 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string; refunded_amount?: number } | null;
+    if (!result?.success) {
+      show(`${isAr ? 'فشل المرتجع' : 'Refund failed'}: ${result?.detail || result?.error || 'unknown'}`, 'error');
+      return;
+    }
+    await logAudit('update', 'sales', refundSale.id, { refunded_amount: result.refunded_amount, reason: refundReason });
+    show(`${isAr ? 'تمت المعاملة' : 'Refunded'} ${formatCurrency(result.refunded_amount || 0, currency, lang)}`, 'success');
+    setRefundSale(null);
+    load();
   };
 
   const saveSaleEdit = async () => {
@@ -161,19 +214,31 @@ export function SalesPage() {
       </span>
     )},
     { key: 'status', header: t('status'), render: (r) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-        r.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-        r.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-      }`}>
-        {r.status}
-      </span>
+      <div className="flex items-center gap-1.5">
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          r.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+          r.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+          'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+        }`}>
+          {r.status}
+        </span>
+        {r.refunded_amount > 0 && r.status !== 'returned' && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+            {isAr ? `مرتجع ${formatCurrency(r.refunded_amount, currency, lang)}` : `Refunded ${formatCurrency(r.refunded_amount, currency, lang)}`}
+          </span>
+        )}
+      </div>
     )},
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('refunds.approve') && (
           <button onClick={() => openViewSale(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}>
             <Edit2 className="w-4 h-4" />
+          </button>
+        )}
+        {can('refunds.approve') && r.status !== 'returned' && (r.refunded_amount || 0) < r.total && (
+          <button onClick={() => openRefund(r)} className="p-1.5 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-500" title={isAr ? 'مرتجع' : 'Refund'}>
+            <RotateCcw className="w-4 h-4" />
           </button>
         )}
         {can('refunds.approve') && r.status !== 'completed' && (
@@ -281,6 +346,72 @@ export function SalesPage() {
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setViewSale(null)}>{t('cancel')}</Button>
               <Button onClick={saveSaleEdit}>{t('save')}</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Refund Modal */}
+      <Modal open={!!refundSale} onClose={() => setRefundSale(null)} title={isAr ? 'مرتجع الفاتورة' : 'Invoice Refund'} size="lg">
+        {refundSale && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div>
+                <p className="font-bold text-lg text-slate-800 dark:text-slate-200">{refundSale.invoice_number}</p>
+                <p className="text-sm text-slate-500">{formatDateTime(refundSale.created_at, lang)}</p>
+              </div>
+              <span className="text-sm text-slate-500">{isAr ? 'إجمالي الفاتورة' : 'Invoice total'}: <b>{formatCurrency(refundSale.total, currency, lang)}</b></span>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{t('productName')}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'كمية المرتجع' : 'Refund Qty'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'قيمة المرتجع' : 'Refund Value'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refundSale.sale_items?.map((item) => {
+                    const remaining = item.quantity - (item.refunded_quantity || 0);
+                    return (
+                      <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="px-3 py-2">
+                          <p className="text-slate-800 dark:text-slate-200">{item.product?.name || '-'}</p>
+                          <p className="text-xs text-slate-400">{isAr ? 'الكمية المبيعة' : 'Sold'}: {item.quantity}{item.refunded_quantity > 0 ? ` · ${isAr ? 'مرتجع' : 'refunded'}: ${item.refunded_quantity}` : ''}</p>
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={remaining}
+                            step="any"
+                            value={refundQty[item.id] ?? ''}
+                            onChange={(e) => setRefundQty({ ...refundQty, [item.id]: e.target.value })}
+                            className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                        </td>
+                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{formatCurrency(refundLineTotal(item), currency, lang)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <Textarea label={isAr ? 'سبب المرتجع (اختياري)' : 'Refund reason (optional)'} value={refundReason} onChange={(e) => setRefundReason(e.target.value)} rows={2} />
+
+            <div className="flex justify-between items-center bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-3">
+              <span className="font-semibold text-red-600 dark:text-red-400">{isAr ? 'قيمة المرتجع الإجمالية' : 'Total refund'}</span>
+              <span className="font-bold text-lg text-red-600 dark:text-red-400">{formatCurrency(refundTotal(), currency, lang)}</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setRefundSale(null)}>{t('cancel')}</Button>
+              <Button onClick={submitRefund} disabled={refunding}>
+                <RotateCcw className="w-4 h-4" /> {refunding ? '...' : (isAr ? 'تأكيد المرتجع' : 'Confirm Refund')}
+              </Button>
             </div>
           </div>
         )}

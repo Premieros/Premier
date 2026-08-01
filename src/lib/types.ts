@@ -7,9 +7,7 @@ export type Role =
   | 'branch_manager'
   | 'cashier'
   | 'warehouse_manager'
-  | 'kitchen'
-  | 'accountant'
-  | 'customer_display';
+  | 'accountant';
 
 export type ShiftStatus = 'open' | 'closed';
 export type ShiftOperationType = 'sale' | 'refund' | 'expense' | 'cash_in' | 'cash_out' | 'opening';
@@ -216,7 +214,6 @@ export interface AppUser {
   role: Role;
   branch_id: string | null;
   is_active: boolean;
-  permissions: Record<string, boolean> | null;
   created_at: string;
 }
 

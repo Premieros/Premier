@@ -11,8 +11,98 @@ import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { formatCurrency } from '../lib/format';
 import { logAudit } from '../lib/audit';
+import { generateQRCodeDataURL } from '../lib/barcode';
 import { mergeEffectiveSettings, useSettings } from '../context/SettingsContext';
-import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult } from '../lib/types';
+import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language } from '../lib/types';
+
+interface ReceiptData {
+  invoice: string;
+  items: { name: string; qty: number; price: number; total: number }[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paid: number;
+  change: number;
+  date: string;
+  customerName: string;
+}
+
+function openPrintWindow(html: string, widthMm: number) {
+  const win = window.open('', '_blank', `width=${Math.min(500, widthMm + 140)},height=600`);
+  if (!win) return false;
+  win.document.write(html);
+  win.document.close();
+  return true;
+}
+
+async function buildReceiptHtml(receipt: ReceiptData, s: Settings, lang: Language, isAr: boolean): Promise<string> {
+  const width = Math.max(50, Math.min(100, s.receipt_width_mm || 80));
+  const copies = Math.max(1, Math.min(5, s.receipt_copies || 1));
+  const showTax = s.receipt_show_tax !== false;
+  const showQr = s.receipt_show_qr !== false;
+  const currency = s.currency || 'EGP';
+
+  let qrImg = '';
+  if (showQr) {
+    try {
+      qrImg = await generateQRCodeDataURL(
+        JSON.stringify({ inv: receipt.invoice, total: receipt.total, date: receipt.date })
+      );
+    } catch {
+      qrImg = '';
+    }
+  }
+
+  const single = `
+    <div class="center header">${s.store_name || ''}</div>
+    ${s.store_address ? `<div class="center sub">${s.store_address}</div>` : ''}
+    ${s.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${s.store_phone}</div>` : ''}
+    ${s.receipt_header ? `<div class="center sub">${s.receipt_header}</div>` : ''}
+    <div class="divider"></div>
+    <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${receipt.invoice}</span></div>
+    <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${new Date(receipt.date).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span></div>
+    ${receipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${receipt.customerName}</span></div>` : ''}
+    <div class="divider"></div>
+    ${receipt.items.map((i) => `<div class="item-row"><div class="item-name">${i.name}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, currency, lang)}</span><span>${formatCurrency(i.total, currency, lang)}</span></div></div>`).join('')}
+    <div class="divider"></div>
+    <div class="row"><span>${isAr ? 'المجموع الفرعي' : 'Subtotal'}</span><span>${formatCurrency(receipt.subtotal, currency, lang)}</span></div>
+    ${receipt.discount > 0 ? `<div class="row"><span>${isAr ? 'الخصم' : 'Discount'}</span><span>-${formatCurrency(receipt.discount, currency, lang)}</span></div>` : ''}
+    ${showTax && receipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${s.tax_rate ?? 0}%)</span><span>${formatCurrency(receipt.tax, currency, lang)}</span></div>` : ''}
+    <div class="divider"></div>
+    <div class="row total-row"><span>${isAr ? 'الإجمالي' : 'Total'}</span><span>${formatCurrency(receipt.total, currency, lang)}</span></div>
+    <div class="row"><span>${isAr ? 'المدفوع' : 'Paid'}</span><span>${formatCurrency(receipt.paid, currency, lang)}</span></div>
+    ${receipt.change > 0 ? `<div class="row"><span>${isAr ? 'الباقي' : 'Change'}</span><span>${formatCurrency(receipt.change, currency, lang)}</span></div>` : ''}
+    ${qrImg ? `<div class="center" style="margin-top:6px"><img src="${qrImg}" width="${Math.round(width / 2.2)}" style="display:block;margin:0 auto" /></div>` : ''}
+    <div class="divider"></div>
+    ${s.receipt_footer ? `<div class="footer">${s.receipt_footer}</div>` : ''}
+    <div class="footer">${isAr ? 'شكراً لزيارتكم' : 'Thank you!'}</div>`;
+
+  const pages = Array.from({ length: copies }, () => `<div class="page">${single}</div>`).join('\n');
+  return `<!DOCTYPE html>
+    <html dir="${isAr ? 'rtl' : 'ltr'}">
+    <head><title>${receipt.invoice}</title>
+    <style>
+      * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
+      body { width: ${width}mm; padding: 4mm; font-size: 12px; color: #000; }
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
+      .center { text-align: center; }
+      .bold { font-weight: bold; }
+      .header { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+      .sub { font-size: 10px; margin-bottom: 8px; }
+      .divider { border-top: 1px dashed #000; margin: 6px 0; }
+      .row { display: flex; justify-content: space-between; margin: 2px 0; }
+      .item-row { margin: 4px 0; }
+      .item-name { font-weight: bold; }
+      .item-detail { font-size: 11px; }
+      .total-row { font-size: 14px; font-weight: bold; }
+      .footer { margin-top: 10px; text-align: center; font-size: 10px; }
+    </style></head>
+    <body>${pages}</body>
+    <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
+    </html>`;
+}
 
 export function PosPage() {
   const { t, lang } = useLanguage();
@@ -42,7 +132,7 @@ export function PosPage() {
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receiptSaleId, setReceiptSaleId] = useState<string | null>(null);
-  const [lastReceipt, setLastReceipt] = useState<{ invoice: string; items: { name: string; qty: number; price: number; total: number }[]; subtotal: number; discount: number; tax: number; total: number; paid: number; change: number; date: string; customerName: string } | null>(null);
+  const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(branchFilter || '');
@@ -257,6 +347,14 @@ export function PosPage() {
   const removeFromCart = (productId: string) => setCart((prev) => prev.filter((i) => i.product.id !== productId));
   const clearCart = () => setCart([]);
 
+  const setItemDiscount = (productId: string, discount: number) => {
+    const item = cart.find((i) => i.product.id === productId);
+    if (!item) return;
+    const lineTotal = item.quantity * item.unit_price;
+    const d = Math.round(Math.min(Math.max(discount || 0, 0), lineTotal) * 100) / 100;
+    setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, discount_amount: d } : i)));
+  };
+
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.quantity * i.unit_price - i.discount_amount, 0), [cart]);
   const discountValue = discountType === 'percent' ? (subtotal * discountAmount) / 100 : discountAmount;
   const taxableAmount = subtotal - discountValue;
@@ -328,13 +426,14 @@ export function PosPage() {
 
     await logAudit('create', 'sales', saleId, { invoice: invoiceNumber, total });
 
-    setLastReceipt({
+    const receiptPayload: ReceiptData = {
       invoice: invoiceNumber,
       items: cart.map((i) => ({ name: i.product.name, qty: i.quantity, price: i.unit_price, total: i.quantity * i.unit_price - i.discount_amount })),
       subtotal, discount: discountValue, tax: taxAmount, total,
       paid: paidAmountToUse, change, date: new Date().toISOString(),
       customerName: customers.find((c) => c.id === customerId)?.name || '',
-    });
+    };
+    setLastReceipt(receiptPayload);
     setReceiptSaleId(saleId);
     setCheckoutOpen(false);
     clearCart();
@@ -344,56 +443,17 @@ export function PosPage() {
     setCompleting(false);
     loadStock(effectiveBranch);
     show(t('saleCompleted'), 'success');
+
+    if (effSettings?.receipt_auto_print) {
+      const html = await buildReceiptHtml(receiptPayload, effSettings, lang, isAr);
+      openPrintWindow(html, effSettings.receipt_width_mm || 80);
+    }
   };
 
-  const printReceipt = () => {
+  const printReceipt = async () => {
     if (!lastReceipt || !effSettings) return;
-    const win = window.open('', '_blank', 'width=380,height=600');
-    if (!win) return;
-    win.document.write(`
-      <html dir="${isAr ? 'rtl' : 'ltr'}">
-      <head><title>${lastReceipt.invoice}</title>
-      <style>
-        * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
-        body { width: 80mm; padding: 4mm; font-size: 12px; color: #000; }
-        .center { text-align: center; }
-        .bold { font-weight: bold; }
-        .header { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
-        .sub { font-size: 10px; margin-bottom: 8px; }
-        .divider { border-top: 1px dashed #000; margin: 6px 0; }
-        .row { display: flex; justify-content: space-between; margin: 2px 0; }
-        .item-row { margin: 4px 0; }
-        .item-name { font-weight: bold; }
-        .item-detail { font-size: 11px; }
-        .total-row { font-size: 14px; font-weight: bold; }
-        .footer { margin-top: 10px; text-align: center; font-size: 10px; }
-      </style></head>
-      <body>
-        <div class="center header">${effSettings.store_name}</div>
-        ${effSettings.store_address ? `<div class="center sub">${effSettings.store_address}</div>` : ''}
-        ${effSettings.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${effSettings.store_phone}</div>` : ''}
-        ${effSettings.receipt_header ? `<div class="center sub">${effSettings.receipt_header}</div>` : ''}
-        <div class="divider"></div>
-        <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${lastReceipt.invoice}</span></div>
-        <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${new Date(lastReceipt.date).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span></div>
-        ${lastReceipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${lastReceipt.customerName}</span></div>` : ''}
-        <div class="divider"></div>
-        ${lastReceipt.items.map((i) => `<div class="item-row"><div class="item-name">${i.name}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, effSettings.currency, lang)}</span><span>${formatCurrency(i.total, effSettings.currency, lang)}</span></div></div>`).join('')}
-        <div class="divider"></div>
-        <div class="row"><span>${isAr ? 'المجموع الفرعي' : 'Subtotal'}</span><span>${formatCurrency(lastReceipt.subtotal, effSettings.currency, lang)}</span></div>
-        ${lastReceipt.discount > 0 ? `<div class="row"><span>${isAr ? 'الخصم' : 'Discount'}</span><span>-${formatCurrency(lastReceipt.discount, effSettings.currency, lang)}</span></div>` : ''}
-        ${lastReceipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${taxRate}%)</span><span>${formatCurrency(lastReceipt.tax, effSettings.currency, lang)}</span></div>` : ''}
-        <div class="divider"></div>
-        <div class="row total-row"><span>${isAr ? 'الإجمالي' : 'Total'}</span><span>${formatCurrency(lastReceipt.total, effSettings.currency, lang)}</span></div>
-        <div class="row"><span>${isAr ? 'المدفوع' : 'Paid'}</span><span>${formatCurrency(lastReceipt.paid, effSettings.currency, lang)}</span></div>
-        ${lastReceipt.change > 0 ? `<div class="row"><span>${isAr ? 'الباقي' : 'Change'}</span><span>${formatCurrency(lastReceipt.change, effSettings.currency, lang)}</span></div>` : ''}
-        <div class="divider"></div>
-        ${effSettings.receipt_footer ? `<div class="footer">${effSettings.receipt_footer}</div>` : ''}
-        <div class="footer">${isAr ? 'شكراً لزيارتكم' : 'Thank you!'}</div>
-        <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
-      </body></html>
-    `);
-    win.document.close();
+    const html = await buildReceiptHtml(lastReceipt, effSettings, lang, isAr);
+    openPrintWindow(html, effSettings.receipt_width_mm || 80);
   };
 
   if (loading) {
@@ -689,6 +749,18 @@ export function PosPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.product.name}</p>
                       <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
+                      <label className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                        {isAr ? 'خصم' : 'Disc'}
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={item.discount_amount || ''}
+                          placeholder="0"
+                          onChange={(e) => setItemDiscount(item.product.id, parseFloat(e.target.value) || 0)}
+                          className="w-16 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        />
+                      </label>
                     </div>
                     <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
                       <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
@@ -704,9 +776,14 @@ export function PosPage() {
                         <Plus className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200 w-16 text-end">
-                      {formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}
-                    </span>
+                    <div className="w-16 text-end">
+                      {item.discount_amount > 0 && (
+                        <p className="text-[10px] text-red-400 line-through">{formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
+                      )}
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                        {formatCurrency(item.quantity * item.unit_price - item.discount_amount, effSettings?.currency || 'EGP', lang)}
+                      </span>
+                    </div>
                     <button onClick={() => removeFromCart(item.product.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                       <X className="w-4 h-4" />
                     </button>

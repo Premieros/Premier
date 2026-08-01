@@ -1,19 +1,21 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Save, Store, Receipt, Palette, ShoppingCart, FileText, Boxes, ShieldCheck,
-  Building2, Plus, Trash2,
+  Building2, Trash2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
+import { useRoles } from '../context/RolesContext';
 import { useToast } from '../components/Toast';
 import { PageHeader, Card } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Input';
 import { logAudit } from '../lib/audit';
 import { BRAND_PRESETS, applyBrandColor, brandFromSettingsValue } from '../lib/brandColor';
-import type { Settings as SettingsType, Branch, BranchSettings } from '../lib/types';
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, isAdminRole, ROLE_META, type Permission } from '../lib/permissions';
+import type { Settings as SettingsType, Branch, BranchSettings, Role } from '../lib/types';
 
 type TabKey = 'general' | 'appearance' | 'pos' | 'invoices' | 'receipt' | 'inventory' | 'branches' | 'roles';
 
@@ -381,19 +383,7 @@ export function SettingsPage() {
         </Card>
       )}
 
-      {tab === 'roles' && (
-        <Card className="p-5">
-          <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('rolesTab')}
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            {isAr ? 'إدارة صلاحيات كل دور من هنا. تُنفَّذ هذه الإدارة في قسم مستقل لضمان السلامة.' : 'Manage each role\'s permissions here. This is handled in a dedicated section.'}
-          </p>
-          <Button onClick={() => setTab('general')} variant="outline">
-            <Plus className="w-4 h-4" /> {isAr ? 'يأتي في التحديث القادم' : 'Coming in next update'}
-          </Button>
-        </Card>
-      )}
+      {tab === 'roles' && <RolesTab />}
     </div>
   );
 }
@@ -433,4 +423,149 @@ function rgbToHex(hue: number, sat: number): string {
   else [r, g, b] = [c, 0, x];
   const m = l - c / 2;
   return '#' + n(r + m) + n(g + m) + n(b + m);
+}
+
+function RolesTab() {
+  const { t, lang } = useLanguage();
+  const { show } = useToast();
+  const { rolePermissionsMap, roleMeta, loading, saveRole } = useRoles();
+  const isAr = lang === 'ar';
+  const [drafts, setDrafts] = useState<Record<string, Permission[]>>({});
+  const [savingRole, setSavingRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loading || Object.keys(rolePermissionsMap).length === 0) return;
+    setDrafts((prev) => {
+      const merged = { ...prev };
+      for (const role of Object.keys(rolePermissionsMap)) {
+        if (!merged[role]) merged[role] = [...rolePermissionsMap[role]];
+      }
+      return merged;
+    });
+  }, [loading, rolePermissionsMap]);
+
+  const roles: Role[] = Object.keys(ROLE_META) as Role[];
+
+  const toggle = (role: Role, perm: Permission) => {
+    setDrafts((prev) => {
+      const list = prev[role] ?? rolePermissionsMap[role] ?? [];
+      const has = list.includes(perm);
+      return { ...prev, [role]: has ? list.filter((p) => p !== perm) : [...list, perm] };
+    });
+  };
+
+  const setAll = (role: Role, value: boolean) => {
+    setDrafts((prev) => ({ ...prev, [role]: value ? [...ALL_PERMISSIONS] : [] }));
+  };
+
+  const save = async (role: Role) => {
+    setSavingRole(role);
+    const ok = await saveRole(role, drafts[role] ?? []);
+    setSavingRole(null);
+    if (ok) show(t('saveSuccess'), 'success');
+    else show(isAr ? 'تعذر حفظ الصلاحيات' : 'Failed to save permissions', 'error');
+  };
+
+  if (loading) {
+    return (
+      <Card className="p-10 text-center text-slate-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-3" />
+        <p className="text-sm">{isAr ? 'جارٍ تحميل الأدوار...' : 'Loading roles...'}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-5">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('rolesTab')}
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {isAr
+            ? 'تُحفظ الصلاحيات في قاعدة البيانات وتُطبَّق فورًا على جميع المستخدمين أصحاب الدور. الأدوار الإدارية (مدير عام / مالك) تملك كل الصلاحيات تلقائيًا.'
+            : 'Permissions are stored in the database and apply immediately to every user with that role. Admin roles (Super Admin / Owner) always have full access.'}
+        </p>
+      </Card>
+
+      {roles.map((role) => {
+        const admin = isAdminRole(role);
+        const list = drafts[role] ?? rolePermissionsMap[role] ?? [];
+        const count = list.length;
+        return (
+          <Card key={role} className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 className="font-semibold text-slate-800 dark:text-slate-200">{roleMeta[role]?.[lang] || role}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {count} / {ALL_PERMISSIONS.length} {isAr ? 'صلاحية' : 'permissions'}
+                </p>
+              </div>
+              {admin ? (
+                <span className="px-3 py-1.5 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 text-xs font-medium">
+                  {isAr ? 'كامل الصلاحيات تلقائيًا' : 'Full access by default'}
+                </span>
+              ) : (
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setAll(role, true)}>{t('all')}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setAll(role, false)}>{t('none')}</Button>
+                  <Button size="sm" onClick={() => save(role)} disabled={savingRole === role}>
+                    <Save className="w-4 h-4" /> {savingRole === role ? '...' : t('save')}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {admin ? (
+              <p className="text-sm text-slate-400">{isAr ? 'لا يمكن تقييد هذا الدور.' : 'This role cannot be restricted.'}</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {PERMISSION_GROUPS.map((group) => {
+                  const groupAll = group.permissions.every((p) => list.includes(p));
+                  const groupSome = group.permissions.some((p) => list.includes(p));
+                  return (
+                    <div key={group.key} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/60">
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={groupAll}
+                            ref={(el) => { if (el) el.indeterminate = groupSome && !groupAll; }}
+                            onChange={() => {
+                              const value = !groupAll;
+                              setDrafts((prev) => {
+                                const base = new Set(prev[role] ?? rolePermissionsMap[role] ?? []);
+                                group.permissions.forEach((p) => { if (value) base.add(p); else base.delete(p); });
+                                return { ...prev, [role]: [...base] };
+                              });
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                          />
+                          <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{group[lang]}</span>
+                        </label>
+                      </div>
+                      <div className="px-3 py-2 space-y-1.5">
+                        {group.permissions.map((perm) => (
+                          <label key={perm} className="flex items-center gap-2.5 cursor-pointer py-0.5">
+                            <input
+                              type="checkbox"
+                              checked={list.includes(perm)}
+                              onChange={() => toggle(role, perm)}
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{PERMISSION_LABELS[perm]?.[lang] || perm}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        );
+      })}
+      <p className="text-xs text-slate-400 px-1">{isAr ? 'الدور المبني من القاعدة: أي تغيير يظهر فورًا، بدون إعادة تسجيل دخول.' : 'DB-backed roles: changes apply immediately, no re-login needed.'}</p>
+    </div>
+  );
 }

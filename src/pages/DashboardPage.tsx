@@ -129,9 +129,10 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currency, setCurrency] = useState('EGP');
+  const [defaultThreshold, setDefaultThreshold] = useState(5);
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
-  const isSimple = user?.role === 'cashier' || user?.role === 'customer_display';
+  const isSimple = user?.role === 'cashier';
 
   const [dateRange, setDateRange] = useState<DateRange>('today');
   const [customFrom, setCustomFrom] = useState('');
@@ -185,6 +186,18 @@ export function DashboardPage() {
       try {
       const { data: settingsData } = await supabase.from('settings').select('*').maybeSingle();
       if (settingsData) setCurrency((settingsData as Settings).currency || 'EGP');
+
+      let defThr = 5;
+      if (settingsData) defThr = Number((settingsData as Settings).low_stock_threshold || 5);
+      if (effectiveBranchFilter) {
+        const { data: bs } = await supabase
+          .from('branch_settings')
+          .select('low_stock_threshold')
+          .eq('branch_id', effectiveBranchFilter)
+          .maybeSingle();
+        if (bs?.low_stock_threshold != null) defThr = Number(bs.low_stock_threshold);
+      }
+      setDefaultThreshold(defThr);
 
       if (isAdminRole(user?.role) && branches.length === 0) {
         const { data: br } = await supabase.from('branches').select('*').order('name');
@@ -258,12 +271,12 @@ export function DashboardPage() {
 
       const lowStockItems = (lowStock.data || []).filter((r: Record<string, unknown>) => {
         const qty = Number(r.quantity);
-        const threshold = Number((r.product as { low_stock_threshold: number })?.low_stock_threshold || 5);
+        const threshold = Number((r.product as { low_stock_threshold: number | null })?.low_stock_threshold ?? defaultThreshold);
         return qty < threshold;
       }).map((r: Record<string, unknown>) => ({
         name: (r.product as { name: string })?.name || '-',
         quantity: Number(r.quantity),
-        threshold: Number((r.product as { low_stock_threshold: number })?.low_stock_threshold || 5),
+        threshold: Number((r.product as { low_stock_threshold: number | null })?.low_stock_threshold ?? defaultThreshold),
       }));
 
       setData({
@@ -390,14 +403,14 @@ export function DashboardPage() {
           const { data } = await supabase.from('inventory').select('product_id, quantity, product:products(name, low_stock_threshold)');
           rows = (data || []).filter((r: Record<string, unknown>) => {
             const qty = Number(r.quantity);
-            const threshold = Number((r.product as { low_stock_threshold: number })?.low_stock_threshold || 5);
+            const threshold = Number((r.product as { low_stock_threshold: number | null })?.low_stock_threshold ?? defaultThreshold);
             return qty < threshold;
           }).map((r: Record<string, unknown>) => ({
             id: String(r.product_id),
             name: (r.product as { name: string })?.name || '-',
             total: 0,
             created_at: '',
-            extra: `${Number(r.quantity)} / ${Number((r.product as { low_stock_threshold: number })?.low_stock_threshold || 5)}`,
+            extra: `${Number(r.quantity)} / ${Number((r.product as { low_stock_threshold: number | null })?.low_stock_threshold ?? defaultThreshold)}`,
           }));
           break;
         }
@@ -407,7 +420,7 @@ export function DashboardPage() {
       setDetailData([]);
     }
     setDetailLoading(false);
-  }, [getDateRange, effectiveBranchFilter]);
+  }, [getDateRange, effectiveBranchFilter, defaultThreshold]);
 
   const salesTrendPct = useMemo(() => {
     if (!data || data.yesterdaySales === 0) return null;

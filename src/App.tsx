@@ -4,9 +4,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { RolesProvider } from './context/RolesContext';
 import { ToastProvider } from './components/Toast';
 import { Layout } from './components/Layout';
-import { hasPermission, type Permission } from './lib/permissions';
+import { useCan, type Permission } from './lib/permissions';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -38,7 +39,8 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children, permission, fullscreen }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean }) {
-  const { session, loading, user } = useAuth();
+  const { session, loading } = useAuth();
+  const can = useCan();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -47,7 +49,7 @@ function ProtectedRoute({ children, permission, fullscreen }: { children: React.
     );
   }
   if (!session) return <Navigate to="/login" replace />;
-  if (permission && !hasPermission(user?.role, user?.permissions, permission)) return <Navigate to="/dashboard" replace />;
+  if (permission && !can(permission)) return <Navigate to="/dashboard" replace />;
   if (fullscreen) return <>{children}</>;
   return <Layout>{children}</Layout>;
 }
@@ -96,11 +98,13 @@ export default function App() {
       <LanguageProvider>
         <AuthProvider>
           <SettingsProvider>
-            <ToastProvider>
-              <HashRouter>
-                <AppRoutes />
-              </HashRouter>
-            </ToastProvider>
+            <RolesProvider>
+              <ToastProvider>
+                <HashRouter>
+                  <AppRoutes />
+                </HashRouter>
+              </ToastProvider>
+            </RolesProvider>
           </SettingsProvider>
         </AuthProvider>
       </LanguageProvider>

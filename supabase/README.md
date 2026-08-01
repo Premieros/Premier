@@ -18,6 +18,9 @@
    - إعادة بناء جدولي الشيفتات تلقائيًا إذا كانت بنيتهما قديمة (`shifts` / `shift_operations`).
    - ضمان مفاتيح أجنبية (بينها `shifts_cashier_id_fkey` ومفاتيح المستخدمين الأساسية).
    - سياسات RLS صارمة للجداول الحساسة.
+   - توسيع `settings` وإضافة `branch_settings` (إعدادات عامة + لكل فرع).
+   - جدول `roles` (مصفوفة الصلاحيات بالدور، قابلة للتعديل من شاشة الإعدادات)،
+     إسقاط `users.permissions` (نموذج دور فقط)، وإزالة دورَي `kitchen` / `customer_display`.
 7. `migration_fix_login.sql` — أدوات تشخيص/إصلاح تسجيل الدخول للمستخدمين الجدد
    (`verify_auth_account` / `repair_auth_account` / `password_matches`) — تُشغَّل عند الحاجة فقط.
 
