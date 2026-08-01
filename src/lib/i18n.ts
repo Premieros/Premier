@@ -3,8 +3,8 @@ import type { Language } from './types';
 export const translations = {
   ar: {
     // App
-    appName: 'نظام نقاط البيع',
-    appShortName: 'ن.م.ب',
+    appName: 'Premier',
+    appShortName: 'Premier',
     // Auth
     login: 'تسجيل الدخول',
     logout: 'تسجيل الخروج',
@@ -366,8 +366,8 @@ export const translations = {
     roleCustomerDisplay: 'شاشة العرض',
   },
   en: {
-    appName: 'POS System',
-    appShortName: 'POS',
+    appName: 'Premier',
+    appShortName: 'Premier',
     login: 'Login',
     logout: 'Logout',
     email: 'Email',

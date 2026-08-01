@@ -9,6 +9,7 @@ import { isAdminRole } from '../lib/permissions';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
+import { Logo } from '../components/Logo';
 import { formatCurrency } from '../lib/format';
 import { logAudit } from '../lib/audit';
 import { generateQRCodeDataURL } from '../lib/barcode';
@@ -461,7 +462,7 @@ export function PosPage() {
   const renderCartPanel = (opts: { onClose?: () => void }) => (
     <div className="flex flex-col h-full min-h-0">
       {/* Cart Header */}
-      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-navy-800 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
             <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
@@ -478,7 +479,7 @@ export function PosPage() {
             </button>
           )}
           {opts.onClose && (
-            <button onClick={opts.onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title={isAr ? 'إغلاق' : 'Close'}>
+            <button onClick={opts.onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors" title={isAr ? 'إغلاق' : 'Close'}>
               <X className="w-5 h-5" />
             </button>
           )}
@@ -489,8 +490,8 @@ export function PosPage() {
       <div className="flex-1 overflow-y-auto px-3 py-2">
         {cart.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-              <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+            <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center mb-3">
+              <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-navy-700" />
             </div>
             <p className="text-sm font-medium">{t('emptyCart')}</p>
             <p className="text-xs text-slate-400 mt-1">{isAr ? 'اضغط على المنتج لإضافته' : 'Tap a product to add it'}</p>
@@ -498,9 +499,9 @@ export function PosPage() {
         ) : (
           <div className="space-y-1.5">
             {cart.map((item) => (
-              <div key={item.product.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+              <div key={item.product.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-navy-800/50 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors group">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.product.name}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{item.product.name}</p>
                   <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
                   <label className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
                     {isAr ? 'خصم' : 'Disc'}
@@ -511,21 +512,21 @@ export function PosPage() {
                       value={item.discount_amount || ''}
                       placeholder="0"
                       onChange={(e) => setItemDiscount(item.product.id, parseFloat(e.target.value) || 0)}
-                      className="w-16 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                      className="w-16 px-1 py-0.5 rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-[11px] text-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-gold-500"
                     />
                   </label>
                 </div>
-                <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
-                  <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                <div className="flex items-center gap-1 bg-white dark:bg-navy-800 rounded-lg border border-slate-200 dark:border-navy-700 p-0.5">
+                  <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-700 transition-colors">
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <input
                     type="number"
                     value={item.quantity}
                     onChange={(e) => setQty(item.product.id, parseInt(e.target.value) || 1)}
-                    className="w-9 text-center text-sm font-bold bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                    className="w-9 text-center text-sm font-bold bg-transparent text-slate-800 dark:text-white focus:outline-none"
                   />
-                  <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                  <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-700 transition-colors">
                     <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -533,7 +534,7 @@ export function PosPage() {
                   {item.discount_amount > 0 && (
                     <p className="text-[10px] text-red-400 line-through">{formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
                   )}
-                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">
                     {formatCurrency(item.quantity * item.unit_price - item.discount_amount, effSettings?.currency || 'EGP', lang)}
                   </span>
                 </div>
@@ -548,7 +549,7 @@ export function PosPage() {
 
       {/* Cart Footer - Summary + Payment */}
       {cart.length > 0 && (
-        <div className="border-t border-slate-100 dark:border-slate-800 p-4 space-y-3 flex-shrink-0">
+        <div className="border-t border-slate-100 dark:border-navy-800 p-4 space-y-3 flex-shrink-0">
           {/* Totals */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm text-slate-500">
@@ -567,9 +568,9 @@ export function PosPage() {
                 <span className="font-medium">{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-navy-800">
               <span>{t('total')}</span>
-              <span className="text-brand-600 dark:text-brand-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+              <span className="text-brand-600 dark:text-gold-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
             </div>
           </div>
 
@@ -608,7 +609,7 @@ export function PosPage() {
             </button>
             <button
               onClick={() => setCheckoutOpen(true)}
-              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs transition-all active:scale-95"
+              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-200 dark:bg-navy-800 hover:bg-slate-300 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 font-medium text-xs transition-all active:scale-95"
             >
               <Percent className="w-4 h-4" />
               {t('discount')}
@@ -620,14 +621,22 @@ export function PosPage() {
   );
 
   if (loading) {
-    return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-500 border-t-transparent" /></div>;
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-navy-950 gap-4">
+        <Logo variant="mark" size={56} tone="white" />
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-gold-500 border-t-transparent" />
+      </div>
+    );
   }
 
   if (loadError) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-950">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+      <div className="h-screen flex items-center justify-center bg-navy-950">
+        <div className="text-center max-w-md px-4">
+          <div className="flex justify-center mb-4">
+            <Logo variant="mark" size={56} tone="white" />
+          </div>
+          <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
             <ShoppingCart className="w-8 h-8 text-red-400" />
           </div>
           <p className="text-lg font-semibold text-white mb-2">{isAr ? 'خطأ في تحميل البيانات' : 'Error Loading Data'}</p>
@@ -641,18 +650,18 @@ export function PosPage() {
   const currentBranchName = branches.find((b) => b.id === effectiveBranch)?.name || '';
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 overflow-hidden">
 
       {/* ===== TOP TOOLBAR ===== */}
-      <header className="flex-shrink-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-3 gap-2 z-20">
+      <header className="flex-shrink-0 h-14 bg-white dark:bg-navy-900 border-b border-slate-200 dark:border-navy-800 flex items-center px-3 gap-2 z-20">
         {/* Back + POS title */}
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-800">
           {isAr ? <ArrowRight className="w-5 h-5" /> : <ArrowRight className="w-5 h-5 rotate-180" />}
           <LayoutDashboard className="w-4 h-4" />
           <span className="text-sm font-bold hidden sm:inline">{isAr ? 'لوحة التحكم' : 'Dashboard'}</span>
         </button>
 
-        <div className="w-px h-7 bg-slate-200 dark:bg-slate-700" />
+        <div className="w-px h-7 bg-slate-200 dark:bg-navy-700" />
 
         {/* Branch selector */}
         <div className="flex items-center gap-1.5">
@@ -661,7 +670,7 @@ export function PosPage() {
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
             onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); }}
-            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 max-w-[130px] sm:max-w-none truncate"
+            className="text-sm border-0 bg-slate-100 dark:bg-navy-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 max-w-[130px] sm:max-w-none truncate"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
@@ -669,8 +678,8 @@ export function PosPage() {
         </div>
 
         {currentBranchName && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800">
-            <span className="text-xs font-bold text-brand-700 dark:text-brand-300">{currentBranchName}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold-900/20 border border-gold-200 dark:border-gold-800">
+            <span className="text-xs font-bold text-gold-700 dark:text-gold-300">{currentBranchName}</span>
           </div>
         )}
 
@@ -678,11 +687,11 @@ export function PosPage() {
 
         {/* Cart summary in header */}
         {cart.length > 0 && (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
-            <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span className="text-sm font-bold text-brand-700 dark:text-brand-300">{cart.length}</span>
-            <span className="text-xs text-brand-500">|</span>
-            <span className="text-sm font-bold text-brand-700 dark:text-brand-300">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-navy-50 dark:bg-navy-800 border border-navy-100 dark:border-navy-700">
+            <ShoppingCart className="w-4 h-4 text-navy-700 dark:text-gold-400" />
+            <span className="text-sm font-bold text-navy-800 dark:text-gold-400">{cart.length}</span>
+            <span className="text-xs text-navy-400 dark:text-slate-500">|</span>
+            <span className="text-sm font-bold text-navy-800 dark:text-gold-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
           </div>
         )}
 
@@ -697,7 +706,7 @@ export function PosPage() {
       {isCashier && shiftChecked && (
         <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-sm border-b ${
           activeShift
-            ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300'
+            ? 'bg-navy-50 dark:bg-navy-900 border-navy-100 dark:border-navy-800 text-navy-800 dark:text-gold-300'
             : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
         }`}>
           <Timer className="w-4 h-4" />
@@ -719,9 +728,9 @@ export function PosPage() {
       <div className="flex-1 flex min-h-0">
 
         {/* ===== LEFT: CATEGORIES SIDEBAR ===== */}
-        <div className={`${catSidebarOpen ? 'w-56' : 'w-0'} hidden md:flex flex-shrink-0 transition-all duration-300 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 ${isAr ? 'border-l' : 'border-r'}`}>
+        <div className={`${catSidebarOpen ? 'w-56' : 'w-0'} hidden md:flex flex-shrink-0 transition-all duration-300 overflow-hidden bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-800 ${isAr ? 'border-l' : 'border-r'}`}>
           <div className="w-56 h-full flex flex-col">
-            <div className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="px-3 py-3 border-b border-slate-100 dark:border-navy-800">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{isAr ? 'الفئات' : 'Categories'}</p>
             </div>
             <div className="flex-1 overflow-y-auto py-1">
@@ -729,13 +738,13 @@ export function PosPage() {
                 onClick={() => setSelectedCategory('')}
                 className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-all ${
                   selectedCategory === ''
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800'
                 }`}
                 style={{ width: 'calc(100% - 8px)' }}
               >
                 <span className="truncate">{t('allCategories')}</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedCategory === '' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedCategory === '' ? 'bg-white/20' : 'bg-slate-200 dark:bg-navy-800'}`}>
                   {products.length}
                 </span>
               </button>
@@ -745,13 +754,13 @@ export function PosPage() {
                   onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg mx-1 transition-all ${
                     selectedCategory === cat.id
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800'
                   }`}
                   style={{ width: 'calc(100% - 8px)' }}
                 >
                   <span className="truncate">{isAr ? cat.name : (cat.name_en || cat.name)}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedCategory === cat.id ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedCategory === cat.id ? 'bg-white/20' : 'bg-slate-200 dark:bg-navy-800'}`}>
                     {categoryProducts[cat.id] || 0}
                   </span>
                 </button>
@@ -763,10 +772,10 @@ export function PosPage() {
         {/* ===== CENTER: PRODUCTS ===== */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Search Bar */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-navy-900 border-b border-slate-200 dark:border-navy-800">
             <button
               onClick={() => setCatSidebarOpen(!catSidebarOpen)}
-              className="hidden md:flex p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="hidden md:flex p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
               title={isAr ? 'إظهار/إخفاء الفئات' : 'Toggle Categories'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -781,7 +790,7 @@ export function PosPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleBarcodeScan}
                 placeholder={isAr ? 'بحث عن منتج أو مسح الباركود...' : 'Search product or scan barcode...'}
-                className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                className="w-full ps-10 pe-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold-500/60 focus:border-gold-500 transition-all"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute top-1/2 -translate-y-1/2 end-3 text-slate-400 hover:text-slate-600">
@@ -798,13 +807,13 @@ export function PosPage() {
           </div>
 
           {/* Mobile Categories Chips */}
-          <div className="md:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0">
+          <div className="md:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto border-b border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 flex-shrink-0">
             <button
               onClick={() => setSelectedCategory('')}
               className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 selectedCategory === ''
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
               }`}
             >
               {t('allCategories')}
@@ -816,8 +825,8 @@ export function PosPage() {
                 onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
                 className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   selectedCategory === cat.id
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                    ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {isAr ? cat.name : (cat.name_en || cat.name)}
@@ -849,10 +858,10 @@ export function PosPage() {
                       key={p.id}
                       onClick={() => addToCart(p)}
                       disabled={outOfStock || noRecipe}
-                      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-200 ${
+                      className={`group relative bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-800 overflow-hidden transition-all duration-200 ${
                         outOfStock || noRecipe
                           ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:shadow-lg hover:shadow-brand-500/10 hover:-translate-y-1 hover:border-brand-400 dark:hover:border-brand-600 active:scale-[0.97]'
+                          : 'hover:shadow-card-hover hover:border-gold-400 dark:hover:border-gold-600 hover:-translate-y-1 active:scale-[0.97]'
                       }`}
                     >
                       {/* Stock badge */}
@@ -869,17 +878,17 @@ export function PosPage() {
                       </div>
 
                       {/* Image */}
-                      <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-850 flex items-center justify-center overflow-hidden">
+                      <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-50 dark:from-navy-800 dark:to-navy-950 flex items-center justify-center overflow-hidden">
                         {p.image_url ? (
                           <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
-                          <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-brand-400 transition-colors" />
+                          <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-navy-700 group-hover:text-gold-500 transition-colors" />
                         )}
                       </div>
 
                       {/* Info */}
                       <div className="p-2.5">
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">{p.name}</p>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-white truncate leading-tight">{p.name}</p>
                         <div className="flex items-center gap-1 mt-0.5">
                           {isManufactured && (
                             <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[10px] font-medium text-purple-700 dark:text-purple-400">{t('manufactured')}</span>
@@ -887,10 +896,10 @@ export function PosPage() {
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-bold text-brand-600 dark:text-brand-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, effSettings?.currency || 'EGP', lang)}</span>
+                          <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, effSettings?.currency || 'EGP', lang)}</span>
                           {!outOfStock && !noRecipe && (
-                            <div className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Plus className="w-3.5 h-3.5 text-white" />
+                            <div className="w-6 h-6 rounded-full bg-gold-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Plus className="w-3.5 h-3.5 text-navy-950" />
                             </div>
                           )}
                         </div>
@@ -904,7 +913,7 @@ export function PosPage() {
         </div>
 
         {/* ===== RIGHT: CART (desktop) ===== */}
-        <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0 flex-col bg-white dark:bg-slate-900 border-s border-slate-200 dark:border-slate-800">
+        <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0 flex-col bg-white dark:bg-navy-900 border-s border-slate-200 dark:border-navy-800">
           {renderCartPanel({})}
         </div>
 
@@ -912,22 +921,22 @@ export function PosPage() {
         {cart.length > 0 && !mobileCartOpen && (
           <button
             onClick={() => setMobileCartOpen(true)}
-            className="lg:hidden fixed bottom-4 start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-brand-600 text-white shadow-pos active:scale-[0.98] transition-all"
+            className="lg:hidden fixed bottom-4 start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-navy-900 text-white border border-gold-500/40 shadow-pos active:scale-[0.98] transition-all"
           >
             <span className="flex items-center gap-2 font-bold text-sm">
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-5 h-5 text-gold-400" />
               {isAr ? 'عرض السلة' : 'View Cart'}
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">{cart.length}</span>
+              <span className="px-2 py-0.5 rounded-full bg-gold-500 text-navy-950 text-xs font-bold">{cart.length}</span>
             </span>
-            <span className="font-bold">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+            <span className="font-bold text-gold-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
           </button>
         )}
 
         {/* ===== MOBILE CART BOTTOM SHEET ===== */}
         {mobileCartOpen && (
           <div className="lg:hidden fixed inset-0 z-40 flex items-end justify-center animate-fade-in">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCartOpen(false)} />
-            <div className="relative w-full max-h-[92vh] bg-white dark:bg-slate-900 rounded-t-2xl shadow-pos overflow-hidden animate-slide-up flex flex-col">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setMobileCartOpen(false)} />
+            <div className="relative w-full max-h-[92vh] bg-white dark:bg-navy-900 rounded-t-2xl shadow-pos overflow-hidden animate-slide-up flex flex-col">
               {renderCartPanel({ onClose: () => setMobileCartOpen(false) })}
             </div>
           </div>
@@ -937,8 +946,8 @@ export function PosPage() {
       {/* ===== CHECKOUT MODAL ===== */}
       <Modal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} title={t('checkout')} size="md">
         <div className="space-y-4">
-          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 text-sm font-medium flex items-center gap-2">
-            <Tag className="w-4 h-4 text-brand-500" />
+          <div className="bg-slate-50 dark:bg-navy-800/60 rounded-xl p-3 text-sm font-medium flex items-center gap-2 border border-slate-100 dark:border-navy-700">
+            <Tag className="w-4 h-4 text-brand-500 dark:text-gold-400" />
             <span className="text-slate-600 dark:text-slate-300">{isAr ? 'الفرع' : 'Branch'}: </span>
             <span className="font-bold text-slate-800 dark:text-white">{currentBranchName}</span>
           </div>
@@ -948,7 +957,7 @@ export function PosPage() {
             <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
             >
               <option value="">--</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -961,7 +970,7 @@ export function PosPage() {
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'amount' | 'percent')}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
               >
                 <option value="amount">{t('amount')}</option>
                 <option value="percent">%</option>
@@ -974,7 +983,7 @@ export function PosPage() {
                 value={discountAmount || ''}
                 onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                 min={0}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
               />
             </div>
           </div>
@@ -988,8 +997,8 @@ export function PosPage() {
                   onClick={() => setPaymentMethod(m)}
                   className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                     paymentMethod === m
-                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
+                      ? 'border-gold-500 bg-gold-50 dark:bg-gold-900/20 text-gold-700 dark:text-gold-300 shadow-md'
+                      : 'border-slate-200 dark:border-navy-700 hover:border-slate-300 dark:hover:border-navy-600 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {m === 'cash' && <Banknote className="w-5 h-5" />}
@@ -1010,19 +1019,19 @@ export function PosPage() {
                 value={paidAmount || ''}
                 onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                 min={0}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-lg font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-lg font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
               />
             </div>
           )}
 
           {/* Summary */}
-          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-2">
+          <div className="bg-slate-50 dark:bg-navy-800/60 rounded-xl p-4 space-y-2 border border-slate-100 dark:border-navy-700">
             <div className="flex justify-between text-sm"><span className="text-slate-500">{t('subtotal')}</span><span>{formatCurrency(subtotal, effSettings?.currency || 'EGP', lang)}</span></div>
             <div className="flex justify-between text-sm"><span className="text-slate-500">{t('discount')}</span><span className="text-red-500">-{formatCurrency(discountValue, effSettings?.currency || 'EGP', lang)}</span></div>
             <div className="flex justify-between text-sm"><span className="text-slate-500">{t('tax')}</span><span>{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span></div>
-            <div className="flex justify-between font-bold text-lg pt-2 border-t border-slate-200 dark:border-slate-600">
+            <div className="flex justify-between font-bold text-lg pt-2 border-t border-slate-200 dark:border-navy-700">
               <span>{t('total')}</span>
-              <span className="text-brand-600">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+              <span className="text-brand-600 dark:text-gold-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
             </div>
             {paymentMethod !== 'credit' && change > 0 && (
               <div className="flex justify-between text-sm font-bold text-emerald-600">
@@ -1043,10 +1052,10 @@ export function PosPage() {
         {lastReceipt && (
           <div className="space-y-4">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 ring-2 ring-gold-500/40 flex items-center justify-center mx-auto mb-3">
                 <BarcodeIcon className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <p className="text-base font-semibold text-slate-800 dark:text-slate-200">{t('saleCompleted')}</p>
+              <p className="text-base font-semibold text-slate-800 dark:text-white">{t('saleCompleted')}</p>
               <p className="text-sm text-slate-400 mt-1">{lastReceipt.invoice}</p>
             </div>
             <Button size="lg" className="w-full" onClick={printReceipt}>

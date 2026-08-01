@@ -33,7 +33,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
-        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center mb-3">
           <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
         </div>
         <p className="text-sm font-medium">{emptyMessage || 'No data'}</p>
@@ -63,7 +63,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
     <div className="overflow-x-auto rounded-xl">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+          <tr className="border-b border-slate-200 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-800/40">
             {showCheckbox && (
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll}
@@ -80,7 +80,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
           {data.map((row, i) => (
             <tr
               key={row.id || i}
@@ -88,7 +88,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
                 if (showCheckbox && (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
                 onRowClick?.(row);
               }}
-              className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
+              className={`hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
             >
               {showCheckbox && (
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>

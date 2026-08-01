@@ -7,6 +7,9 @@ export interface BrandPreset {
 }
 
 export const BRAND_PRESETS: BrandPreset[] = [
+  { key: 'royal', ar: 'أزرق ملكي', en: 'Royal Blue', hue: 222, sat: 72 },
+  { key: 'navy', ar: 'كحلي', en: 'Navy', hue: 222, sat: 66 },
+  { key: 'gold', ar: 'ذهبي', en: 'Gold', hue: 46, sat: 74 },
   { key: 'green', ar: 'أخضر', en: 'Green', hue: 150, sat: 72 },
   { key: 'teal', ar: 'تركوازي', en: 'Teal', hue: 172, sat: 74 },
   { key: 'blue', ar: 'أزرق', en: 'Blue', hue: 218, sat: 70 },
@@ -17,7 +20,7 @@ export const BRAND_PRESETS: BrandPreset[] = [
   { key: 'red', ar: 'أحمر', en: 'Red', hue: 0, sat: 72 },
 ];
 
-export const DEFAULT_BRAND = { hue: 150, sat: 72 };
+export const DEFAULT_BRAND = { hue: 222, sat: 72 };
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 const LADDER: Record<number, { l: number; s: number }> = {

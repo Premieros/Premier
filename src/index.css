@@ -3,25 +3,51 @@
 @tailwind utilities;
 
 :root {
-  --brand-50: 236 253 245;
-  --brand-100: 209 250 229;
-  --brand-200: 167 243 208;
-  --brand-300: 110 231 183;
-  --brand-400: 52 211 153;
-  --brand-500: 16 185 129;
-  --brand-600: 5 150 105;
-  --brand-700: 4 120 87;
-  --brand-800: 6 95 70;
-  --brand-900: 6 78 59;
+  --brand-50: 242 245 253;
+  --brand-100: 229 235 251;
+  --brand-200: 201 215 248;
+  --brand-300: 156 182 242;
+  --brand-400: 102 142 234;
+  --brand-500: 42 96 223;
+  --brand-600: 30 76 184;
+  --brand-700: 26 62 147;
+  --brand-800: 22 50 116;
+  --brand-900: 18 39 89;
+
+  --navy-50: 240 243 250;
+  --navy-100: 219 227 243;
+  --navy-200: 185 200 232;
+  --navy-300: 138 163 216;
+  --navy-400: 90 121 194;
+  --navy-500: 58 91 171;
+  --navy-600: 45 71 144;
+  --navy-700: 36 58 118;
+  --navy-800: 26 42 88;
+  --navy-900: 15 23 42;
+  --navy-950: 2 6 23;
+
+  --gold-50: 251 248 239;
+  --gold-100: 245 238 216;
+  --gold-200: 234 220 175;
+  --gold-300: 223 200 135;
+  --gold-400: 217 188 98;
+  --gold-500: 212 175 55;
+  --gold-600: 183 149 42;
+  --gold-700: 146 116 34;
+  --gold-800: 115 91 31;
+  --gold-900: 92 74 30;
 }
 
 @layer base {
   html {
     font-family: 'Inter', 'Cairo', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.011em;
   }
 
   html[dir='rtl'] {
     font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0;
   }
 
   body {

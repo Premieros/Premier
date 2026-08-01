@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 px-4 py-3 animate-[slideDown_0.2s_ease-out]"
+            className="flex items-center gap-3 bg-white dark:bg-navy-900 rounded-xl shadow-lg shadow-navy-950/20 ring-1 ring-slate-200 dark:ring-navy-800 px-4 py-3 animate-[slideDown_0.2s_ease-out]"
           >
             {icons[toast.type]}
             <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{toast.message}</span>

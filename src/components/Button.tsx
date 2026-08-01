@@ -11,7 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm active:bg-brand-800',
+  primary: 'bg-navy-900 hover:bg-navy-800 text-white shadow-sm shadow-navy-900/20 active:bg-navy-950 ring-1 ring-navy-800/50',
   secondary: 'bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100',
   danger: 'bg-red-600 hover:bg-red-700 text-white shadow-sm active:bg-red-800',
   ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200',
@@ -50,7 +50,7 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   return (
     <button
       ref={btnRef}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       onClick={handleClick}
       {...props}
     >
