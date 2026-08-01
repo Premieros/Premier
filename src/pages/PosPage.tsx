@@ -138,6 +138,7 @@ export function PosPage() {
   const [selectedBranch, setSelectedBranch] = useState(branchFilter || '');
   const [loadError, setLoadError] = useState('');
   const [catSidebarOpen, setCatSidebarOpen] = useState(true);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<{ id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number } | null>(null);
   const [shiftChecked, setShiftChecked] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
@@ -436,6 +437,7 @@ export function PosPage() {
     setLastReceipt(receiptPayload);
     setReceiptSaleId(saleId);
     setCheckoutOpen(false);
+    setMobileCartOpen(false);
     clearCart();
     setDiscountAmount(0);
     setPaidAmount(0);
@@ -455,6 +457,167 @@ export function PosPage() {
     const html = await buildReceiptHtml(lastReceipt, effSettings, lang, isAr);
     openPrintWindow(html, effSettings.receipt_width_mm || 80);
   };
+
+  const renderCartPanel = (opts: { onClose?: () => void }) => (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Cart Header */}
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+            <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('cart')}</h2>
+            <p className="text-xs text-slate-400">{cart.length} {isAr ? 'منتج' : 'items'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {cart.length > 0 && (
+            <button onClick={clearCart} className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded-lg transition-colors">
+              {t('clearCart')}
+            </button>
+          )}
+          {opts.onClose && (
+            <button onClick={opts.onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title={isAr ? 'إغلاق' : 'Close'}>
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Cart Items */}
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        {cart.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+              <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+            </div>
+            <p className="text-sm font-medium">{t('emptyCart')}</p>
+            <p className="text-xs text-slate-400 mt-1">{isAr ? 'اضغط على المنتج لإضافته' : 'Tap a product to add it'}</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {cart.map((item) => (
+              <div key={item.product.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.product.name}</p>
+                  <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
+                  <label className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                    {isAr ? 'خصم' : 'Disc'}
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={item.discount_amount || ''}
+                      placeholder="0"
+                      onChange={(e) => setItemDiscount(item.product.id, parseFloat(e.target.value) || 0)}
+                      className="w-16 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                  </label>
+                </div>
+                <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
+                  <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => setQty(item.product.id, parseInt(e.target.value) || 1)}
+                    className="w-9 text-center text-sm font-bold bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                  <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="w-16 text-end">
+                  {item.discount_amount > 0 && (
+                    <p className="text-[10px] text-red-400 line-through">{formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
+                  )}
+                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    {formatCurrency(item.quantity * item.unit_price - item.discount_amount, effSettings?.currency || 'EGP', lang)}
+                  </span>
+                </div>
+                <button onClick={() => removeFromCart(item.product.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Cart Footer - Summary + Payment */}
+      {cart.length > 0 && (
+        <div className="border-t border-slate-100 dark:border-slate-800 p-4 space-y-3 flex-shrink-0">
+          {/* Totals */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>{t('subtotal')}</span>
+              <span className="font-medium">{formatCurrency(subtotal, effSettings?.currency || 'EGP', lang)}</span>
+            </div>
+            {discountValue > 0 && (
+              <div className="flex justify-between text-sm text-red-500">
+                <span>{t('discount')}</span>
+                <span className="font-medium">-{formatCurrency(discountValue, effSettings?.currency || 'EGP', lang)}</span>
+              </div>
+            )}
+            {taxAmount > 0 && (
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>{t('tax')} ({taxRate}%)</span>
+                <span className="font-medium">{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span>{t('total')}</span>
+              <span className="text-brand-600 dark:text-brand-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+            </div>
+          </div>
+
+          {/* Quick Payment Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { setPaymentMethod('cash'); setPaidAmount(total); setCheckoutOpen(true); }}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all active:scale-95"
+            >
+              <Banknote className="w-5 h-5" />
+              {t('cash')}
+            </button>
+            <button
+              onClick={() => { setPaymentMethod('card'); setPaidAmount(total); setCheckoutOpen(true); }}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all active:scale-95"
+            >
+              <CreditCard className="w-5 h-5" />
+              {t('card')}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => { setPaymentMethod('transfer'); setPaidAmount(total); setCheckoutOpen(true); }}
+              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs transition-all active:scale-95"
+            >
+              <Smartphone className="w-4 h-4" />
+              {t('transfer')}
+            </button>
+            <button
+              onClick={() => { setPaymentMethod('credit'); setPaidAmount(0); setCheckoutOpen(true); }}
+              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-all active:scale-95"
+            >
+              <FileText className="w-4 h-4" />
+              {t('credit')}
+            </button>
+            <button
+              onClick={() => setCheckoutOpen(true)}
+              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs transition-all active:scale-95"
+            >
+              <Percent className="w-4 h-4" />
+              {t('discount')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-500 border-t-transparent" /></div>;
@@ -498,7 +661,7 @@ export function PosPage() {
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
             onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); }}
-            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+            className="text-sm border-0 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 max-w-[130px] sm:max-w-none truncate"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
@@ -556,7 +719,7 @@ export function PosPage() {
       <div className="flex-1 flex min-h-0">
 
         {/* ===== LEFT: CATEGORIES SIDEBAR ===== */}
-        <div className={`${catSidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 transition-all duration-300 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 ${isAr ? 'border-l' : 'border-r'}`}>
+        <div className={`${catSidebarOpen ? 'w-56' : 'w-0'} hidden md:flex flex-shrink-0 transition-all duration-300 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 ${isAr ? 'border-l' : 'border-r'}`}>
           <div className="w-56 h-full flex flex-col">
             <div className="px-3 py-3 border-b border-slate-100 dark:border-slate-800">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{isAr ? 'الفئات' : 'Categories'}</p>
@@ -603,7 +766,7 @@ export function PosPage() {
           <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setCatSidebarOpen(!catSidebarOpen)}
-              className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="hidden md:flex p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title={isAr ? 'إظهار/إخفاء الفئات' : 'Toggle Categories'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -634,8 +797,36 @@ export function PosPage() {
             )}
           </div>
 
+          {/* Mobile Categories Chips */}
+          <div className="md:hidden flex items-center gap-2 px-3 py-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0">
+            <button
+              onClick={() => setSelectedCategory('')}
+              className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                selectedCategory === ''
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {t('allCategories')}
+              <span className="ms-1 opacity-70">({products.length})</span>
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  selectedCategory === cat.id
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {isAr ? cat.name : (cat.name_en || cat.name)}
+              </button>
+            ))}
+          </div>
+
           {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3 pb-24 sm:p-4 lg:pb-4">
             {!effectiveBranch ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
                 <ShoppingCart className="w-20 h-20 mb-4 opacity-20" />
@@ -647,7 +838,7 @@ export function PosPage() {
                 <p className="text-lg font-medium">{t('noData')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3">
                 {filteredProducts.map((p) => {
                   const isManufactured = p.product_type === 'manufactured';
                   const noRecipe = isManufactured && (recipeMap[p.id]?.length || 0) === 0;
@@ -712,158 +903,35 @@ export function PosPage() {
           </div>
         </div>
 
-        {/* ===== RIGHT: CART ===== */}
-        <div className="w-[380px] flex-shrink-0 flex flex-col bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 border-slate-200 dark:border-slate-800">
-          {/* Cart Header */}
-          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('cart')}</h2>
-                <p className="text-xs text-slate-400">{cart.length} {isAr ? 'منتج' : 'items'}</p>
-              </div>
-            </div>
-            {cart.length > 0 && (
-              <button onClick={clearCart} className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded-lg transition-colors">
-                {t('clearCart')}
-              </button>
-            )}
-          </div>
-
-          {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-3 py-2">
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-                  <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600" />
-                </div>
-                <p className="text-sm font-medium">{t('emptyCart')}</p>
-                <p className="text-xs text-slate-400 mt-1">{isAr ? 'اضغط على المنتج لإضافته' : 'Tap a product to add it'}</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {cart.map((item) => (
-                  <div key={item.product.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{item.product.name}</p>
-                      <p className="text-xs text-slate-400">{formatCurrency(item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
-                      <label className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
-                        {isAr ? 'خصم' : 'Disc'}
-                        <input
-                          type="number"
-                          min={0}
-                          step="any"
-                          value={item.discount_amount || ''}
-                          placeholder="0"
-                          onChange={(e) => setItemDiscount(item.product.id, parseFloat(e.target.value) || 0)}
-                          className="w-16 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        />
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
-                      <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => setQty(item.product.id, parseInt(e.target.value) || 1)}
-                        className="w-9 text-center text-sm font-bold bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
-                      />
-                      <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="w-16 text-end">
-                      {item.discount_amount > 0 && (
-                        <p className="text-[10px] text-red-400 line-through">{formatCurrency(item.quantity * item.unit_price, effSettings?.currency || 'EGP', lang)}</p>
-                      )}
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                        {formatCurrency(item.quantity * item.unit_price - item.discount_amount, effSettings?.currency || 'EGP', lang)}
-                      </span>
-                    </div>
-                    <button onClick={() => removeFromCart(item.product.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Cart Footer - Summary + Payment */}
-          {cart.length > 0 && (
-            <div className="border-t border-slate-100 dark:border-slate-800 p-4 space-y-3">
-              {/* Totals */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-sm text-slate-500">
-                  <span>{t('subtotal')}</span>
-                  <span className="font-medium">{formatCurrency(subtotal, effSettings?.currency || 'EGP', lang)}</span>
-                </div>
-                {discountValue > 0 && (
-                  <div className="flex justify-between text-sm text-red-500">
-                    <span>{t('discount')}</span>
-                    <span className="font-medium">-{formatCurrency(discountValue, effSettings?.currency || 'EGP', lang)}</span>
-                  </div>
-                )}
-                {taxAmount > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>{t('tax')} ({taxRate}%)</span>
-                    <span className="font-medium">{formatCurrency(taxAmount, effSettings?.currency || 'EGP', lang)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <span>{t('total')}</span>
-                  <span className="text-brand-600 dark:text-brand-400">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
-                </div>
-              </div>
-
-              {/* Quick Payment Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => { setPaymentMethod('cash'); setPaidAmount(total); setCheckoutOpen(true); }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all active:scale-95"
-                >
-                  <Banknote className="w-5 h-5" />
-                  {t('cash')}
-                </button>
-                <button
-                  onClick={() => { setPaymentMethod('card'); setPaidAmount(total); setCheckoutOpen(true); }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all active:scale-95"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  {t('card')}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => { setPaymentMethod('transfer'); setPaidAmount(total); setCheckoutOpen(true); }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs transition-all active:scale-95"
-                >
-                  <Smartphone className="w-4 h-4" />
-                  {t('transfer')}
-                </button>
-                <button
-                  onClick={() => { setPaymentMethod('credit'); setPaidAmount(0); setCheckoutOpen(true); }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-all active:scale-95"
-                >
-                  <FileText className="w-4 h-4" />
-                  {t('credit')}
-                </button>
-                <button
-                  onClick={() => setCheckoutOpen(true)}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs transition-all active:scale-95"
-                >
-                  <Percent className="w-4 h-4" />
-                  {t('discount')}
-                </button>
-              </div>
-            </div>
-          )}
+        {/* ===== RIGHT: CART (desktop) ===== */}
+        <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0 flex-col bg-white dark:bg-slate-900 border-s border-slate-200 dark:border-slate-800">
+          {renderCartPanel({})}
         </div>
+
+        {/* ===== MOBILE FLOATING CART BAR ===== */}
+        {cart.length > 0 && !mobileCartOpen && (
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="lg:hidden fixed bottom-4 start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-brand-600 text-white shadow-pos active:scale-[0.98] transition-all"
+          >
+            <span className="flex items-center gap-2 font-bold text-sm">
+              <ShoppingCart className="w-5 h-5" />
+              {isAr ? 'عرض السلة' : 'View Cart'}
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">{cart.length}</span>
+            </span>
+            <span className="font-bold">{formatCurrency(total, effSettings?.currency || 'EGP', lang)}</span>
+          </button>
+        )}
+
+        {/* ===== MOBILE CART BOTTOM SHEET ===== */}
+        {mobileCartOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 flex items-end justify-center animate-fade-in">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCartOpen(false)} />
+            <div className="relative w-full max-h-[92vh] bg-white dark:bg-slate-900 rounded-t-2xl shadow-pos overflow-hidden animate-slide-up flex flex-col">
+              {renderCartPanel({ onClose: () => setMobileCartOpen(false) })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== CHECKOUT MODAL ===== */}
@@ -913,7 +981,7 @@ export function PosPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('paymentMethod')}</label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(['cash', 'card', 'transfer', 'credit'] as const).map((m) => (
                 <button
                   key={m}
