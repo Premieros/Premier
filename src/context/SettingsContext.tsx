@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { applyBrandColor, brandFromSettingsValue } from '../lib/brandColor';
+import { applyBrandColor, applyDefaultSurface, applySurfaceColor, brandFromSettingsValue } from '../lib/brandColor';
+import { findUiTheme } from '../lib/themes';
 import { useTheme } from './ThemeContext';
 import { useLanguage } from './LanguageContext';
 import { useAuth } from './AuthContext';
@@ -56,8 +57,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const data = sRes.data as Settings | null;
     if (data) {
       setSettings(data);
-      const brand = brandFromSettingsValue(data.brand_color);
-      applyBrandColor(brand.hue, brand.sat);
+      const uiPreset = findUiTheme(data.brand_color);
+      if (uiPreset) {
+        applyBrandColor(uiPreset.brandHue, uiPreset.brandSat);
+        applySurfaceColor(uiPreset.surfaceHue, uiPreset.surfaceSat);
+      } else {
+        const brand = brandFromSettingsValue(data.brand_color);
+        applyBrandColor(brand.hue, brand.sat);
+        applyDefaultSurface();
+      }
       if (data.theme) setTheme(data.theme as 'light' | 'dark');
       if (data.language) setLang(data.language as 'ar' | 'en');
     }

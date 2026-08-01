@@ -101,6 +101,47 @@ export function applyBrandHex(hex: string): void {
   applyBrandColor(h, Math.min(85, Math.max(55, s)));
 }
 
+export const DEFAULT_SURFACE = { hue: 222, sat: 50 };
+
+const SURFACE_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+const SURFACE_LADDER: Record<number, { l: number; s: number }> = {
+  50: { l: 96, s: 38 },
+  100: { l: 90, s: 53 },
+  200: { l: 82, s: 57 },
+  300: { l: 70, s: 52 },
+  400: { l: 56, s: 47 },
+  500: { l: 45, s: 49 },
+  600: { l: 37, s: 52 },
+  700: { l: 30, s: 53 },
+  800: { l: 22, s: 54 },
+  900: { l: 11, s: 47 },
+  950: { l: 5, s: 60 },
+};
+
+export function surfaceShades(hue: number, sat: number): Record<string, string> {
+  const out: Record<string, string> = {};
+  const factor = sat / DEFAULT_SURFACE.sat;
+  for (const shade of SURFACE_SHADES) {
+    const { l, s } = SURFACE_LADDER[shade];
+    const ss = Math.min(75, Math.max(18, Math.round(s * factor)));
+    const [r, g, b] = hslToRgb(hue, ss, l);
+    out[`--navy-${shade}`] = `${r} ${g} ${b}`;
+  }
+  return out;
+}
+
+export function applySurfaceColor(hue: number, sat: number): void {
+  const vars = surfaceShades(hue, sat);
+  const root = document.documentElement;
+  for (const key of Object.keys(vars)) {
+    root.style.setProperty(key, vars[key]);
+  }
+}
+
+export function applyDefaultSurface(): void {
+  applySurfaceColor(DEFAULT_SURFACE.hue, DEFAULT_SURFACE.sat);
+}
+
 export interface BrandValue {
   hue: number;
   sat: number;

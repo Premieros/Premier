@@ -14,6 +14,7 @@ import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Input';
 import { logAudit } from '../lib/audit';
 import { BRAND_PRESETS, applyBrandColor, brandFromSettingsValue } from '../lib/brandColor';
+import { findUiTheme, UI_THEMES } from '../lib/themes';
 import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, isAdminRole, ROLE_META, type Permission } from '../lib/permissions';
 import type { Settings as SettingsType, Branch, BranchSettings, Role } from '../lib/types';
 
@@ -27,7 +28,7 @@ interface TabDef {
 
 export function SettingsPage() {
   const { t, lang, setLang } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, setUiTheme } = useTheme();
   const { settings, branchSettingsMap, save, saveBranchSettings } = useSettings();
   const { show } = useToast();
   const isAr = lang === 'ar';
@@ -50,7 +51,8 @@ export function SettingsPage() {
   useEffect(() => {
     if (settings) {
       setForm({ ...settings });
-      const brand = brandFromSettingsValue(settings.brand_color);
+      const uiPreset = findUiTheme(settings.brand_color);
+      const brand = uiPreset ? { hue: uiPreset.brandHue, sat: uiPreset.brandSat } : brandFromSettingsValue(settings.brand_color);
       setBrandHex(rgbToHex(brand.hue, brand.sat));
     }
   }, [settings]);
@@ -93,6 +95,17 @@ export function SettingsPage() {
     applyBrandColor(p.hue, p.sat);
     setBrandHex(rgbToHex(p.hue, p.sat));
     set('brand_color', key);
+    setCustomBrand('');
+  };
+
+  const pickTheme = (key: string) => {
+    const p = findUiTheme(key);
+    if (!p) return;
+    setUiTheme(key);
+    set('brand_color', key);
+    set('theme', p.mode);
+    setTheme(p.mode);
+    setBrandHex(rgbToHex(p.brandHue, p.brandSat));
     setCustomBrand('');
   };
 
@@ -233,7 +246,39 @@ export function SettingsPage() {
           <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
             <Palette className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('appearance')}
           </h3>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">{t('brandColor')}</label>
+
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">{t('uiTheme')}</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('themeHint')}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {UI_THEMES.map((p) => {
+              const active = form.brand_color === p.key;
+              const surfaceMid = `hsl(${p.surfaceHue} ${Math.min(70, p.surfaceSat)}% ${p.mode === 'dark' ? 45 : 75}%)`;
+              const surfaceDark = `hsl(${p.surfaceHue} ${Math.min(70, p.surfaceSat)}% ${p.mode === 'dark' ? 12 : 30}%)`;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => pickTheme(p.key)}
+                  className={`group relative overflow-hidden rounded-2xl border-2 transition-all p-3 text-start ${
+                    active
+                      ? 'border-brand-500 ring-2 ring-brand-500/30'
+                      : 'border-slate-200 dark:border-navy-700 hover:border-brand-300'
+                  }`}
+                >
+                  <div className={`h-9 rounded-xl mb-2.5 flex items-end gap-1 p-1.5 border border-black/10 ${p.mode === 'dark' ? '' : 'bg-slate-100'}`} style={{ background: surfaceDark }}>
+                    <span className="w-4 h-2.5 rounded-[4px]" style={{ background: `hsl(${p.brandHue} ${p.brandSat}% 45%)` }} />
+                    <span className="w-4 h-2.5 rounded-[4px] opacity-80" style={{ background: surfaceMid }} />
+                    <span className="w-4 h-2.5 rounded-[4px] opacity-60" style={{ background: surfaceMid }} />
+                  </div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-100">{isAr ? p.ar : p.en}</div>
+                  <div className="text-[10px] text-slate-400">{p.mode === 'dark' ? t('darkMode') : t('lightMode')}</div>
+                  {active && <span className="absolute top-2 end-2 w-2.5 h-2.5 rounded-full bg-brand-500 shadow" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="border-t border-slate-100 dark:border-navy-800 pt-5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">{t('brandColor')}</label>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-5">
             {BRAND_PRESETS.map((p) => {
               const active = form.brand_color === p.key;
@@ -261,8 +306,9 @@ export function SettingsPage() {
             </div>
             <div className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-600 mb-1" style={{ backgroundColor: brandHex }} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label={t('logo') + ' URL'} value={form.logo_url || ''} onChange={(e) => set('logo_url', e.target.value)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label={t('logo') + ' URL'} value={form.logo_url || ''} onChange={(e) => set('logo_url', e.target.value)} />
+            </div>
           </div>
         </Card>
       )}
