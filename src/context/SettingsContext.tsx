@@ -43,8 +43,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { setLang } = useLanguage();
   const { session } = useAuth();
 
+  const sessionUserId = session?.user?.id ?? null;
+
   const refresh = useCallback(async () => {
-    if (!session) {
+    if (!sessionUserId) {
       setSettings(null);
       setBranchSettingsMap({});
       setLoading(false);
@@ -73,7 +75,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     for (const row of (bRes.data as BranchSettings[]) || []) bMap[row.branch_id] = row;
     setBranchSettingsMap(bMap);
     setLoading(false);
-  }, [session, setTheme, setLang]);
+  }, [sessionUserId, setTheme, setLang]);
 
   useEffect(() => {
     refresh();

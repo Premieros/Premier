@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Theme } from '../lib/types';
 import { applySurfaceColor } from '../lib/brandColor';
 import { DEFAULT_UI_THEME, findUiTheme, UI_THEME_STORAGE_KEY, applyUiThemePreset } from '../lib/themes';
@@ -35,20 +35,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (p) applySurfaceColor(p.surfaceHue, p.surfaceSat);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setTheme = (t: Theme) => setThemeState(t);
-  const toggleTheme = () => setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const setTheme = useCallback((t: Theme) => setThemeState(t), []);
+  const toggleTheme = useCallback(() => setThemeState((prev) => (prev === 'light' ? 'dark' : 'light')), []);
 
-  const setUiTheme = (key: string) => {
+  const setUiTheme = useCallback((key: string) => {
     const p = findUiTheme(key);
     if (!p) return;
     setUiThemeState(key);
     localStorage.setItem(UI_THEME_STORAGE_KEY, key);
     applyUiThemePreset(p);
     setThemeState(p.mode);
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ theme, setTheme, toggleTheme, uiTheme, setUiTheme }),
+    [theme, setTheme, toggleTheme, uiTheme, setUiTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, uiTheme, setUiTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

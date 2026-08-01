@@ -49,12 +49,11 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (settings) {
-      setForm({ ...settings });
-      const uiPreset = findUiTheme(settings.brand_color);
-      const brand = uiPreset ? { hue: uiPreset.brandHue, sat: uiPreset.brandSat } : brandFromSettingsValue(settings.brand_color);
-      setBrandHex(rgbToHex(brand.hue, brand.sat));
-    }
+    if (!settings) return;
+    setForm((prev) => prev ?? { ...settings });
+    const uiPreset = findUiTheme(settings.brand_color);
+    const brand = uiPreset ? { hue: uiPreset.brandHue, sat: uiPreset.brandSat } : brandFromSettingsValue(settings.brand_color);
+    setBrandHex(rgbToHex(brand.hue, brand.sat));
   }, [settings]);
 
   useEffect(() => {
