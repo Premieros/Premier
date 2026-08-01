@@ -846,7 +846,109 @@ BEGIN
 END;
 $$;
 
--- ============ 15. SHIFTS FK GUARANTEE ============
+-- ============ 15. FULL SHIFTS SYSTEM REBUILD ============
+-- The live database can still hold a LEGACY shifts table (created by an older
+-- deployment) whose columns do NOT match this project: no opening_amount and
+-- no FK to users. That breaks column selects AND PostgREST embeds, regardless
+-- of schema-cache reloads. Rebuild the tables from scratch.
+--   * Old tables are preserved as shifts_legacy_<ts> / shift_operations_legacy_<ts>
+--     (renamed, never dropped) so nothing is permanently lost.
+--   * Idempotent: the rename only happens when the current shifts table is
+--     missing the canonical opening_amount column, so re-running this file is
+--     safe and will not wipe freshly created shift data.
+DO $$
+DECLARE
+  v_ts text := to_char(now(), 'YYYYMMDD_HH24MISS');
+  v_c record;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'shifts')
+     AND NOT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'shifts' AND column_name = 'opening_amount'
+     ) THEN
+    -- Free the canonical index names (shifts_pkey is schema-wide) before the
+    -- rebuilt tables are created, otherwise CREATE TABLE clashes with the
+    -- legacy index name. CASCADE also drops any legacy FK that depended on it.
+    FOR v_c IN SELECT conname FROM pg_constraint
+               WHERE conrelid = 'public.shifts'::regclass AND contype = 'p'
+    LOOP
+      EXECUTE format('ALTER TABLE public.shifts DROP CONSTRAINT %I CASCADE', v_c.conname);
+    END LOOP;
+    EXECUTE format('ALTER TABLE public.shifts RENAME TO shifts_legacy_%s', v_ts);
+
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'shift_operations') THEN
+      FOR v_c IN SELECT conname FROM pg_constraint
+                 WHERE conrelid = 'public.shift_operations'::regclass AND contype = 'p'
+      LOOP
+        EXECUTE format('ALTER TABLE public.shift_operations DROP CONSTRAINT %I CASCADE', v_c.conname);
+      END LOOP;
+      EXECUTE format('ALTER TABLE public.shift_operations RENAME TO shift_operations_legacy_%s', v_ts);
+    END IF;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.shifts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  branch_id uuid NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+  cashier_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  opened_at timestamptz NOT NULL DEFAULT now(),
+  closed_at timestamptz,
+  opening_amount numeric(14,2) NOT NULL DEFAULT 0,
+  expected_amount numeric(14,2) NOT NULL DEFAULT 0,
+  actual_amount numeric(14,2),
+  difference numeric(14,2) DEFAULT 0,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.shift_operations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shift_id uuid NOT NULL REFERENCES public.shifts(id) ON DELETE CASCADE,
+  operation_type text NOT NULL CHECK (operation_type IN ('sale', 'refund', 'expense', 'cash_in', 'cash_out', 'opening')),
+  amount numeric(14,2) NOT NULL DEFAULT 0,
+  payment_method text,
+  reference_type text,
+  reference_id uuid,
+  created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.shift_operations ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_shifts_branch  ON public.shifts(branch_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_cashier ON public.shifts(cashier_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_status  ON public.shifts(status);
+CREATE INDEX IF NOT EXISTS idx_shift_ops_shift ON public.shift_operations(shift_id);
+
+DROP POLICY IF EXISTS "auth_select_shifts" ON public.shifts;
+CREATE POLICY "auth_select_shifts" ON public.shifts FOR SELECT TO authenticated
+  USING (is_pos_admin() OR branch_id = get_branch_id() OR cashier_id = auth.uid());
+DROP POLICY IF EXISTS "auth_insert_shifts" ON public.shifts;
+CREATE POLICY "auth_insert_shifts" ON public.shifts FOR INSERT TO authenticated
+  WITH CHECK (cashier_id = auth.uid() AND (branch_id = get_branch_id() OR is_pos_admin()));
+DROP POLICY IF EXISTS "auth_update_shifts" ON public.shifts;
+CREATE POLICY "auth_update_shifts" ON public.shifts FOR UPDATE TO authenticated
+  USING (is_pos_admin() OR cashier_id = auth.uid())
+  WITH CHECK (is_pos_admin() OR cashier_id = auth.uid());
+DROP POLICY IF EXISTS "auth_delete_shifts" ON public.shifts;
+CREATE POLICY "auth_delete_shifts" ON public.shifts FOR DELETE TO authenticated
+  USING (is_pos_admin());
+
+DROP POLICY IF EXISTS "auth_select_shift_operations" ON public.shift_operations;
+CREATE POLICY "auth_select_shift_operations" ON public.shift_operations FOR SELECT TO authenticated
+  USING (is_pos_admin() OR EXISTS (
+    SELECT 1 FROM shifts s WHERE s.id = shift_operations.shift_id
+    AND (s.branch_id = get_branch_id() OR s.cashier_id = auth.uid())
+  ));
+DROP POLICY IF EXISTS "auth_insert_shift_operations" ON public.shift_operations;
+CREATE POLICY "auth_insert_shift_operations" ON public.shift_operations FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM shifts s WHERE s.id = shift_operations.shift_id
+    AND s.cashier_id = auth.uid() AND s.status = 'open'
+  ));
+
+-- ============ 16. SHIFTS FK GUARANTEE ============
 -- Legacy databases created the shifts table before this FK existed, so the
 -- PostgREST embed cashier:users!shifts_cashier_id_fkey fails with a
 -- "could not find a relationship" error (PGRST200) until the constraint is
