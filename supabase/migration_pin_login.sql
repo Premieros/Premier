@@ -11,6 +11,10 @@
 -- ============ 1. USERNAME COLUMN ============
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS username text;
 
+-- Refresh the PostgREST schema cache immediately so the new column is usable
+-- right away even if a later statement below fails (also repeated at the end).
+NOTIFY pgrst, 'reload schema';
+
 -- Backfill existing accounts from their email prefix (deduplicated).
 WITH numbered AS (
   SELECT id, lower(split_part(email, '@', 1)) AS base,
@@ -23,8 +27,32 @@ SET username = CASE WHEN n.rn = 1 THEN n.base ELSE n.base || '_' || n.rn END
 FROM numbered n
 WHERE u.id = n.id;
 
--- Normalize + enforce uniqueness/format.
-UPDATE public.users SET username = lower(btrim(username)) WHERE username IS NOT NULL;
+-- Sanitize every username to the allowed charset so the unique index / CHECK
+-- constraint below can NEVER fail on existing data (e.g. '+' or Arabic letters
+-- in an email prefix would otherwise abort this script before the final reload).
+WITH cleaned AS (
+  SELECT id,
+         regexp_replace(
+           regexp_replace(lower(btrim(COALESCE(username, ''))), '[^a-z0-9._-]', '_', 'g'),
+           '^[._-]+', '', 'g'
+         ) AS clean
+  FROM public.users
+)
+UPDATE public.users u
+SET username = CASE WHEN c.clean = '' THEN 'user' || replace(u.id::text, '-', '') ELSE c.clean END
+FROM cleaned c
+WHERE u.id = c.id;
+
+-- Final dedup after sanitization (very rare: 'a.b' and 'a_b' both become 'a_b').
+WITH dup AS (
+  SELECT id, row_number() OVER (PARTITION BY username ORDER BY created_at) AS rn
+  FROM public.users
+  WHERE username IS NOT NULL
+)
+UPDATE public.users u
+SET username = u.username || '_' || d.rn
+FROM dup d
+WHERE u.id = d.id AND d.rn > 1;
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_uniq_idx ON public.users (username);
 
@@ -115,8 +143,14 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'EMAIL_TAKEN');
   END IF;
 
-  -- Username: default to email prefix, must be unique
-  v_username := lower(btrim(coalesce(NULLIF(p_username, ''), split_part(v_email, '@', 1))));
+  -- Username: default to email prefix, sanitized, must be unique
+  v_username := regexp_replace(
+    regexp_replace(lower(btrim(coalesce(NULLIF(p_username, ''), split_part(v_email, '@', 1)))), '[^a-z0-9._-]', '_', 'g'),
+    '^[._-]+', '', 'g'
+  );
+  IF v_username = '' THEN
+    v_username := 'user' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 8);
+  END IF;
   IF EXISTS (SELECT 1 FROM public.users WHERE username = v_username) THEN
     RETURN jsonb_build_object('success', false, 'error', 'USERNAME_TAKEN');
   END IF;
