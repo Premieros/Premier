@@ -21,6 +21,7 @@ const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
 
 export function UsersPage() {
   const { t, lang } = useLanguage();
+  const isAr = lang === 'ar';
   const { show } = useToast();
   const { user: me } = useAuth();
   const { roleMeta } = useRoles();
@@ -31,11 +32,11 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
-  const [form, setForm] = useState({ full_name: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [form, setForm] = useState({ full_name: '', username: '', role: 'cashier' as Role, branch_id: '', is_active: true });
   const [newPassword, setNewPassword] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addModal, setAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
 
   async function load() {
     setLoading(true);
@@ -54,24 +55,26 @@ export function UsersPage() {
   }
   useEffect(() => { load(); }, []);
 
-  const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
 
   const openEdit = (u: AppUser) => {
     setEditing(u);
-    setForm({ full_name: u.full_name || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
+    setForm({ full_name: u.full_name || '', username: u.username || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
     setNewPassword('');
     setModalOpen(true);
   };
 
   const openAdd = () => {
-    setAddForm({ full_name: '', email: '', password: '', role: 'cashier' as Role, branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
+    setAddForm({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
     setAddModal(true);
   };
 
   const createNewUser = async () => {
     const email = addForm.email.trim();
-    if (!addForm.full_name || !email || !addForm.password) { show(t('required'), 'error'); return; }
-    if (addForm.password.length < 6) { show(t('required'), 'error'); return; }
+    const username = addForm.username.trim().toLowerCase();
+    if (!addForm.full_name || !email || !username || !addForm.password) { show(t('required'), 'error'); return; }
+    if (!/^\d{4}$/.test(addForm.password)) { show(t('pinInvalid'), 'error'); return; }
+    if (!/^[a-z0-9][a-z0-9._-]*$/.test(username)) { show(t('usernameInvalid'), 'error'); return; }
     if (!isAdmin && (addForm.role === 'super_admin' || addForm.role === 'owner')) {
       show(t('noPermissionToCreateUser'), 'error'); return;
     }
@@ -82,12 +85,14 @@ export function UsersPage() {
       p_role: addForm.role,
       p_branch_id: addForm.branch_id || null,
       p_is_active: addForm.is_active,
+      p_username: username,
     });
     if (error) { show(`${t('unknownErrorCreatingUser')}: ${error.message}`, 'error'); return; }
     const result = data as { success: boolean; error?: string; detail?: string; user_id?: string } | null;
     if (!result?.success) {
       if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
       else if (result?.error === 'EMAIL_TAKEN') show(t('emailAlreadyUsed'), 'error');
+      else if (result?.error === 'USERNAME_TAKEN') show(t('usernameTaken'), 'error');
       else show(`${t('unknownErrorCreatingUser')}: ${result?.detail || 'unknown'}`, 'error');
       return;
     }
@@ -107,11 +112,13 @@ export function UsersPage() {
       const otherAdmins = items.filter((u) => u.id !== editing.id && ADMIN_ROLES.includes(u.role as Role) && u.is_active).length;
       if (otherAdmins === 0) { show(t('lastAdminWarning'), 'error'); return; }
     }
-    const payload = { full_name: form.full_name, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
+    const username = form.username.trim().toLowerCase();
+    if (!username || !/^[a-z0-9][a-z0-9._-]*$/.test(username)) { show(t('usernameInvalid'), 'error'); return; }
+    const payload = { full_name: form.full_name, username, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
     const { error } = await supabase.from('users').update(payload).eq('id', editing.id);
     if (error) { show(error.message, 'error'); return; }
     if (newPassword) {
-      if (newPassword.length < 6) { show(t('weakPassword'), 'error'); return; }
+      if (newPassword.length < 4 || (newPassword.length === 4 && !/^\d{4}$/.test(newPassword))) { show(t('weakPassword'), 'error'); return; }
       const { data: pwData, error: pwError } = await supabase.rpc('update_user_password', { p_user_id: editing.id, p_new_password: newPassword });
       if (pwError) { show(`${t('unknownErrorCreatingUser')}: ${pwError.message}`, 'error'); return; }
       const pwResult = pwData as { success: boolean; error?: string; detail?: string } | null;
@@ -149,7 +156,8 @@ export function UsersPage() {
   const roleOptions = isAdmin ? ROLES : ROLES.filter((r) => !ADMIN_ROLES.includes(r));
 
   const columns: Column<AppUser>[] = [
-    { key: 'email', header: t('email'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.email}</span> },
+    { key: 'username', header: t('username'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.username || '-'}</span> },
+    { key: 'email', header: t('email'), render: (u) => <span className="text-slate-600 dark:text-slate-300">{u.email}</span> },
     { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
     { key: 'role', header: t('role'), render: (u) => (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 capitalize">
@@ -196,6 +204,7 @@ export function UsersPage() {
               <p className="font-medium text-slate-800 dark:text-slate-200">{editing.email}</p>
             </div>
             <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Input label={t('username')} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="off" />
             <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
               {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
             </Select>
@@ -207,7 +216,7 @@ export function UsersPage() {
               <option value="1">{t('active')}</option>
               <option value="0">{t('inactive')}</option>
             </Select>
-            <Input label={t('newPassword')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} minLength={6} />
+            <Input label={t('pinChangeHint')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} inputMode="numeric" maxLength={4} />
             <div className="flex justify-end gap-2">
               <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
               <button onClick={save} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
@@ -220,8 +229,9 @@ export function UsersPage() {
       <Modal open={addModal} onClose={() => setAddModal(false)} title={t('addUser')}>
         <div className="space-y-4">
           <Input label={t('fullName')} value={addForm.full_name} onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })} required />
+          <Input label={t('username')} value={addForm.username} onChange={(e) => setAddForm({ ...addForm, username: e.target.value })} required autoComplete="off" placeholder={isAr ? 'اسم المستخدم' : 'username'} />
           <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
-          <Input label={t('password')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} required minLength={6} />
+          <Input label={t('pin')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value.replace(/\D/g, '').slice(0, 4) })} required inputMode="numeric" maxLength={4} placeholder="1234" />
           <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as Role })}>
             {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
           </Select>

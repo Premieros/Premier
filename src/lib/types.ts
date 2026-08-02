@@ -210,6 +210,7 @@ export interface Expense {
 export interface AppUser {
   id: string;
   email: string;
+  username: string | null;
   full_name: string | null;
   role: Role;
   branch_id: string | null;

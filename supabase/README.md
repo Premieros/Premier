@@ -23,6 +23,10 @@
      إسقاط `users.permissions` (نموذج دور فقط)، وإزالة دورَي `kitchen` / `customer_display`.
 7. `migration_fix_login.sql` — أدوات تشخيص/إصلاح تسجيل الدخول للمستخدمين الجدد
    (`verify_auth_account` / `repair_auth_account` / `password_matches`) — تُشغَّل عند الحاجة فقط.
+8. `migration_pin_login.sql` — تسجيل الدخول باسم المستخدم + رقم سري (4 أرقام):
+   - عمود `username` في `users` + تعبئة تلقائية من البريد الإلكتروني للحسابات الموجودة.
+   - دالة `get_login_email(username)` (متاحة للـ anon) للبحث قبل تسجيل الدخول.
+   - `create_user` يقبل `p_username`، و`update_user_password` يقبل رقماً سرياً من 4 أرقام.
 
 > ملاحظة: الملفات القديمة (`migrations/` المؤرّخة، `migration_phase1/2`,
 > `migration_create_user`, `migration_user_password_delete`, `run_all_migrations`,

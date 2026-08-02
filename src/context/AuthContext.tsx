@@ -8,6 +8,7 @@ interface AuthContextValue {
   user: AppUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: { code: string; message: string } | null }>;
+  signInWithUsername: (username: string, pin: string) => Promise<{ error: { code: string; message: string } | null }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -120,6 +121,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? { code: error.code ?? '', message: error.message } : null };
   };
 
+  const signInWithUsername = async (username: string, pin: string) => {
+    const { data, error } = await supabase.rpc('get_login_email', {
+      p_username: username.trim().toLowerCase(),
+    });
+    if (error) return { error: { code: 'rpc_error', message: error.message } };
+    const result = data as { success?: boolean; email?: string; error?: string } | null;
+    if (!result?.success || !result.email) {
+      return { error: { code: result?.error === 'USER_INACTIVE' ? 'user_inactive' : 'user_not_found', message: '' } };
+    }
+    const { error: signError } = await supabase.auth.signInWithPassword({ email: result.email, password: pin });
+    return { error: signError ? { code: signError.code ?? '', message: signError.message } : null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -131,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signInWithUsername, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

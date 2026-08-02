@@ -8,9 +8,12 @@ import { Logo } from '../components/Logo';
 import { useToast } from '../components/Toast';
 
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithUsername } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const { show } = useToast();
+  const [mode, setMode] = useState<'pin' | 'password'>('pin');
+  const [username, setUsername] = useState('');
+  const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,15 +22,26 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) {
+    let result: { error: { code: string; message: string } | null };
+    if (mode === 'pin') {
+      if (!/^\d{4}$/.test(pin)) {
+        show(t('pinInvalid'), 'error');
+        return;
+      }
+      result = await signInWithUsername(username, pin);
+    } else {
+      result = await signIn(email, password);
+    }
+    if (result.error) {
+      const code = result.error.code;
       let msg: string;
-      if (error.code === 'invalid_credentials') msg = t('invalidCredentials');
-      else if (error.code === 'email_not_confirmed') msg = t('emailNotConfirmed');
-      else if (error.code === 'user_not_found') msg = t('userNotFound');
-      else if (error.code === 'over_request_rate_limit') msg = t('rateLimited');
-      else if (error.code === 'email_address_invalid') msg = t('invalidCredentials');
-      else msg = `${t('loginFailed')} ${error.message}`;
+      if (code === 'invalid_credentials') msg = t('invalidCredentials');
+      else if (code === 'email_not_confirmed') msg = t('emailNotConfirmed');
+      else if (code === 'user_not_found') msg = mode === 'pin' ? t('usernameNotFound') : t('userNotFound');
+      else if (code === 'user_inactive') msg = t('userInactive');
+      else if (code === 'over_request_rate_limit') msg = t('rateLimited');
+      else if (code === 'email_address_invalid') msg = t('invalidCredentials');
+      else msg = `${t('loginFailed')} ${result.error.message}`;
       show(msg, 'error');
     }
     setLoading(false);
@@ -84,7 +98,7 @@ export function LoginPage() {
           </div>
 
           <div className="bg-white dark:bg-navy-900 rounded-3xl shadow-xl border border-slate-100 dark:border-navy-800 p-8">
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                 {isAr ? 'مرحباً بك' : 'Welcome back'}
               </h2>
@@ -93,24 +107,74 @@ export function LoginPage() {
               </p>
             </div>
 
+            <div className="flex rounded-xl bg-slate-100 dark:bg-navy-800 p-1 mb-5">
+              <button
+                type="button"
+                onClick={() => setMode('pin')}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  mode === 'pin'
+                    ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                {t('loginWithPin')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('password')}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  mode === 'password'
+                    ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                {t('loginWithEmail')}
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label={t('email')}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="email@example.com"
-              />
-              <Input
-                label={t('password')}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                minLength={6}
-              />
+              {mode === 'pin' ? (
+                <>
+                  <Input
+                    label={t('username')}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    autoComplete="username"
+                    placeholder={isAr ? 'اسم المستخدم' : 'username'}
+                  />
+                  <Input
+                    label={t('pin')}
+                    type="password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    required
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="••••"
+                  />
+                </>
+              ) : (
+                <>
+                  <Input
+                    label={t('email')}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="email@example.com"
+                  />
+                  <Input
+                    label={t('password')}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    minLength={6}
+                  />
+                </>
+              )}
               <Button type="submit" size="lg" className="w-full" disabled={loading}>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
