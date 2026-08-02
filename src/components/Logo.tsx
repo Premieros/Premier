@@ -4,7 +4,7 @@ const NAVY = '#0F172A';
 const GOLD = '#D4AF37';
 const WHITE = '#FFFFFF';
 
-export type LogoTone = 'navy' | 'white' | 'mono';
+export type LogoTone = 'navy' | 'white' | 'mono' | 'auto';
 export type LogoVariant = 'mark' | 'horizontal' | 'vertical';
 
 interface LogoProps {

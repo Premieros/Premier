@@ -81,7 +81,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-slate-50 dark:bg-navy-950">
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 ${lang === 'ar' ? 'right-0' : 'left-0'} z-40 h-full w-64 bg-navy-900 dark:bg-navy-950 ${lang === 'ar' ? 'border-l' : 'border-r'} border-navy-800/60 shadow-xl shadow-navy-950/20 transform transition-transform duration-300 ${
+        className={`fixed top-0 ${lang === 'ar' ? 'right-0' : 'left-0'} z-40 h-full w-64 bg-white dark:bg-navy-950 ${lang === 'ar' ? 'border-l' : 'border-r'} border-slate-200 dark:border-navy-800/60 shadow-xl shadow-slate-200 dark:shadow-navy-950/20 transform transition-transform duration-300 ${
           sidebarOpen
             ? 'translate-x-0'
             : lang === 'ar'
@@ -90,9 +90,9 @@ export function Layout({ children }: { children: ReactNode }) {
         } lg:translate-x-0`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-5 border-b border-navy-800/60">
-          <Logo variant="horizontal" size={30} tone="white" showTagline={false} />
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+        <div className="flex items-center justify-between h-16 px-5 border-b border-slate-200 dark:border-navy-800/60 text-slate-900 dark:text-white">
+          <Logo variant="horizontal" size={30} tone="auto" showTagline={false} />
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-900 dark:hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -103,7 +103,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <div key={group} className="mb-1">
               <button
                 onClick={() => toggleGroup(group)}
-                className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold text-navy-300/70 uppercase tracking-wider hover:text-gold-300 transition-colors"
+                className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold text-slate-400 dark:text-navy-300/70 uppercase tracking-wider hover:text-slate-600 dark:hover:text-gold-300 transition-colors"
               >
                 <span>{isAr ? groupLabels[group]?.ar : groupLabels[group]?.en}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${collapsedGroups[group] ? '-rotate-90' : ''}`} />
@@ -117,7 +117,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/30'
-                        : 'text-slate-300/80 hover:bg-navy-800/80 hover:text-white'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300/80 dark:hover:bg-navy-800/80 dark:hover:text-white'
                     }`
                   }
                 >
@@ -130,12 +130,12 @@ export function Layout({ children }: { children: ReactNode }) {
 
           {/* AI Assistant teaser */}
           <div className="mt-auto pt-3">
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-navy-800/60 border border-gold-500/20">
-              <div className="w-8 h-8 rounded-lg bg-gold-500/15 text-gold-300 flex items-center justify-center">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-navy-800/60 border border-gold-500/20">
+              <div className="w-8 h-8 rounded-lg bg-gold-500/15 text-gold-600 dark:text-gold-300 flex items-center justify-center">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div className="text-xs">
-                <p className="text-white font-semibold">{isAr ? 'مساعد الذكاء الاصطناعي' : 'AI Assistant'}</p>
+                <p className="text-slate-900 dark:text-white font-semibold">{isAr ? 'مساعد الذكاء الاصطناعي' : 'AI Assistant'}</p>
                 <p className="text-slate-400">{isAr ? 'قريباً' : 'Coming soon'}</p>
               </div>
             </div>
