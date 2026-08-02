@@ -386,7 +386,13 @@ export function PosPage() {
       if (stock < item.quantity) { show(`${item.product.name}: ${t('insufficientStock')} (${stock})`, 'error'); setCompleting(false); return; }
     }
 
-    const invoiceNumber = `INV-${Date.now()}`;
+    const { data: serialRes, error: serialError } = await supabase.rpc('next_document_number', { p_type: 'sale' });
+    if (serialError || !serialRes?.success) {
+      show(serialError?.message || (serialRes as { detail?: string } | null)?.detail || t('error'), 'error');
+      setCompleting(false);
+      return;
+    }
+    const invoiceNumber = (serialRes as { number?: string }).number || `INV-${Date.now()}`;
     const itemsPayload = cart.map((i) => ({
       product_id: i.product.id,
       unit_name: i.unit_name,

@@ -9,13 +9,12 @@ import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { formatCurrency } from '../lib/format';
+import { formatCurrency, formatNumber, generateBarcode } from '../lib/format';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '../lib/barcode';
 import { logAudit } from '../lib/audit';
-import { generateBarcode } from '../lib/format';
 import { useBranchFilter } from '../lib/useBranchFilter';
-import type { Product, Category, ProductUnit, Settings, Branch } from '../lib/types';
+import type { Product, Category, ProductUnit, Settings, Branch, ProductComponentInput } from '../lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
 
@@ -44,6 +43,34 @@ export function ProductsPage() {
     branch_id: '',
   });
   const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [productComponents, setProductComponents] = useState<ProductComponentInput[]>([]);
+  const [stockComponents, setStockComponents] = useState<{ product_id: string; name: string; total: number; cost_price: number }[]>([]);
+  const [componentSel, setComponentSel] = useState('');
+  const [componentQty, setComponentQty] = useState(1);
+
+  async function loadStockComponents() {
+    let invQuery = supabase.from('inventory').select('product_id, quantity, product:products(id, name, cost_price, is_active)');
+    if (branchFilter) {
+      const { data: whs } = await supabase.from('warehouses').select('id').eq('branch_id', branchFilter).eq('is_active', true);
+      const ids = ((whs as { id: string }[] | null) || []).map((w) => w.id);
+      if (ids.length === 0) { setStockComponents([]); return; }
+      invQuery = invQuery.in('warehouse_id', ids);
+    }
+    const { data } = await invQuery;
+    const totals: Record<string, { name: string; cost_price: number; total: number }> = {};
+    for (const row of ((data || []) as unknown as { product_id: string; quantity: number; product: { id: string; name: string; cost_price: number; is_active: boolean } | null }[])) {
+      if (!row.product || !row.product.is_active) continue;
+      const t = totals[row.product_id] || { name: row.product.name, cost_price: row.product.cost_price, total: 0 };
+      t.total += Number(row.quantity) || 0;
+      totals[row.product_id] = t;
+    }
+    setStockComponents(
+      Object.entries(totals)
+        .filter(([, v]) => v.total > 0)
+        .map(([product_id, v]) => ({ product_id, name: v.name, total: v.total, cost_price: v.cost_price }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+  }
 
   async function load() {
     setLoading(true);
@@ -61,6 +88,7 @@ export function ProductsPage() {
       setCategories((c.data as Category[]) || []);
       if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
       setBranches((b.data as Branch[]) || []);
+      await loadStockComponents();
     } finally {
       setLoading(false);
     }
@@ -72,23 +100,40 @@ export function ProductsPage() {
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search) || p.sku?.includes(search)
   );
 
+  const availableToAdd = stockComponents.filter(
+    (s) => s.product_id !== editing?.id && !productComponents.some((c) => c.component_product_id === s.product_id)
+  );
+
   const openAdd = () => {
     setEditing(null);
     setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready', branch_id: branchFilter || '' });
     setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
+    setProductComponents([]);
+    setComponentSel('');
+    setComponentQty(1);
     setModalOpen(true);
   };
 
   const openEdit = async (p: Product) => {
     setEditing(p);
     setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, product_type: p.product_type || 'ready', branch_id: p.branch_id || branchFilter || '' });
-    const { data: u } = await supabase.from('product_units').select('*').eq('product_id', p.id);
-    setUnits((u as ProductUnit[]) || [{ id: '', product_id: p.id, unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: p.sale_price, cost_price: p.cost_price, barcode: p.barcode || '', is_base: true, created_at: '' }]);
+    const [u, comps] = await Promise.all([
+      supabase.from('product_units').select('*').eq('product_id', p.id),
+      supabase.from('product_components').select('component_product_id, quantity').eq('product_id', p.id),
+    ]);
+    setUnits((u.data as ProductUnit[]) || [{ id: '', product_id: p.id, unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: p.sale_price, cost_price: p.cost_price, barcode: p.barcode || '', is_base: true, created_at: '' }]);
+    setProductComponents(((comps.data as { component_product_id: string; quantity: number }[] | null) || []).map((c) => ({ component_product_id: c.component_product_id, quantity: Number(c.quantity) || 1 })));
+    setComponentSel('');
+    setComponentQty(1);
     setModalOpen(true);
   };
 
   const save = async () => {
     if (!form.name) { show(t('required') + ': ' + t('name'), 'error'); return; }
+    if (form.product_type === 'manufactured' && productComponents.length === 0) {
+      show(t('manufacturedRequiresComponents'), 'error');
+      return;
+    }
     const payload = { ...form, category_id: form.category_id || null, branch_id: form.branch_id || branchFilter || null };
     const unitPayload = units.filter(u => u.unit_name).map((u) => ({
       unit_name: u.unit_name,
@@ -99,26 +144,49 @@ export function ProductsPage() {
       barcode: u.barcode || null,
       is_base: u.is_base,
     }));
+    let pid: string;
     if (editing) {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
+      pid = editing.id;
       const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: editing.id, p_units: unitPayload });
       if (unitError) { show(unitError.message, 'error'); return; }
       await logAudit('update', 'products', editing.id, { name: form.name });
-      show(t('saveSuccess'), 'success');
     } else {
       const { data, error } = await supabase.from('products').insert(payload).select().single();
       if (error) { show(error.message, 'error'); return; }
+      pid = (data as { id: string }).id;
       if (unitPayload.length > 0) {
-        const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: data.id, p_units: unitPayload });
+        const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: pid, p_units: unitPayload });
         if (unitError) { show(unitError.message, 'error'); return; }
       }
-      await logAudit('create', 'products', data.id, { name: form.name });
-      show(t('saveSuccess'), 'success');
+      await logAudit('create', 'products', pid, { name: form.name });
     }
+    const { error: compDelError } = await supabase.from('product_components').delete().eq('product_id', pid);
+    if (compDelError) { show(compDelError.message, 'error'); return; }
+    if (form.product_type === 'manufactured' && productComponents.length > 0) {
+      const { error: compInsError } = await supabase.from('product_components').insert(
+        productComponents.map((c) => ({ product_id: pid, component_product_id: c.component_product_id, quantity: c.quantity }))
+      );
+      if (compInsError) { show(compInsError.message, 'error'); return; }
+    }
+    show(t('saveSuccess'), 'success');
     setModalOpen(false);
     load();
   };
+
+  const addComponentRow = () => {
+    if (!componentSel) { show(t('required'), 'error'); return; }
+    setProductComponents([...productComponents, { component_product_id: componentSel, quantity: componentQty > 0 ? componentQty : 1 }]);
+    setComponentSel('');
+    setComponentQty(1);
+  };
+
+  const updateComponentQty = (i: number, qty: number) =>
+    setProductComponents(productComponents.map((c, idx) => (idx === i ? { ...c, quantity: qty > 0 ? qty : 1 } : c)));
+
+  const removeComponentRow = (i: number) =>
+    setProductComponents(productComponents.filter((_, idx) => idx !== i));
 
   const remove = async () => {
     if (!deleteId) return;
@@ -259,10 +327,17 @@ export function ProductsPage() {
               <option value="">--</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
-            <Select label={t('productType')} value={form.product_type} onChange={(e) => setForm({ ...form, product_type: e.target.value as 'ready' | 'manufactured' })}>
-              <option value="ready">{t('readyProduct')}</option>
-              <option value="manufactured">{t('manufacturedProduct')}</option>
-            </Select>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('productType')}</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setForm({ ...form, product_type: 'ready' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'ready' ? 'bg-brand-600 text-white border-brand-600' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-brand-400'}`}>
+                  {t('withoutIngredients')}
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, product_type: 'manufactured' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'manufactured' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-purple-400'}`}>
+                  {t('withIngredients')}
+                </button>
+              </div>
+            </div>
             {!branchFilter && (
               <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })}>
                 <option value="">--</option>
@@ -276,6 +351,52 @@ export function ProductsPage() {
             <Input label={t('lowStockThreshold')} type="number" value={form.low_stock_threshold || ''} onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 0 })} />
           </div>
           <Textarea label={t('description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+
+          {/* Components (manufactured products) */}
+          {form.product_type === 'manufactured' && (
+            <div className="rounded-xl border border-purple-200 dark:border-purple-800/50 bg-purple-50/40 dark:bg-purple-900/10 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('components')}</h3>
+              </div>
+
+              {productComponents.length === 0 && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('selectComponent')}</p>
+              )}
+
+              <div className="space-y-2">
+                {productComponents.map((c, i) => {
+                  const info = stockComponents.find((s) => s.product_id === c.component_product_id);
+                  return (
+                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{info?.name || c.component_product_id}</p>
+                        <p className="text-xs text-slate-400">{t('availableStock')}: {formatNumber(info?.total || 0)}</p>
+                      </div>
+                      <Input label={t('usageQuantityPerUnit')} type="number" min={1} step="0.01" value={c.quantity || ''} onChange={(e) => updateComponentQty(i, parseFloat(e.target.value) || 1)} className="w-32" />
+                      <button onClick={() => removeComponentRow(i)} className="p-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {stockComponents.length > 0 ? (
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1 min-w-[200px]">
+                    <Select label={t('addComponent')} value={componentSel} onChange={(e) => setComponentSel(e.target.value)}>
+                      <option value="">--</option>
+                      {availableToAdd.map((s) => (
+                        <option key={s.product_id} value={s.product_id}>{s.name} ({formatNumber(s.total)})</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <Input label={t('usageQuantityPerUnit')} type="number" min={1} step="0.01" value={componentQty || ''} onChange={(e) => setComponentQty(parseFloat(e.target.value) || 1)} className="w-32" />
+                  <Button size="sm" onClick={addComponentRow}><Plus className="w-4 h-4" /> {t('addComponent')}</Button>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-600 dark:text-amber-400">{t('noAvailableComponents')}</p>
+              )}
+            </div>
+          )}
 
           {/* Units */}
           <div>

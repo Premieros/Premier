@@ -94,7 +94,12 @@ export function PurchasesPage() {
     if (!form.supplier_id) { show(t('required') + ': ' + t('supplier'), 'error'); return; }
     if (validItems.length === 0) { show(t('required') + ': ' + t('addProduct'), 'error'); return; }
 
-    const invoiceNumber = generateInvoiceNumber('PUR');
+    const { data: serialRes, error: serialError } = await supabase.rpc('next_document_number', { p_type: 'purchase' });
+    if (serialError || !serialRes?.success) {
+      show(serialError?.message || (serialRes as { detail?: string } | null)?.detail || t('error'), 'error');
+      return;
+    }
+    const invoiceNumber = (serialRes as { number?: string }).number || generateInvoiceNumber('PUR');
     const total = validItems.reduce((s, i) => s + i.quantity * i.unit_cost, 0);
 
     const { data, error } = await supabase.rpc('process_purchase', {
