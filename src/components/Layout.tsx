@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store,
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
-  Sparkles,
+  Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -27,8 +27,13 @@ const navItems: NavItem[] = [
   { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', permission: 'components.view', group: 'catalog' },
+  { to: '/raw-materials', icon: <FlaskConical className="w-5 h-5" />, labelKey: 'rawMaterials', permission: 'raw_materials.view', group: 'catalog' },
+  { to: '/recipes', icon: <ChefHat className="w-5 h-5" />, labelKey: 'recipes', permission: 'recipes.view', group: 'catalog' },
   { to: '/inventory', icon: <Boxes className="w-5 h-5" />, labelKey: 'inventory', permission: 'inventory.view', group: 'operations' },
   { to: '/warehouses', icon: <Warehouse className="w-5 h-5" />, labelKey: 'warehouses', permission: 'warehouses.view', group: 'operations' },
+  { to: '/production', icon: <Factory className="w-5 h-5" />, labelKey: 'productionOrders', permission: 'production.view', group: 'operations' },
+  { to: '/transfers', icon: <ArrowLeftRight className="w-5 h-5" />, labelKey: 'warehouseTransfers', permission: 'inventory.transfers', group: 'operations' },
+  { to: '/inventory-ledger', icon: <BookOpenText className="w-5 h-5" />, labelKey: 'inventoryLedger', permission: 'inventory.ledger.view', group: 'operations' },
   { to: '/branches', icon: <Store className="w-5 h-5" />, labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
   { to: '/purchases', icon: <Truck className="w-5 h-5" />, labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
   { to: '/customers', icon: <Users className="w-5 h-5" />, labelKey: 'customers', permission: 'customers.view', group: 'people' },

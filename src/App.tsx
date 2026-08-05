@@ -28,6 +28,11 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ defa
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ComponentsPage = lazy(() => import('./pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
 const ShiftsPage = lazy(() => import('./pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
+const RawMaterialsPage = lazy(() => import('./pages/RawMaterialsPage').then(m => ({ default: m.RawMaterialsPage })));
+const RecipesPage = lazy(() => import('./pages/RecipesPage').then(m => ({ default: m.RecipesPage })));
+const ProductionOrdersPage = lazy(() => import('./pages/ProductionOrdersPage').then(m => ({ default: m.ProductionOrdersPage })));
+const TransfersPage = lazy(() => import('./pages/TransfersPage').then(m => ({ default: m.TransfersPage })));
+const InventoryLedgerPage = lazy(() => import('./pages/InventoryLedgerPage').then(m => ({ default: m.InventoryLedgerPage })));
 
 function PageLoader() {
   return (
@@ -72,6 +77,11 @@ function AppRoutes() {
       <Route path="/components" element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute permission="inventory.view"><InventoryPage /></ProtectedRoute>} />
       <Route path="/warehouses" element={<ProtectedRoute permission="warehouses.view"><WarehousesPage /></ProtectedRoute>} />
+      <Route path="/raw-materials" element={<ProtectedRoute permission="raw_materials.view"><RawMaterialsPage /></ProtectedRoute>} />
+      <Route path="/recipes" element={<ProtectedRoute permission="recipes.view"><RecipesPage /></ProtectedRoute>} />
+      <Route path="/production" element={<ProtectedRoute permission="production.view"><ProductionOrdersPage /></ProtectedRoute>} />
+      <Route path="/transfers" element={<ProtectedRoute permission="inventory.transfers"><TransfersPage /></ProtectedRoute>} />
+      <Route path="/inventory-ledger" element={<ProtectedRoute permission="inventory.ledger.view"><InventoryLedgerPage /></ProtectedRoute>} />
       <Route path="/branches" element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
       <Route path="/purchases" element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />

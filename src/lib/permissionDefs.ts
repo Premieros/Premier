@@ -18,6 +18,11 @@ export type Permission =
   | 'components.view' | 'components.manage'
   | 'purchases.view' | 'purchases.manage'
   | 'inventory.view' | 'inventory.manage'
+  | 'inventory.transfers' | 'inventory.transfers.approve'
+  | 'inventory.ledger.view'
+  | 'raw_materials.view' | 'raw_materials.manage'
+  | 'recipes.view' | 'recipes.manage'
+  | 'production.view' | 'production.manage' | 'production.waste'
   | 'warehouses.view' | 'warehouses.manage'
   | 'customers.view' | 'customers.manage'
   | 'suppliers.view' | 'suppliers.manage'
@@ -39,6 +44,11 @@ export const ALL_PERMISSIONS: Permission[] = [
   'components.view', 'components.manage',
   'purchases.view', 'purchases.manage',
   'inventory.view', 'inventory.manage',
+  'inventory.transfers', 'inventory.transfers.approve',
+  'inventory.ledger.view',
+  'raw_materials.view', 'raw_materials.manage',
+  'recipes.view', 'recipes.manage',
+  'production.view', 'production.manage', 'production.waste',
   'warehouses.view', 'warehouses.manage',
   'customers.view', 'customers.manage',
   'suppliers.view', 'suppliers.manage',
@@ -66,6 +76,16 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> =
   'purchases.manage': { ar: 'إدارة المشتريات', en: 'Manage Purchases' },
   'inventory.view': { ar: 'عرض المخزون', en: 'View Inventory' },
   'inventory.manage': { ar: 'إدارة المخزون', en: 'Manage Inventory' },
+  'inventory.transfers': { ar: 'إنشاء تحويلات المخازن', en: 'Create Warehouse Transfers' },
+  'inventory.transfers.approve': { ar: 'اعتماد تحويلات المخازن', en: 'Approve Warehouse Transfers' },
+  'inventory.ledger.view': { ar: 'عرض دفتر المخزون', en: 'View Inventory Ledger' },
+  'raw_materials.view': { ar: 'عرض المواد الخام', en: 'View Raw Materials' },
+  'raw_materials.manage': { ar: 'إدارة المواد الخام', en: 'Manage Raw Materials' },
+  'recipes.view': { ar: 'عرض الوصفات', en: 'View Recipes' },
+  'recipes.manage': { ar: 'إدارة الوصفات', en: 'Manage Recipes' },
+  'production.view': { ar: 'عرض أوامر الإنتاج', en: 'View Production Orders' },
+  'production.manage': { ar: 'إدارة أوامر الإنتاج', en: 'Manage Production Orders' },
+  'production.waste': { ar: 'تسجيل هالك الإنتاج', en: 'Record Production Waste' },
   'warehouses.view': { ar: 'عرض المخازن', en: 'View Warehouses' },
   'warehouses.manage': { ar: 'إدارة المخازن', en: 'Manage Warehouses' },
   'customers.view': { ar: 'عرض العملاء', en: 'View Customers' },
@@ -136,7 +156,29 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'inventory',
     ar: 'المخزون',
     en: 'Inventory',
-    permissions: ['inventory.view', 'inventory.manage'],
+    permissions: [
+      'inventory.view', 'inventory.manage',
+      'inventory.transfers', 'inventory.transfers.approve',
+      'inventory.ledger.view',
+    ],
+  },
+  {
+    key: 'raw_materials',
+    ar: 'المواد الخام',
+    en: 'Raw Materials',
+    permissions: ['raw_materials.view', 'raw_materials.manage'],
+  },
+  {
+    key: 'recipes',
+    ar: 'الوصفات',
+    en: 'Recipes',
+    permissions: ['recipes.view', 'recipes.manage'],
+  },
+  {
+    key: 'production',
+    ar: 'الإنتاج',
+    en: 'Production',
+    permissions: ['production.view', 'production.manage', 'production.waste'],
   },
   {
     key: 'warehouses',
@@ -237,6 +279,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reports.view',
     'shifts.view',
   ],
+  production_manager: [
+    'dashboard.view',
+    'products.view', 'products.manage',
+    'categories.view', 'categories.manage',
+    'raw_materials.view', 'raw_materials.manage',
+    'recipes.view', 'recipes.manage',
+    'production.view', 'production.manage', 'production.waste',
+    'inventory.view', 'inventory.manage',
+    'warehouses.view', 'warehouses.manage',
+    'inventory.transfers', 'inventory.transfers.approve',
+    'purchases.view', 'purchases.manage',
+    'suppliers.view', 'suppliers.manage',
+    'inventory.ledger.view',
+    'shifts.view',
+  ],
 };
 
 /** DB row of the `roles` table. */
@@ -256,6 +313,7 @@ export const ROLE_META: Record<Role, { ar: string; en: string }> = {
   cashier: { ar: 'أمين صندوق', en: 'Cashier' },
   warehouse_manager: { ar: 'مدير مخازن', en: 'Warehouse Manager' },
   accountant: { ar: 'محاسب', en: 'Accountant' },
+  production_manager: { ar: 'مدير إنتاج', en: 'Production Manager' },
 };
 
 export function isAdminRole(role?: Role | null): boolean {
