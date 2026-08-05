@@ -33,6 +33,10 @@ const RecipesPage = lazy(() => import('./pages/RecipesPage').then(m => ({ defaul
 const ProductionOrdersPage = lazy(() => import('./pages/ProductionOrdersPage').then(m => ({ default: m.ProductionOrdersPage })));
 const TransfersPage = lazy(() => import('./pages/TransfersPage').then(m => ({ default: m.TransfersPage })));
 const InventoryLedgerPage = lazy(() => import('./pages/InventoryLedgerPage').then(m => ({ default: m.InventoryLedgerPage })));
+const AccountsPage = lazy(() => import('./pages/AccountsPage').then(m => ({ default: m.AccountsPage })));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage').then(m => ({ default: m.PaymentsPage })));
+const JournalPage = lazy(() => import('./pages/JournalPage').then(m => ({ default: m.JournalPage })));
+const FinancialReportsPage = lazy(() => import('./pages/FinancialReportsPage').then(m => ({ default: m.FinancialReportsPage })));
 
 function PageLoader() {
   return (
@@ -90,6 +94,10 @@ function AppRoutes() {
       <Route path="/sales" element={<ProtectedRoute permission="sales.view"><SalesPage /></ProtectedRoute>} />
       <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportsPage /></ProtectedRoute>} />
+      <Route path="/financial-reports" element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
+      <Route path="/accounts" element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
+      <Route path="/payments" element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
+      <Route path="/journal" element={<ProtectedRoute permission="accounts.view"><JournalPage /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
       <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />

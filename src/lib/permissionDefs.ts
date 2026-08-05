@@ -30,6 +30,8 @@ export type Permission =
   | 'sales.view'
   | 'refunds.approve'
   | 'reports.view'
+  | 'reports.financial'
+  | 'accounts.view' | 'accounts.manage'
   | 'shifts.view' | 'shifts.open' | 'shifts.close' | 'shifts.manage'
   | 'users.view' | 'users.manage'
   | 'audit.view'
@@ -56,6 +58,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   'sales.view',
   'refunds.approve',
   'reports.view',
+  'reports.financial',
+  'accounts.view', 'accounts.manage',
   'shifts.view', 'shifts.open', 'shifts.close', 'shifts.manage',
   'users.view', 'users.manage',
   'audit.view',
@@ -97,6 +101,9 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> =
   'sales.view': { ar: 'عرض فواتير المبيعات', en: 'View Sales Invoices' },
   'refunds.approve': { ar: 'الموافقة على المرتجعات', en: 'Approve Refunds' },
   'reports.view': { ar: 'عرض التقارير', en: 'View Reports' },
+  'reports.financial': { ar: 'التقارير المالية', en: 'Financial Reports' },
+  'accounts.view': { ar: 'عرض الحسابات والقيود', en: 'View Accounts & Journal' },
+  'accounts.manage': { ar: 'إدارة الحسابات', en: 'Manage Accounts' },
   'shifts.view': { ar: 'عرض الشيفتات', en: 'View Shifts' },
   'shifts.open': { ar: 'فتح شيفت', en: 'Open Shift' },
   'shifts.close': { ar: 'إغلاق شيفت', en: 'Close Shift' },
@@ -211,6 +218,12 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     permissions: ['expenses.view', 'expenses.manage'],
   },
   {
+    key: 'accounts',
+    ar: 'المحاسبة',
+    en: 'Accounting',
+    permissions: ['accounts.view', 'accounts.manage'],
+  },
+  {
     key: 'shifts',
     ar: 'الشيفتات',
     en: 'Shifts',
@@ -220,7 +233,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'reports',
     ar: 'التقارير',
     en: 'Reports',
-    permissions: ['reports.view'],
+    permissions: ['reports.view', 'reports.financial'],
   },
   {
     key: 'admin',
@@ -245,8 +258,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'suppliers.view', 'suppliers.manage',
     'expenses.view', 'expenses.manage',
     'sales.view', 'refunds.approve',
+    'reports.view', 'reports.financial',
+    'accounts.view', 'accounts.manage',
     'shifts.view', 'shifts.open', 'shifts.close', 'shifts.manage',
-    'reports.view',
     'users.view', 'users.manage',
   ],
   cashier: [
@@ -276,7 +290,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'inventory.view',
     'customers.view',
     'suppliers.view',
-    'reports.view',
+    'reports.view', 'reports.financial',
+    'accounts.view', 'accounts.manage',
     'shifts.view',
   ],
   production_manager: [

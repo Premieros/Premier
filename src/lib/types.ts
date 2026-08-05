@@ -584,3 +584,111 @@ export interface RpcResult {
     notes: string | null;
   };
 }
+
+export type AccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+
+export interface ChartOfAccount {
+  id: string;
+  branch_id: string;
+  code: string;
+  name: string;
+  name_en: string | null;
+  account_type: AccountType;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  entry_number: string;
+  branch_id: string;
+  entry_date: string;
+  reference_type: string;
+  reference_id: string | null;
+  reference_number: string | null;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface JournalEntryLine {
+  id: string;
+  journal_entry_id: string;
+  account_id: string;
+  debit: number;
+  credit: number;
+  customer_id: string | null;
+  supplier_id: string | null;
+  note: string | null;
+  created_at: string;
+  account?: ChartOfAccount;
+}
+
+export interface CustomerPayment {
+  id: string;
+  customer_id: string;
+  branch_id: string;
+  amount: number;
+  payment_method: string;
+  sale_id: string | null;
+  reference_number: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  customer?: Pick<Customer, 'name'>;
+}
+
+export interface TrialBalanceRow {
+  code: string;
+  name: string;
+  name_en: string | null;
+  account_type: AccountType;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface GeneralLedgerRow {
+  line_id: string;
+  entry_date: string;
+  entry_number: string;
+  description: string | null;
+  reference_number: string | null;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface IncomeStatementResult {
+  revenue: number;
+  discount: number;
+  net_revenue: number;
+  cogs: number;
+  gross_profit: number;
+  expenses: number;
+  net_income: number;
+}
+
+export interface BalanceSheetResult {
+  assets: number;
+  liabilities: number;
+  capital: number;
+  retained: number;
+  net_income: number;
+  equity: number;
+  balanced: boolean;
+}
+
+export interface ArAgingRow {
+  id?: string;
+  customer_id: string;
+  name: string;
+  phone: string | null;
+  open_amount: number;
+  bucket_0_30: number;
+  bucket_31_60: number;
+  bucket_61_90: number;
+  bucket_90_plus: number;
+}
