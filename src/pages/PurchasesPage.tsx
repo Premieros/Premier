@@ -14,14 +14,18 @@ import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/format
 import { exportToExcel } from '../lib/excel';
 import { logAudit } from '../lib/audit';
 import { useCan } from '../lib/permissions';
-import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult } from '../lib/types';
+import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult, RawMaterial } from '../lib/types';
 
 interface PurchaseFormItem {
+  line_type: 'product' | 'raw';
   product_id: string;
+  raw_material_id: string;
   unit_name: string;
   quantity: number;
   unit_cost: number;
 }
+
+const EMPTY_LINE: PurchaseFormItem = { line_type: 'product', product_id: '', raw_material_id: '', unit_name: 'piece', quantity: 1, unit_cost: 0 };
 
 export function PurchasesPage() {
   const { t, lang } = useLanguage();
@@ -32,6 +36,7 @@ export function PurchasesPage() {
   const [items, setItems] = useState<Purchase[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,17 +53,18 @@ export function PurchasesPage() {
     payment_method: 'cash',
     notes: '',
   });
-  const [lineItems, setLineItems] = useState<PurchaseFormItem[]>([{ product_id: '', unit_name: 'piece', quantity: 1, unit_cost: 0 }]);
+  const [lineItems, setLineItems] = useState<PurchaseFormItem[]>([{ ...EMPTY_LINE }]);
 
   async function load() {
     setLoading(true);
     try {
       let purchaseQuery = supabase.from('purchases').select('*, supplier:suppliers(*)').order('created_at', { ascending: false });
       if (branchFilter) purchaseQuery = purchaseQuery.eq('branch_id', branchFilter);
-      const [p, s, pr, w, b, st] = await Promise.all([
+      const [p, s, pr, rm, w, b, st] = await Promise.all([
         purchaseQuery,
         supabase.from('suppliers').select('*').order('name'),
         supabase.from('products').select('*').eq('is_active', true).order('name'),
+        supabase.from('raw_materials').select('*, unit:units(*)').eq('is_active', true).order('name'),
         supabase.from('warehouses').select('*').order('name'),
         supabase.from('branches').select('*').order('name'),
         supabase.from('settings').select('*').maybeSingle(),
@@ -66,6 +72,7 @@ export function PurchasesPage() {
       setItems((p.data as Purchase[]) || []);
       setSuppliers((s.data as Supplier[]) || []);
       setProducts((pr.data as Product[]) || []);
+      setRawMaterials((rm.data as RawMaterial[]) || []);
       setWarehouses((w.data as Warehouse[]) || []);
       setBranches((b.data as Branch[]) || []);
       if (st.data) setCurrency((st.data as Settings).currency || 'EGP');
@@ -81,18 +88,25 @@ export function PurchasesPage() {
 
   const openAdd = () => {
     setForm({ supplier_id: '', warehouse_id: '', branch_id: user?.branch_id || '', payment_method: 'cash', notes: '' });
-    setLineItems([{ product_id: '', unit_name: 'piece', quantity: 1, unit_cost: 0 }]);
+    setLineItems([{ ...EMPTY_LINE }]);
     setModalOpen(true);
   };
 
-  const addLine = () => setLineItems([...lineItems, { product_id: '', unit_name: 'piece', quantity: 1, unit_cost: 0 }]);
+  const addLine = () => setLineItems([...lineItems, { ...EMPTY_LINE }]);
   const updateLine = (i: number, field: keyof PurchaseFormItem, value: string | number) => setLineItems(lineItems.map((l, idx) => idx === i ? { ...l, [field]: value } : l));
   const removeLine = (i: number) => setLineItems(lineItems.filter((_, idx) => idx !== i));
 
+  const rawUnitName = (id: string) => {
+    const rm = rawMaterials.find((m) => m.id === id);
+    return rm?.unit?.symbol || rm?.unit?.name || 'وحدة';
+  };
+
   const save = async () => {
-    const validItems = lineItems.filter((l) => l.product_id && l.quantity > 0);
+    const validItems = lineItems.filter((l) => (l.line_type === 'product' ? l.product_id : l.raw_material_id) && l.quantity > 0);
     if (!form.supplier_id) { show(t('required') + ': ' + t('supplier'), 'error'); return; }
     if (validItems.length === 0) { show(t('required') + ': ' + t('addProduct'), 'error'); return; }
+    const hasProductLines = validItems.some((l) => l.line_type === 'product');
+    if (hasProductLines && !form.warehouse_id) { show(t('required') + ': ' + t('warehouse'), 'error'); return; }
 
     const { data: serialRes, error: serialError } = await supabase.rpc('next_document_number', { p_type: 'purchase' });
     if (serialError || !serialRes?.success) {
@@ -116,8 +130,8 @@ export function PurchasesPage() {
       p_status: 'completed',
       p_notes: form.notes,
       p_items: validItems.map((i) => ({
-        product_id: i.product_id,
-        unit_name: i.unit_name,
+        ...(i.line_type === 'raw' ? { raw_material_id: i.raw_material_id } : { product_id: i.product_id }),
+        unit_name: i.line_type === 'raw' ? rawUnitName(i.raw_material_id) : i.unit_name,
         quantity: i.quantity,
         unit_cost: i.unit_cost,
       })),
@@ -134,9 +148,9 @@ export function PurchasesPage() {
 
   const viewPurchase = async (p: Purchase) => {
     setViewModal(p);
-    const { data } = await supabase.from('purchase_items').select('*, product:products(name)').eq('purchase_id', p.id);
+    const { data } = await supabase.from('purchase_items').select('*, product:products(name), raw_material:raw_materials(name)').eq('purchase_id', p.id);
     setViewItems((data || []).map((i: Record<string, unknown>) => ({
-      name: (i.product as { name: string })?.name || '-',
+      name: (i.product as { name: string })?.name || (i.raw_material as { name: string })?.name || '-',
       quantity: Number(i.quantity),
       unit_cost: Number(i.unit_cost),
       total: Number(i.total),
@@ -209,11 +223,22 @@ export function PurchasesPage() {
             <div className="space-y-2">
               {lineItems.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <div className="col-span-5">
-                    <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
-                      <option value="">--</option>
-                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                    <option value="product">{t('product')}</option>
+                    <option value="raw">{t('rawMaterial')}</option>
+                  </select>
+                  <div className="col-span-3">
+                    {l.line_type === 'product' ? (
+                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                        <option value="">--</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    ) : (
+                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                        <option value="">--</option>
+                        {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
+                      </select>
+                    )}
                   </div>
                   <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
                   <input type="number" placeholder={t('cost')} step="0.01" value={l.unit_cost || ''} onChange={(e) => updateLine(i, 'unit_cost', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
