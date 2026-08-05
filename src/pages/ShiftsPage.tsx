@@ -11,7 +11,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { Button } from '../components/Button';
 import { Input, Textarea, Select } from '../components/Input';
 import { Modal } from '../components/Modal';
-import { formatCurrency, formatDateTime } from '../lib/format';
+import { formatCurrency, formatDateTime, escapeHtml } from '../lib/format';
 import { getBrandHex } from '../lib/brandColor';
 import { logAudit } from '../lib/audit';
 import type { Shift, Branch, Settings, RpcResult } from '../lib/types';
@@ -124,8 +124,8 @@ export function ShiftsPage() {
     const w = window.open('', '_blank', 'width=760,height=640');
     if (!w) { show(t('error'), 'error'); return; }
     const dir = isAr ? 'rtl' : 'ltr';
-    const branchName = shift.branch?.name || (branches.find((b) => b.id === shift.branch_id)?.name) || '-';
-    const cashierName = shift.cashier?.full_name || shift.cashier?.email || '-';
+    const branchName = escapeHtml(shift.branch?.name || (branches.find((b) => b.id === shift.branch_id)?.name) || '-');
+    const cashierName = escapeHtml(shift.cashier?.full_name || shift.cashier?.email || '-');
     const rows: [string, string][] = [
       [t('shift'), `#${shift.id.slice(0, 8).toUpperCase()}`],
       [t('branch'), branchName],
@@ -136,7 +136,7 @@ export function ShiftsPage() {
       [t('expectedAmount'), formatCurrency(shift.expected_amount, currency, lang)],
       [t('actualAmount'), formatCurrency(shift.actual_amount ?? 0, currency, lang)],
       [t('difference'), formatCurrency(shift.difference, currency, lang)],
-      [t('notes'), shift.notes || '-'],
+      [t('notes'), escapeHtml(shift.notes || '-')],
     ];
     const rowsHtml = rows.map(([k, v]) =>
       `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join('');
@@ -165,7 +165,7 @@ export function ShiftsPage() {
 </head>
 <body>
   <div class="head">
-    <div class="store">${storeName || 'POS'}</div>
+    <div class="store">${escapeHtml(storeName || 'POS')}</div>
     <h1>${t('closeShiftReport')}</h1>
     <p>${formatDateTime(new Date().toISOString(), lang)}</p>
   </div>

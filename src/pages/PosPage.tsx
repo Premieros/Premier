@@ -10,7 +10,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Logo } from '../components/Logo';
-import { formatCurrency } from '../lib/format';
+import { formatCurrency, escapeHtml } from '../lib/format';
 import { logAudit } from '../lib/audit';
 import { generateQRCodeDataURL } from '../lib/barcode';
 import { mergeEffectiveSettings, useSettings } from '../context/SettingsContext';
@@ -56,33 +56,33 @@ async function buildReceiptHtml(receipt: ReceiptData, s: Settings, lang: Languag
   }
 
   const single = `
-    <div class="center header">${s.store_name || ''}</div>
-    ${s.store_address ? `<div class="center sub">${s.store_address}</div>` : ''}
-    ${s.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${s.store_phone}</div>` : ''}
-    ${s.receipt_header ? `<div class="center sub">${s.receipt_header}</div>` : ''}
+    <div class="center header">${escapeHtml(s.store_name)}</div>
+    ${s.store_address ? `<div class="center sub">${escapeHtml(s.store_address)}</div>` : ''}
+    ${s.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${escapeHtml(s.store_phone)}</div>` : ''}
+    ${s.receipt_header ? `<div class="center sub">${escapeHtml(s.receipt_header)}</div>` : ''}
     <div class="divider"></div>
-    <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${receipt.invoice}</span></div>
+    <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${escapeHtml(receipt.invoice)}</span></div>
     <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${new Date(receipt.date).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span></div>
-    ${receipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${receipt.customerName}</span></div>` : ''}
+    ${receipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${escapeHtml(receipt.customerName)}</span></div>` : ''}
     <div class="divider"></div>
-    ${receipt.items.map((i) => `<div class="item-row"><div class="item-name">${i.name}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, currency, lang)}</span><span>${formatCurrency(i.total, currency, lang)}</span></div></div>`).join('')}
+    ${receipt.items.map((i) => `<div class="item-row"><div class="item-name">${escapeHtml(i.name)}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, currency, lang)}</span><span>${formatCurrency(i.total, currency, lang)}</span></div></div>`).join('')}
     <div class="divider"></div>
     <div class="row"><span>${isAr ? 'المجموع الفرعي' : 'Subtotal'}</span><span>${formatCurrency(receipt.subtotal, currency, lang)}</span></div>
     ${receipt.discount > 0 ? `<div class="row"><span>${isAr ? 'الخصم' : 'Discount'}</span><span>-${formatCurrency(receipt.discount, currency, lang)}</span></div>` : ''}
-    ${showTax && receipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${s.tax_rate ?? 0}%)</span><span>${formatCurrency(receipt.tax, currency, lang)}</span></div>` : ''}
+    ${showTax && receipt.tax > 0 ? `<div class="row"><span>${isAr ? 'الضريبة' : 'Tax'} (${escapeHtml(s.tax_rate ?? 0)}%)</span><span>${formatCurrency(receipt.tax, currency, lang)}</span></div>` : ''}
     <div class="divider"></div>
     <div class="row total-row"><span>${isAr ? 'الإجمالي' : 'Total'}</span><span>${formatCurrency(receipt.total, currency, lang)}</span></div>
     <div class="row"><span>${isAr ? 'المدفوع' : 'Paid'}</span><span>${formatCurrency(receipt.paid, currency, lang)}</span></div>
     ${receipt.change > 0 ? `<div class="row"><span>${isAr ? 'الباقي' : 'Change'}</span><span>${formatCurrency(receipt.change, currency, lang)}</span></div>` : ''}
     ${qrImg ? `<div class="center" style="margin-top:6px"><img src="${qrImg}" width="${Math.round(width / 2.2)}" style="display:block;margin:0 auto" /></div>` : ''}
     <div class="divider"></div>
-    ${s.receipt_footer ? `<div class="footer">${s.receipt_footer}</div>` : ''}
+    ${s.receipt_footer ? `<div class="footer">${escapeHtml(s.receipt_footer)}</div>` : ''}
     <div class="footer">${isAr ? 'شكراً لزيارتكم' : 'Thank you!'}</div>`;
 
   const pages = Array.from({ length: copies }, () => `<div class="page">${single}</div>`).join('\n');
   return `<!DOCTYPE html>
     <html dir="${isAr ? 'rtl' : 'ltr'}">
-    <head><title>${receipt.invoice}</title>
+    <head><title>${escapeHtml(receipt.invoice)}</title>
     <style>
       * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
       body { width: ${width}mm; padding: 4mm; font-size: 12px; color: #000; }

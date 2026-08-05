@@ -55,3 +55,12 @@ export function generateBarcode(): string {
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
