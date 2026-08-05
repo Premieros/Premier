@@ -129,7 +129,7 @@ export function ReportsPage() {
         setChartData(Array.from(methodMap.entries()).map(([method, data]) => ({ name: METHOD_LABELS[method] || method, value: data.total })));
         setSummary({ total: (sales || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total), 0), count: (sales || []).length });
       } else if (reportType === 'sales_by_employee') {
-        let q = supabase.from('sales').select('cashier_id, total, users:users!sales_cashier_id_fkey(full_name, email)').gte('created_at', fromTs).lte('created_at', toTs);
+        let q = supabase.from('sales').select('cashier_id, total, users:users!fk_sales_cashier(full_name, email)').gte('created_at', fromTs).lte('created_at', toTs);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         const { data: sales } = await q;
         const empMap = new Map<string, { name: string; total: number; count: number }>();
@@ -173,7 +173,7 @@ export function ReportsPage() {
         setChartData(Array.from(prodMap.values()).sort((a, b) => b.total - a.total).slice(0, 10).map((p) => ({ name: p.name, value: p.total })));
         setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[2]), 0), count: rows.length });
       } else if (reportType === 'detailed_invoices') {
-        let q = supabase.from('sales').select('id, invoice_number, total, paid_amount, payment_method, status, created_at, customer:customers(name), cashier:users!sales_cashier_id_fkey(full_name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });
+        let q = supabase.from('sales').select('id, invoice_number, total, paid_amount, payment_method, status, created_at, customer:customers(name), cashier:users!fk_sales_cashier(full_name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         const { data: sales } = await q;
         const rows = (sales || []).map((s: Record<string, unknown>) => {
