@@ -37,6 +37,8 @@ const AccountsPage = lazy(() => import('./pages/AccountsPage').then(m => ({ defa
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage').then(m => ({ default: m.PaymentsPage })));
 const JournalPage = lazy(() => import('./pages/JournalPage').then(m => ({ default: m.JournalPage })));
 const FinancialReportsPage = lazy(() => import('./pages/FinancialReportsPage').then(m => ({ default: m.FinancialReportsPage })));
+const TreasuryPage = lazy(() => import('./pages/TreasuryPage').then(m => ({ default: m.TreasuryPage })));
+const ReconciliationPage = lazy(() => import('./pages/ReconciliationPage').then(m => ({ default: m.ReconciliationPage })));
 
 function PageLoader() {
   return (
@@ -98,6 +100,8 @@ function AppRoutes() {
       <Route path="/accounts" element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
       <Route path="/payments" element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
       <Route path="/journal" element={<ProtectedRoute permission="accounts.view"><JournalPage /></ProtectedRoute>} />
+      <Route path="/treasury" element={<ProtectedRoute permission="accounts.view"><TreasuryPage /></ProtectedRoute>} />
+      <Route path="/reconciliation" element={<ProtectedRoute permission="accounts.view"><ReconciliationPage /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
       <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />

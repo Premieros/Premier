@@ -5,7 +5,7 @@ import {
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
   Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
-  Landmark, HandCoins, NotebookPen, FileSpreadsheet,
+  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -43,6 +43,8 @@ const navItems: NavItem[] = [
   { to: '/accounts', icon: <Landmark className="w-5 h-5" />, labelKey: 'chartOfAccounts', permission: 'accounts.view', group: 'finance' },
   { to: '/payments', icon: <HandCoins className="w-5 h-5" />, labelKey: 'receivePayment', permission: 'accounts.view', group: 'finance' },
   { to: '/journal', icon: <NotebookPen className="w-5 h-5" />, labelKey: 'journalEntries', permission: 'accounts.view', group: 'finance' },
+  { to: '/treasury', icon: <Wallet className="w-5 h-5" />, labelKey: 'treasury', permission: 'accounts.view', group: 'finance' },
+  { to: '/reconciliation', icon: <Scale className="w-5 h-5" />, labelKey: 'bankReconciliation', permission: 'accounts.view', group: 'finance' },
   { to: '/financial-reports', icon: <FileSpreadsheet className="w-5 h-5" />, labelKey: 'financialReports', permission: 'reports.financial', group: 'finance' },
   { to: '/sales', icon: <FileText className="w-5 h-5" />, labelKey: 'salesInvoices', permission: 'sales.view', group: 'finance' },
   { to: '/shifts', icon: <Timer className="w-5 h-5" />, labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
