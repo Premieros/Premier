@@ -284,16 +284,6 @@ export const translations = {
     selected: 'محدد',
     selectBranchFirst: 'يجب اختيار الفرع أولاً',
     cannotDeleteCompleted: 'لا يمكن حذف الفواتير المكتملة',
-    // Branch Product Assignment
-    branchProducts: 'تخصيص منتجات الفروع',
-    assignProducts: 'تخصيص المنتجات',
-    selectAll: 'تحديد الكل',
-    clearSelection: 'إلغاء التحديد',
-    branchSellingPrice: 'سعر بيع الفرع',
-    notAssigned: 'غير مخصص',
-    assignmentsSaved: 'تم حفظ تخصيصات المنتجات',
-    selectBranchToStart: 'اختر فرعاً لبدء تخصيص منتجاته',
-    clickToView: 'انقر لعرض التفاصيل',
     // Inventory v2 (Dual Inventory)
     productType: 'نوع المنتج',
     readyProduct: 'منتج جاهز',
@@ -653,16 +643,6 @@ export const translations = {
     selected: 'Selected',
     selectBranchFirst: 'Please select a branch first',
     cannotDeleteCompleted: 'Completed invoices cannot be deleted',
-    // Branch Product Assignment
-    branchProducts: 'Branch Product Assignment',
-    assignProducts: 'Assign Products',
-    selectAll: 'Select All',
-    clearSelection: 'Clear Selection',
-    branchSellingPrice: 'Branch Price',
-    notAssigned: 'Not assigned',
-    assignmentsSaved: 'Product assignments saved',
-    selectBranchToStart: 'Select a branch to start assigning its products',
-    clickToView: 'Click to view details',
     // Inventory v2 (Dual Inventory)
     productType: 'Product Type',
     readyProduct: 'Ready Product',

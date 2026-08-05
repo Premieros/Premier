@@ -195,8 +195,8 @@ export function PosPage() {
         let catq = supabase.from('categories').select('*');
         const productQuery = fixedBranch
           ? supabase
-              .from('branch_products')
-              .select('selling_price, is_active, product:products(*, category:categories(*))')
+              .from('products')
+              .select('*, category:categories(*)')
               .eq('branch_id', fixedBranch)
               .eq('is_active', true)
           : supabase.from('products').select('*, category:categories(*)').eq('is_active', true).order('name');
@@ -217,10 +217,10 @@ export function PosPage() {
         if (pRes.status === 'fulfilled' && pRes.value.error) errors.push('products: ' + pRes.value.error.message);
         else if (pRes.status === 'fulfilled') {
           if (fixedBranch) {
-            const rows = ((pRes.value.data || []) as { selling_price: number | null; product: Product }[]).sort((a, b) =>
-              (a.product?.name || '').localeCompare(b.product?.name || '')
+            const rows = ((pRes.value.data || []) as Product[]).sort((a, b) =>
+              (a.name || '').localeCompare(b.name || '')
             );
-            setProducts(rows.map((r) => ({ ...r.product, branch_selling_price: r.selling_price })));
+            setProducts(rows);
           } else {
             setProducts((pRes.value.data as Product[]) || []);
           }
@@ -327,7 +327,7 @@ export function PosPage() {
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) return prev.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i));
-      return [...prev, { product, unit_name: 'piece', quantity: 1, unit_price: product.branch_selling_price ?? product.sale_price, discount_amount: 0, bonus_quantity: 0 }];
+      return [...prev, { product, unit_name: 'piece', quantity: 1, unit_price: product.sale_price, discount_amount: 0, bonus_quantity: 0 }];
     });
   };
 
@@ -902,7 +902,7 @@ export function PosPage() {
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{isAr ? p.category?.name : (p.category?.name_en || p.category?.name)}</p>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(p.branch_selling_price ?? p.sale_price, effSettings?.currency || 'EGP', lang)}</span>
+                          <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(p.sale_price, effSettings?.currency || 'EGP', lang)}</span>
                           {!outOfStock && !noRecipe && (
                             <div className="w-6 h-6 rounded-full bg-gold-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Plus className="w-3.5 h-3.5 text-navy-950" />

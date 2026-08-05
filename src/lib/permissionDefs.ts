@@ -13,7 +13,7 @@ export type { Role };
 export type Permission =
   | 'dashboard.view'
   | 'pos.sell'
-  | 'products.view' | 'products.manage' | 'products.assign'
+  | 'products.view' | 'products.manage'
   | 'categories.view' | 'categories.manage'
   | 'components.view' | 'components.manage'
   | 'purchases.view' | 'purchases.manage'
@@ -34,7 +34,7 @@ export type Permission =
 export const ALL_PERMISSIONS: Permission[] = [
   'dashboard.view',
   'pos.sell',
-  'products.view', 'products.manage', 'products.assign',
+  'products.view', 'products.manage',
   'categories.view', 'categories.manage',
   'components.view', 'components.manage',
   'purchases.view', 'purchases.manage',
@@ -58,7 +58,6 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> =
   'pos.sell': { ar: 'البيع من نقطة البيع', en: 'Sell from POS' },
   'products.view': { ar: 'عرض المنتجات', en: 'View Products' },
   'products.manage': { ar: 'إدارة المنتجات', en: 'Manage Products' },
-  'products.assign': { ar: 'تخصيص منتجات الفروع', en: 'Assign Branch Products' },
   'categories.view': { ar: 'عرض الأصناف', en: 'View Categories' },
   'categories.manage': { ar: 'إدارة الأصناف', en: 'Manage Categories' },
   'components.view': { ar: 'عرض مكونات المنتجات', en: 'View Components' },
@@ -113,7 +112,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'products',
     ar: 'المنتجات',
     en: 'Products',
-    permissions: ['products.view', 'products.manage', 'products.assign'],
+    permissions: ['products.view', 'products.manage'],
   },
   {
     key: 'categories',
