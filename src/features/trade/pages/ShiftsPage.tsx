@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Timer, Play, Square, Printer, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -84,7 +85,7 @@ export function ShiftsPage() {
 
   const openShift = async () => {
     if (!user?.branch_id) { show(t('selectBranchFirst'), 'error'); return; }
-    const { data, error } = await supabase.rpc('open_shift', {
+    const { data, error } = await api.shifts.open({
       p_branch_id: user.branch_id,
       p_opening_amount: openForm.opening_amount || 0,
       p_notes: openForm.notes || null,
@@ -105,7 +106,7 @@ export function ShiftsPage() {
 
   const closeShift = async () => {
     if (!closeTarget) return;
-    const { data, error } = await supabase.rpc('close_shift', {
+    const { data, error } = await api.shifts.close({
       p_shift_id: closeTarget.id,
       p_actual_amount: closeForm.actual_amount,
       p_notes: closeForm.notes || null,

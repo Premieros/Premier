@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Search, Eye, Scale, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -78,7 +79,7 @@ export function JournalPage() {
       setBranches((b.data as Branch[]) || []);
 
       if (effectiveBranchFilter) {
-        const { data } = await supabase.rpc('get_journals', {
+        const { data } = await api.accounting.getJournals( {
           p_branch_id: effectiveBranchFilter,
           p_from_date: from || null,
           p_to_date: to || null,
@@ -156,7 +157,7 @@ export function JournalPage() {
     if (Math.abs(db - cr) > 0.001) { show(t('journalUnbalanced'), 'error'); return; }
 
     setSaving(true);
-    const { data, error } = await supabase.rpc('post_manual_journal', {
+    const { data, error } = await api.accounting.postManualJournal( {
       p_branch_id: effectiveBranchFilter,
       p_description: manualDesc.trim(),
       p_lines: lines,

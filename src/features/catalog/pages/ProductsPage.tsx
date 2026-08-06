@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { PageHeader, Card } from '@/components/PageHeader';
@@ -149,7 +150,7 @@ export function ProductsPage() {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       pid = editing.id;
-      const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: editing.id, p_units: unitPayload });
+      const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: editing.id, p_units: unitPayload });
       if (unitError) { show(unitError.message, 'error'); return; }
       await logAudit('update', 'products', editing.id, { name: form.name });
     } else {
@@ -157,7 +158,7 @@ export function ProductsPage() {
       if (error) { show(error.message, 'error'); return; }
       pid = (data as { id: string }).id;
       if (unitPayload.length > 0) {
-        const { error: unitError } = await supabase.rpc('replace_product_units', { p_product_id: pid, p_units: unitPayload });
+        const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: pid, p_units: unitPayload });
         if (unitError) { show(unitError.message, 'error'); return; }
       }
       await logAudit('create', 'products', pid, { name: form.name });

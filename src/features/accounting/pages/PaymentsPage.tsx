@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { HandCoins, Search, Phone, User, Building2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -57,8 +58,8 @@ export function PaymentsPage() {
       if (effectiveBranchFilter) {
         const asOf = new Date().toISOString().slice(0, 10);
         const [{ data: aging }, { data: apAging }] = await Promise.all([
-          supabase.rpc('get_ar_aging', { p_branch_id: effectiveBranchFilter, p_as_of: asOf }),
-          supabase.rpc('get_ap_aging', { p_branch_id: effectiveBranchFilter, p_as_of: asOf }),
+          api.accounting.getArAging({ p_branch_id: effectiveBranchFilter, p_as_of: asOf }),
+          api.accounting.getApAging({ p_branch_id: effectiveBranchFilter, p_as_of: asOf }),
         ]);
         setRows(((aging as ArAgingRow[]) || []).map((r) => ({ ...r, id: r.customer_id })));
         setApRows(((apAging as ApAgingRow[]) || []).map((r) => ({ ...r, id: r.supplier_id })));
@@ -124,7 +125,7 @@ export function PaymentsPage() {
     const amount = Number(form.amount);
     if (!amount || amount <= 0) { show(t('required'), 'error'); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc('receive_payment', {
+    const { data, error } = await api.accounting.receivePayment( {
       p_customer_id: collecting.customer_id,
       p_branch_id: effectiveBranchFilter,
       p_amount: amount,
@@ -147,7 +148,7 @@ export function PaymentsPage() {
     const amount = Number(apForm.amount);
     if (!amount || amount <= 0) { show(t('required'), 'error'); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc('pay_supplier', {
+    const { data, error } = await api.accounting.paySupplier( {
       p_supplier_id: paying.supplier_id,
       p_branch_id: effectiveBranchFilter,
       p_amount: amount,

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Search, Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
@@ -67,7 +68,7 @@ export function InventoryPage() {
 
   const saveAdjust = async () => {
     if (!adjustModal) return;
-    const { data, error } = await supabase.rpc('adjust_stock', {
+    const { data, error } = await api.inventory.adjustStock({
       p_inventory_id: adjustModal.id,
       p_new_quantity: adjustQty,
       p_reason: adjustReason || null,

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Coins, Landmark } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -63,7 +64,7 @@ export function AccountsPage() {
       setBranches((b.data as Branch[]) || []);
 
       if (effectiveBranchFilter) {
-        const { data: tb } = await supabase.rpc('get_trial_balance', { p_branch_id: effectiveBranchFilter, p_to_date: new Date().toISOString().slice(0, 10) });
+        const { data: tb } = await api.accounting.getTrialBalance( { p_branch_id: effectiveBranchFilter, p_to_date: new Date().toISOString().slice(0, 10) });
         if (tb && Array.isArray(tb)) {
           const map: Record<string, number> = {};
           (tb as TrialBalanceRow[]).forEach((r) => { map[r.code] = Number(r.balance); });
@@ -118,7 +119,7 @@ export function AccountsPage() {
   const seedOpening = async () => {
     if (!effectiveBranchFilter) { show(t('filterByBranch'), 'error'); return; }
     setSeeding(true);
-    const { data, error } = await supabase.rpc('seed_opening_balances', { p_branch_id: effectiveBranchFilter });
+    const { data, error } = await api.accounting.seedOpeningBalances( { p_branch_id: effectiveBranchFilter });
     setSeeding(false);
     if (error) { show(error.message, 'error'); return; }
     const r = data as { success: boolean; error?: string; detail?: string; total?: number; skipped?: boolean } | null;

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Scale, BookOpen, TrendingUp, PieChart, Clock, Download, BadgeCheck, BadgeAlert, Landmark, ArrowLeftRight, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Card } from '@/components/PageHeader';
@@ -89,13 +90,13 @@ export function FinancialReportsPage() {
     try {
       if (view === 'trial_balance') {
         const [{ data }, { data: summary }] = await Promise.all([
-          supabase.rpc('get_trial_balance', { p_branch_id: effectiveBranchFilter, p_to_date: to }),
-          supabase.rpc('get_trial_balance_summary', { p_branch_id: effectiveBranchFilter, p_to_date: to }),
+          api.reporting.getTrialBalance({ p_branch_id: effectiveBranchFilter, p_to_date: to }),
+          api.reporting.getTrialBalanceSummary({ p_branch_id: effectiveBranchFilter, p_to_date: to }),
         ]);
         setTb((data as TrialBalanceRow[]) || []);
         setTbSummary((summary as TrialBalanceSummary) || null);
       } else if (view === 'ledger') {
-        const { data } = await supabase.rpc('get_general_ledger', {
+        const { data } = await api.reporting.getGeneralLedger( {
           p_branch_id: effectiveBranchFilter,
           p_account_id: accountId || null,
           p_from_date: from,
@@ -103,25 +104,25 @@ export function FinancialReportsPage() {
         });
         setGl((data as GeneralLedgerRow[]) || []);
       } else if (view === 'income') {
-        const { data } = await supabase.rpc('get_income_statement', { p_branch_id: effectiveBranchFilter, p_from_date: from, p_to_date: to });
+        const { data } = await api.reporting.getIncomeStatement( { p_branch_id: effectiveBranchFilter, p_from_date: from, p_to_date: to });
         setIncome((data as IncomeStatementResult) || null);
       } else if (view === 'balance_sheet') {
-        const { data } = await supabase.rpc('get_balance_sheet', { p_branch_id: effectiveBranchFilter, p_as_of: to });
+        const { data } = await api.reporting.getBalanceSheet( { p_branch_id: effectiveBranchFilter, p_as_of: to });
         setSheet((data as BalanceSheetResult) || null);
       } else if (view === 'ar_aging') {
-        const { data } = await supabase.rpc('get_ar_aging', { p_branch_id: effectiveBranchFilter, p_as_of: to });
+        const { data } = await api.reporting.getArAging( { p_branch_id: effectiveBranchFilter, p_as_of: to });
         setArAging((data as ArAgingRow[]) || []);
       } else if (view === 'ap_aging') {
-        const { data } = await supabase.rpc('get_ap_aging', { p_branch_id: effectiveBranchFilter, p_as_of: to });
+        const { data } = await api.reporting.getApAging( { p_branch_id: effectiveBranchFilter, p_as_of: to });
         setApAging((data as ApAgingRow[]) || []);
       } else if (view === 'aging_summary') {
-        const { data } = await supabase.rpc('get_aging_summary', { p_branch_id: effectiveBranchFilter, p_as_of: to });
+        const { data } = await api.reporting.getAgingSummary( { p_branch_id: effectiveBranchFilter, p_as_of: to });
         setAgingSummary((data as AgingSummaryResult) || null);
       } else if (view === 'cash_flow') {
-        const { data } = await supabase.rpc('get_cash_flow', { p_branch_id: effectiveBranchFilter, p_from_date: from, p_to_date: to });
+        const { data } = await api.reporting.getCashFlow( { p_branch_id: effectiveBranchFilter, p_from_date: from, p_to_date: to });
         setCashFlow((data as CashFlowRow[]) || []);
       } else if (view === 'party_statement') {
-        const { data } = await supabase.rpc('get_party_statement', {
+        const { data } = await api.reporting.getPartyStatement( {
           p_branch_id: effectiveBranchFilter,
           p_side: partySide,
           p_party_id: partyId || null,

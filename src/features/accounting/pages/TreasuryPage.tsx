@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Landmark, ArrowLeftRight, PiggyBank, HandCoins, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -51,7 +52,7 @@ export function TreasuryPage() {
 
       if (effectiveBranchFilter) {
         const [{ data: bal }, { data: acc }, { data: tx }] = await Promise.all([
-          supabase.rpc('get_treasury_balances', { p_branch_id: effectiveBranchFilter }),
+          api.accounting.getTreasuryBalances({ p_branch_id: effectiveBranchFilter }),
           supabase.from('treasury_accounts').select('*').eq('branch_id', effectiveBranchFilter).order('account_type'),
           supabase.from('treasury_transactions')
             .select('*, from_account:treasury_accounts!from_account_id(account_name), to_account:treasury_accounts!to_account_id(account_name)')
@@ -85,7 +86,7 @@ export function TreasuryPage() {
     let result: { data: unknown; error: { message: string } | null };
     if (modal === 'transfer') {
       if (!form.from_account_id || !form.to_account_id) { show(t('required'), 'error'); return; }
-      result = await supabase.rpc('process_transfer', {
+      result = await api.accounting.processTransfer({
         p_branch_id: effectiveBranchFilter,
         p_from_account_id: form.from_account_id,
         p_to_account_id: form.to_account_id,
@@ -94,7 +95,7 @@ export function TreasuryPage() {
       });
     } else if (modal === 'deposit') {
       if (!form.account_id) { show(t('required'), 'error'); return; }
-      result = await supabase.rpc('process_treasury_deposit', {
+      result = await api.accounting.processTreasuryDeposit({
         p_branch_id: effectiveBranchFilter,
         p_account_id: form.account_id,
         p_amount: amount,
@@ -102,7 +103,7 @@ export function TreasuryPage() {
       });
     } else {
       if (!form.account_id) { show(t('required'), 'error'); return; }
-      result = await supabase.rpc('process_treasury_withdrawal', {
+      result = await api.accounting.processTreasuryWithdrawal({
         p_branch_id: effectiveBranchFilter,
         p_account_id: form.account_id,
         p_amount: amount,

@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
@@ -156,7 +157,7 @@ export function PosPage() {
     if (!isCashier) { setShiftChecked(true); setActiveShift(null); return; }
     if (!effectiveBranch) { setShiftChecked(true); setActiveShift(null); return; }
     setShiftChecked(false);
-    supabase.rpc('get_active_shift', { p_branch_id: effectiveBranch }).then(({ data }) => {
+      api.pos.getActiveShift({ p_branch_id: effectiveBranch }).then(({ data }) => {
       if (cancelled) return;
       const res = data as RpcResult | null;
       setActiveShift(res?.open ? (res.shift as unknown as { id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number }) : null);
@@ -386,7 +387,7 @@ export function PosPage() {
       if (stock < item.quantity) { show(`${item.product.name}: ${t('insufficientStock')} (${stock})`, 'error'); setCompleting(false); return; }
     }
 
-    const { data: serialRes, error: serialError } = await supabase.rpc('next_document_number', { p_type: 'sale' });
+    const { data: serialRes, error: serialError } = await api.pos.nextDocumentNumber({ p_type: 'sale' });
     if (serialError || !serialRes?.success) {
       show(serialError?.message || (serialRes as { detail?: string } | null)?.detail || t('error'), 'error');
       setCompleting(false);
@@ -405,7 +406,7 @@ export function PosPage() {
 
     const paidAmountToUse = paymentMethod === 'credit' ? 0 : paidAmount || total;
 
-    const { data, error } = await supabase.rpc('process_sale', {
+    const { data, error } = await api.pos.processSale({
       p_invoice_number: invoiceNumber,
       p_branch_id: effectiveBranch,
       p_shift_id: activeShift?.id || null,

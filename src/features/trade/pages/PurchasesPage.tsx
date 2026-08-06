@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
 import { Plus, Trash2, Search, Eye, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
@@ -108,7 +109,7 @@ export function PurchasesPage() {
     const hasProductLines = validItems.some((l) => l.line_type === 'product');
     if (hasProductLines && !form.warehouse_id) { show(t('required') + ': ' + t('warehouse'), 'error'); return; }
 
-    const { data: serialRes, error: serialError } = await supabase.rpc('next_document_number', { p_type: 'purchase' });
+    const { data: serialRes, error: serialError } = await api.trade.nextDocumentNumber({ p_type: 'purchase' });
     if (serialError || !serialRes?.success) {
       show(serialError?.message || (serialRes as { detail?: string } | null)?.detail || t('error'), 'error');
       return;
@@ -116,7 +117,7 @@ export function PurchasesPage() {
     const invoiceNumber = (serialRes as { number?: string }).number || generateInvoiceNumber('PUR');
     const total = validItems.reduce((s, i) => s + i.quantity * i.unit_cost, 0);
 
-    const { data, error } = await supabase.rpc('process_purchase', {
+    const { data, error } = await api.trade.processPurchase({
       p_invoice_number: invoiceNumber,
       p_supplier_id: form.supplier_id,
       p_branch_id: form.branch_id || null,

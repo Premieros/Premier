@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Edit2, Plus, Search, Shield, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { PageHeader, Card } from '@/components/PageHeader';
@@ -78,7 +79,7 @@ export function UsersPage() {
     if (!isAdmin && (addForm.role === 'super_admin' || addForm.role === 'owner')) {
       show(t('noPermissionToCreateUser'), 'error'); return;
     }
-    const { data, error } = await supabase.rpc('create_user', {
+    const { data, error } = await api.admin.createUser( {
       p_email: email,
       p_password: addForm.password,
       p_full_name: addForm.full_name,
@@ -119,7 +120,7 @@ export function UsersPage() {
     if (error) { show(error.message, 'error'); return; }
     if (newPassword) {
       if (newPassword.length < 4 || (newPassword.length === 4 && !/^\d{4}$/.test(newPassword))) { show(t('weakPassword'), 'error'); return; }
-      const { data: pwData, error: pwError } = await supabase.rpc('update_user_password', { p_user_id: editing.id, p_new_password: newPassword });
+      const { data: pwData, error: pwError } = await api.admin.updateUserPassword( { p_user_id: editing.id, p_new_password: newPassword });
       if (pwError) { show(`${t('unknownErrorCreatingUser')}: ${pwError.message}`, 'error'); return; }
       const pwResult = pwData as { success: boolean; error?: string; detail?: string } | null;
       if (!pwResult?.success) {
@@ -139,7 +140,7 @@ export function UsersPage() {
   const remove = async () => {
     if (!deleteId) return;
     const target = items.find((u) => u.id === deleteId);
-    const { data, error } = await supabase.rpc('delete_user', { p_user_id: deleteId });
+    const { data, error } = await api.admin.deleteUser( { p_user_id: deleteId });
     if (error) { show(`${t('unknownErrorDeletingUser')}: ${error.message}`, 'error'); return; }
     const result = data as { success: boolean; error?: string; detail?: string } | null;
     if (!result?.success) {

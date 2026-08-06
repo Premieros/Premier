@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+﻿import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import * as api from '../api';
 import type { AppUser } from '../lib/types';
 
 interface AuthContextValue {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const timeout = setTimeout(() => {
       if (mounted) {
-        console.warn('Auth timeout — forcing loading=false');
+        console.warn('Auth timeout â€” forcing loading=false');
         setLoading(false);
       }
     }, 8000);
@@ -122,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithUsername = async (username: string, pin: string) => {
-    const { data, error } = await supabase.rpc('get_login_email', {
+    const { data, error } = await api.admin.getLoginEmail( {
       p_username: username.trim().toLowerCase(),
     });
     if (error) return { error: { code: 'rpc_error', message: error.message } };

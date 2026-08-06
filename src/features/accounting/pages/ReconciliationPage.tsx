@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Eye, Link2, CheckCircle2, CircleDashed } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -78,7 +79,7 @@ export function ReconciliationPage() {
 
   const openDetail = async (id: string) => {
     setDetailLoading(true);
-    const { data, error } = await supabase.rpc('get_bank_reconciliation', { p_reconciliation_id: id });
+    const { data, error } = await api.accounting.getBankReconciliation( { p_reconciliation_id: id });
     setDetailLoading(false);
     if (error) { show(error.message, 'error'); return; }
     const d = data as ReconciliationDetail;
@@ -90,7 +91,7 @@ export function ReconciliationPage() {
   const createRecon = async () => {
     if (!createForm.treasury_account_id || !createForm.statement_balance) { show(t('required'), 'error'); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc('create_bank_reconciliation', {
+    const { data, error } = await api.accounting.createBankReconciliation( {
       p_branch_id: effectiveBranchFilter,
       p_treasury_account_id: createForm.treasury_account_id,
       p_statement_date: createForm.statement_date,
@@ -110,7 +111,7 @@ export function ReconciliationPage() {
   const addLine = async () => {
     if (!detail?.header || !lineForm.amount) { show(t('required'), 'error'); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc('add_statement_line', {
+    const { data, error } = await api.accounting.addStatementLine( {
       p_reconciliation_id: detail.header.id,
       p_statement_date: lineForm.statement_date,
       p_description: lineForm.description || null,
@@ -130,7 +131,7 @@ export function ReconciliationPage() {
     const candidateId = matchSelections[lineId];
     if (!candidateId) { show(t('required'), 'error'); return; }
     setSaving(true);
-    const { data, error } = await supabase.rpc('match_bank_line', {
+    const { data, error } = await api.accounting.matchBankLine( {
       p_line_id: lineId,
       p_journal_entry_id: candidateId,
     });
@@ -145,7 +146,7 @@ export function ReconciliationPage() {
   const complete = async () => {
     if (!detail?.header) return;
     setSaving(true);
-    const { data, error } = await supabase.rpc('complete_bank_reconciliation', { p_reconciliation_id: detail.header.id });
+    const { data, error } = await api.accounting.completeBankReconciliation( { p_reconciliation_id: detail.header.id });
     setSaving(false);
     if (error) { show(error.message, 'error'); return; }
     const r = data as { success: boolean; error?: string; detail?: string; difference?: number } | null;

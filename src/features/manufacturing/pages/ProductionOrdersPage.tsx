@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Search, Play, CheckCircle2, XCircle, Trash2, Factory, PackageOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
@@ -91,7 +92,7 @@ export function ProductionOrdersPage() {
     if (!form.product_id) { show(t('required') + ': ' + t('selectProduct'), 'error'); return; }
     if (!form.branch_id) { show(t('required') + ': ' + t('branch'), 'error'); return; }
     if (form.quantity <= 0) { show(t('required') + ': ' + t('outputQuantity'), 'error'); return; }
-    const { data, error } = await supabase.rpc('create_production_order', {
+    const { data, error } = await api.manufacturing.createOrder({
       p_product_id: form.product_id,
       p_branch_id: form.branch_id,
       p_warehouse_id: form.warehouse_id || null,
@@ -110,7 +111,7 @@ export function ProductionOrdersPage() {
   };
 
   const startOrder = async (o: ProductionOrder) => {
-    const { data, error } = await supabase.rpc('start_production_order', { p_order_id: o.id });
+    const { data, error } = await api.manufacturing.startOrder({ p_order_id: o.id });
     if (error) { show(error.message, 'error'); return; }
     const result = data as RpcResult | null;
     if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
@@ -144,7 +145,7 @@ export function ProductionOrdersPage() {
       quantity: w.quantity,
       reason: w.reason || null,
     }));
-    const { data, error } = await supabase.rpc('complete_production_order', {
+    const { data, error } = await api.manufacturing.completeOrder({
       p_order_id: completeTarget.id,
       p_waste: p_waste.length ? p_waste : null,
     });
@@ -161,7 +162,7 @@ export function ProductionOrdersPage() {
 
   const doCancel = async () => {
     if (!cancelTarget) return;
-    const { data, error } = await supabase.rpc('cancel_production_order', {
+    const { data, error } = await api.manufacturing.cancelOrder({
       p_order_id: cancelTarget.id,
       p_reason: cancelReason || null,
     });

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Boxes, Layers, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
@@ -148,7 +149,7 @@ export function RawMaterialsPage() {
 
   const saveAdjust = async () => {
     if (!adjustTarget) return;
-    const { data, error } = await supabase.rpc('adjust_raw_stock', {
+    const { data, error } = await api.inventory.adjustRawStock({
       p_raw_material_id: adjustTarget.raw_material_id,
       p_branch_id: adjustTarget.branch_id,
       p_new_quantity: adjustQty,

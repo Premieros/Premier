@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Search, Trash2, FileText, Edit2, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { PageHeader, Card } from '@/components/PageHeader';
@@ -124,7 +125,7 @@ export function SalesPage() {
     }
     if (p_items.length === 0) { show(isAr ? 'اختر كمية للمرتجع' : 'Choose a quantity to refund', 'error'); return; }
     setRefunding(true);
-    const { data, error } = await supabase.rpc('process_refund', {
+    const { data, error } = await api.trade.processRefund({
       p_sale_id: refundSale.id,
       p_items,
       p_reason: refundReason.trim() || null,

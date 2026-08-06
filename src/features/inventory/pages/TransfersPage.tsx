@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Search, CheckCircle2, XCircle, ArrowLeftRight, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
@@ -112,7 +113,7 @@ export function TransfersPage() {
     const validLines = lines.filter((l) => l.product_id && l.quantity > 0);
     if (validLines.length === 0) { show(t('required') + ': ' + t('transferItems'), 'error'); return; }
 
-    const { data, error } = await supabase.rpc('create_warehouse_transfer', {
+    const { data, error } = await api.inventory.createTransfer({
       p_from_warehouse_id: form.from_warehouse_id,
       p_to_warehouse_id: form.to_warehouse_id,
       p_branch_id: form.branch_id,
@@ -134,7 +135,7 @@ export function TransfersPage() {
   };
 
   const approve = async (tr: WarehouseTransfer) => {
-    const { data, error } = await supabase.rpc('approve_warehouse_transfer', { p_transfer_id: tr.id });
+    const { data, error } = await api.inventory.approveTransfer({ p_transfer_id: tr.id });
     if (error) { show(error.message, 'error'); return; }
     const result = data as RpcResult | null;
     if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
@@ -147,7 +148,7 @@ export function TransfersPage() {
 
   const doReject = async () => {
     if (!rejectTarget) return;
-    const { data, error } = await supabase.rpc('reject_warehouse_transfer', {
+    const { data, error } = await api.inventory.rejectTransfer({
       p_transfer_id: rejectTarget.id,
       p_reason: rejectReason || null,
     });
