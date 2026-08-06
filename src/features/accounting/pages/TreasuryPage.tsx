@@ -15,7 +15,9 @@ import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
-import type { TreasuryAccount, TreasuryBalance, TreasuryTransaction, Settings, Branch } from '@/lib/types';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
+import type { TreasuryAccount, TreasuryBalance, TreasuryTransaction } from '@/lib/types';
 
 type ModalType = 'transfer' | 'deposit' | 'withdrawal' | null;
 
@@ -25,16 +27,17 @@ export function TreasuryPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const can = useCan();
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const isAr = lang === 'ar';
 
   const [balances, setBalances] = useState<TreasuryBalance[]>([]);
   const [accounts, setAccounts] = useState<TreasuryAccount[]>([]);
   const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
 
   const [modal, setModal] = useState<ModalType>(null);
   const [saving, setSaving] = useState(false);
@@ -43,13 +46,6 @@ export function TreasuryPage() {
   async function load() {
     setLoading(true);
     try {
-      const [s, b] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-
       if (effectiveBranchFilter) {
         const [{ data: bal }, { data: acc }, { data: tx }] = await Promise.all([
           api.accounting.getTreasuryBalances({ p_branch_id: effectiveBranchFilter }),

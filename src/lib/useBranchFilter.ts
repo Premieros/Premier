@@ -13,10 +13,3 @@ export function useBranchFilter(): string | null {
   return user.branch_id || null;
 }
 
-/**
- * Returns true if the current user is a system admin (super_admin / owner).
- */
-export function useIsAdmin(): boolean {
-  const { user } = useAuth();
-  return isAdminRole(user?.role);
-}

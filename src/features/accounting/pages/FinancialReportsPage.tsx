@@ -11,8 +11,10 @@ import { formatCurrency, todayISO, formatDate } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import type {
-  Settings, Branch, TrialBalanceRow, GeneralLedgerRow, TrialBalanceSummary,
+  TrialBalanceRow, GeneralLedgerRow, TrialBalanceSummary,
   IncomeStatementResult, BalanceSheetResult, ArAgingRow, ApAgingRow,
   AgingSummaryResult, CashFlowRow, PartyStatementResult,
   Customer, Supplier, ChartOfAccount,
@@ -30,8 +32,8 @@ export function FinancialReportsPage() {
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(todayISO());
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [accountId, setAccountId] = useState('');
@@ -40,6 +42,7 @@ export function FinancialReportsPage() {
   const [partySide, setPartySide] = useState<'ar' | 'ap'>('ar');
   const [partyId, setPartyId] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
 
   const [tb, setTb] = useState<TrialBalanceRow[]>([]);
   const [tbSummary, setTbSummary] = useState<TrialBalanceSummary | null>(null);
@@ -51,18 +54,6 @@ export function FinancialReportsPage() {
   const [agingSummary, setAgingSummary] = useState<AgingSummaryResult | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlowRow[]>([]);
   const [partyStmt, setPartyStmt] = useState<PartyStatementResult | null>(null);
-
-  useEffect(() => {
-    const loadMeta = async () => {
-      const [s, b] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-    };
-    loadMeta();
-  }, []);
 
   useEffect(() => {
     if (effectiveBranchFilter) {

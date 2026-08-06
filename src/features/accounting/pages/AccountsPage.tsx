@@ -16,7 +16,9 @@ import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
-import type { ChartOfAccount, Settings, Branch, AccountType, TrialBalanceRow } from '@/lib/types';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
+import type { ChartOfAccount, AccountType, TrialBalanceRow } from '@/lib/types';
 
 const ACCOUNT_TYPES: { value: AccountType; labelKey: 'typeAsset' | 'typeLiability' | 'typeEquity' | 'typeIncome' | 'typeExpense' }[] = [
   { value: 'asset', labelKey: 'typeAsset' },
@@ -32,6 +34,8 @@ export function AccountsPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const can = useCan();
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const [items, setItems] = useState<ChartOfAccount[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -40,12 +44,11 @@ export function AccountsPage() {
   const [editing, setEditing] = useState<ChartOfAccount | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const [form, setForm] = useState({ code: '', name: '', name_en: '', account_type: 'asset' as AccountType, is_active: true });
 
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
   const canManage = can('accounts.manage');
 
@@ -54,14 +57,8 @@ export function AccountsPage() {
     try {
       let q = supabase.from('chart_of_accounts').select('*');
       if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
-      const [res, s, b] = await Promise.all([
-        q.order('code', { ascending: true }),
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
+      const res = await q.order('code', { ascending: true });
       setItems((res.data as ChartOfAccount[]) || []);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
 
       if (effectiveBranchFilter) {
         const { data: tb } = await api.accounting.getTrialBalance( { p_branch_id: effectiveBranchFilter, p_to_date: new Date().toISOString().slice(0, 10) });

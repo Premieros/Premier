@@ -14,7 +14,9 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole } from '@/lib/permissions';
-import type { ArAgingRow, ApAgingRow, Settings, Branch, CustomerPayment, SupplierPayment } from '@/lib/types';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
+import type { ArAgingRow, ApAgingRow, CustomerPayment, SupplierPayment } from '@/lib/types';
 
 type Tab = 'ar' | 'ap';
 
@@ -23,6 +25,8 @@ export function PaymentsPage() {
   const { show } = useToast();
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const [tab, setTab] = useState<Tab>('ar');
   const [rows, setRows] = useState<ArAgingRow[]>([]);
   const [payments, setPayments] = useState<CustomerPayment[]>([]);
@@ -30,10 +34,9 @@ export function PaymentsPage() {
   const [supplierPayments, setSupplierPayments] = useState<SupplierPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
 
   const [collecting, setCollecting] = useState<ArAgingRow | null>(null);
@@ -48,13 +51,6 @@ export function PaymentsPage() {
   async function load() {
     setLoading(true);
     try {
-      const [s, b] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-
       if (effectiveBranchFilter) {
         const asOf = new Date().toISOString().slice(0, 10);
         const [{ data: aging }, { data: apAging }] = await Promise.all([

@@ -15,7 +15,9 @@ import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
-import type { JournalDto, ChartOfAccount, Settings, Branch } from '@/lib/types';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
+import type { JournalDto, ChartOfAccount } from '@/lib/types';
 
 interface ManualLine {
   account_id: string;
@@ -49,17 +51,18 @@ export function JournalPage() {
   const { show } = useToast();
   const branchFilter = useBranchFilter();
   const can = useCan();
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const [items, setItems] = useState<JournalDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [refType, setRefType] = useState('');
   const [viewing, setViewing] = useState<JournalDto | null>(null);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
 
   const [manualOpen, setManualOpen] = useState(false);
@@ -71,13 +74,6 @@ export function JournalPage() {
   async function load() {
     setLoading(true);
     try {
-      const [s, b] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-
       if (effectiveBranchFilter) {
         const { data } = await api.accounting.getJournals( {
           p_branch_id: effectiveBranchFilter,

@@ -15,9 +15,11 @@ import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import type {
   BankReconciliation, ReconciliationDetail,
-  Settings, Branch, TreasuryAccount,
+  TreasuryAccount,
 } from '@/lib/types';
 
 export function ReconciliationPage() {
@@ -26,15 +28,16 @@ export function ReconciliationPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const can = useCan();
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
   const isAr = lang === 'ar';
 
   const [items, setItems] = useState<BankReconciliation[]>([]);
   const [accounts, setAccounts] = useState<TreasuryAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
 
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,13 +52,6 @@ export function ReconciliationPage() {
   async function load() {
     setLoading(true);
     try {
-      const [s, b] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-
       if (effectiveBranchFilter) {
         const [recon, acc] = await Promise.all([
           supabase.from('bank_reconciliations')
