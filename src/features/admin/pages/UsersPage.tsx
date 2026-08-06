@@ -1,0 +1,256 @@
+﻿import { useEffect, useState } from 'react';
+import { Edit2, Plus, Search, Shield, Trash2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/components/Toast';
+import { PageHeader, Card } from '@/components/PageHeader';
+import { DataTable, type Column } from '@/components/DataTable';
+import { Button } from '@/components/Button';
+import { Input, Select } from '@/components/Input';
+import { Modal } from '@/components/Modal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { formatDate } from '@/lib/format';
+import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/context/AuthContext';
+import { useRoles } from '@/context/RolesContext';
+import { isAdminRole, ROLE_META } from '@/lib/permissions';
+import type { AppUser, Branch, Role } from '@/lib/types';
+
+const ROLES: Role[] = Object.keys(ROLE_META) as Role[];
+const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
+
+export function UsersPage() {
+  const { t, lang } = useLanguage();
+  const isAr = lang === 'ar';
+  const { show } = useToast();
+  const { user: me } = useAuth();
+  const { roleMeta } = useRoles();
+  const isAdmin = isAdminRole(me?.role);
+  const [items, setItems] = useState<AppUser[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<AppUser | null>(null);
+  const [form, setForm] = useState({ full_name: '', username: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [newPassword, setNewPassword] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [addModal, setAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+
+  async function load() {
+    setLoading(true);
+    try {
+      const usersQuery = supabase.from('users').select('*').order('created_at', { ascending: false });
+      if (!isAdmin && me?.branch_id) usersQuery.eq('branch_id', me.branch_id);
+      const [u, b] = await Promise.all([
+        usersQuery,
+        supabase.from('branches').select('*').order('name'),
+      ]);
+      setItems((u.data as AppUser[]) || []);
+      setBranches((b.data as Branch[]) || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { load(); }, []);
+
+  const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
+
+  const openEdit = (u: AppUser) => {
+    setEditing(u);
+    setForm({ full_name: u.full_name || '', username: u.username || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
+    setNewPassword('');
+    setModalOpen(true);
+  };
+
+  const openAdd = () => {
+    setAddForm({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
+    setAddModal(true);
+  };
+
+  const createNewUser = async () => {
+    const email = addForm.email.trim();
+    const username = addForm.username.trim().toLowerCase();
+    if (!addForm.full_name || !email || !username || !addForm.password) { show(t('required'), 'error'); return; }
+    if (!/^\d{4}$/.test(addForm.password)) { show(t('pinInvalid'), 'error'); return; }
+    if (!/^[a-z0-9][a-z0-9._-]*$/.test(username)) { show(t('usernameInvalid'), 'error'); return; }
+    if (!isAdmin && (addForm.role === 'super_admin' || addForm.role === 'owner')) {
+      show(t('noPermissionToCreateUser'), 'error'); return;
+    }
+    const { data, error } = await supabase.rpc('create_user', {
+      p_email: email,
+      p_password: addForm.password,
+      p_full_name: addForm.full_name,
+      p_role: addForm.role,
+      p_branch_id: addForm.branch_id || null,
+      p_is_active: addForm.is_active,
+      p_username: username,
+    });
+    if (error) { show(`${t('unknownErrorCreatingUser')}: ${error.message}`, 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string; user_id?: string } | null;
+    if (!result?.success) {
+      if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
+      else if (result?.error === 'EMAIL_TAKEN') show(t('emailAlreadyUsed'), 'error');
+      else if (result?.error === 'USERNAME_TAKEN') show(t('usernameTaken'), 'error');
+      else show(`${t('unknownErrorCreatingUser')}: ${result?.detail || 'unknown'}`, 'error');
+      return;
+    }
+    await logAudit('create', 'users', result.user_id, { email });
+    show(t('saveSuccess'), 'success');
+    setAddModal(false);
+    load();
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    if (!isAdmin && (form.role === 'super_admin' || form.role === 'owner')) { show(t('noPermissionToCreateUser'), 'error'); return; }
+    const isAdminTarget = ADMIN_ROLES.includes(editing.role as Role);
+    const demoting = isAdminTarget && !ADMIN_ROLES.includes(form.role as Role);
+    const deactivating = isAdminTarget && editing.is_active && !form.is_active;
+    if (demoting || deactivating) {
+      const otherAdmins = items.filter((u) => u.id !== editing.id && ADMIN_ROLES.includes(u.role as Role) && u.is_active).length;
+      if (otherAdmins === 0) { show(t('lastAdminWarning'), 'error'); return; }
+    }
+    const username = form.username.trim().toLowerCase();
+    if (!username || !/^[a-z0-9][a-z0-9._-]*$/.test(username)) { show(t('usernameInvalid'), 'error'); return; }
+    const payload = { full_name: form.full_name, username, role: form.role, branch_id: form.branch_id || null, is_active: form.is_active };
+    const { error } = await supabase.from('users').update(payload).eq('id', editing.id);
+    if (error) { show(error.message, 'error'); return; }
+    if (newPassword) {
+      if (newPassword.length < 4 || (newPassword.length === 4 && !/^\d{4}$/.test(newPassword))) { show(t('weakPassword'), 'error'); return; }
+      const { data: pwData, error: pwError } = await supabase.rpc('update_user_password', { p_user_id: editing.id, p_new_password: newPassword });
+      if (pwError) { show(`${t('unknownErrorCreatingUser')}: ${pwError.message}`, 'error'); return; }
+      const pwResult = pwData as { success: boolean; error?: string; detail?: string } | null;
+      if (!pwResult?.success) {
+        if (pwResult?.error === 'PERMISSION_DENIED') show(t('noPermissionToCreateUser'), 'error');
+        else if (pwResult?.error === 'WEAK_PASSWORD') show(t('weakPassword'), 'error');
+        else show(`${t('unknownErrorCreatingUser')}: ${pwResult?.detail || 'unknown'}`, 'error');
+        return;
+      }
+    }
+    await logAudit('update', 'users', editing.id, { ...payload, password_changed: !!newPassword });
+    show(t('saveSuccess'), 'success');
+    setModalOpen(false);
+    setNewPassword('');
+    load();
+  };
+
+  const remove = async () => {
+    if (!deleteId) return;
+    const target = items.find((u) => u.id === deleteId);
+    const { data, error } = await supabase.rpc('delete_user', { p_user_id: deleteId });
+    if (error) { show(`${t('unknownErrorDeletingUser')}: ${error.message}`, 'error'); return; }
+    const result = data as { success: boolean; error?: string; detail?: string } | null;
+    if (!result?.success) {
+      if (result?.error === 'PERMISSION_DENIED') show(t('noPermissionToDeleteUser'), 'error');
+      else if (result?.error === 'LAST_ADMIN') show(t('lastAdminWarning'), 'error');
+      else show(`${t('unknownErrorDeletingUser')}: ${result?.detail || 'unknown'}`, 'error');
+      return;
+    }
+    await logAudit('delete', 'users', deleteId, { email: target?.email });
+    show(t('deleteSuccess'), 'success');
+    load();
+  };
+
+  const roleOptions = isAdmin ? ROLES : ROLES.filter((r) => !ADMIN_ROLES.includes(r));
+
+  const columns: Column<AppUser>[] = [
+    { key: 'username', header: t('username'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.username || '-'}</span> },
+    { key: 'email', header: t('email'), render: (u) => <span className="text-slate-600 dark:text-slate-300">{u.email}</span> },
+    { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
+    { key: 'role', header: t('role'), render: (u) => (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 capitalize">
+        <Shield className="w-3 h-3" /> {roleMeta[u.role]?.[lang] || u.role}
+      </span>
+    )},
+    { key: 'branch', header: t('branch'), render: (u) => branches.find((b) => b.id === u.branch_id)?.name || '-' },
+    { key: 'is_active', header: t('status'), render: (u) => (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+        {u.is_active ? t('active') : t('inactive')}
+      </span>
+    )},
+    { key: 'created_at', header: t('date'), render: (u) => formatDate(u.created_at) },
+    { key: 'actions', header: t('actions'), render: (u) => (
+      <div className="flex gap-1">
+        <button onClick={() => openEdit(u)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(u.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('deleteUser')}><Trash2 className="w-4 h-4" /></button>
+      </div>
+    )},
+  ];
+
+  return (
+    <div>
+      <PageHeader title={t('users')} actions={
+        <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addUser')}</Button>
+      } />
+      <Card className="mb-4 p-4">
+        <div className="relative">
+          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
+            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+      </Card>
+      <Card className="p-4">
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+      </Card>
+
+      {/* Edit User Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('edit')}>
+        {editing && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+              <p className="text-sm text-slate-500">{t('email')}</p>
+              <p className="font-medium text-slate-800 dark:text-slate-200">{editing.email}</p>
+            </div>
+            <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Input label={t('username')} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="off" />
+            <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
+              {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
+            </Select>
+            <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })} disabled={!isAdmin}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+            <Select label={t('status')} value={form.is_active ? '1' : '0'} onChange={(e) => setForm({ ...form, is_active: e.target.value === '1' })}>
+              <option value="1">{t('active')}</option>
+              <option value="0">{t('inactive')}</option>
+            </Select>
+            <Input label={t('pinChangeHint')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} inputMode="numeric" maxLength={4} />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+              <button onClick={save} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Add User Modal */}
+      <Modal open={addModal} onClose={() => setAddModal(false)} title={t('addUser')}>
+        <div className="space-y-4">
+          <Input label={t('fullName')} value={addForm.full_name} onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })} required />
+          <Input label={t('username')} value={addForm.username} onChange={(e) => setAddForm({ ...addForm, username: e.target.value })} required autoComplete="off" placeholder={isAr ? 'اسم المستخدم' : 'username'} />
+          <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
+          <Input label={t('pin')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value.replace(/\D/g, '').slice(0, 4) })} required inputMode="numeric" maxLength={4} placeholder="1234" />
+          <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as Role })}>
+            {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
+          </Select>
+          <Select label={t('branch')} value={addForm.branch_id} onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })} disabled={!isAdmin}>
+            <option value="">--</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </Select>
+          <Select label={t('status')} value={addForm.is_active ? '1' : '0'} onChange={(e) => setAddForm({ ...addForm, is_active: e.target.value === '1' })}>
+            <option value="1">{t('active')}</option>
+            <option value="0">{t('inactive')}</option>
+          </Select>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setAddModal(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+            <button onClick={createNewUser} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('deleteUser')} message={t('confirmDeleteUser')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
+    </div>
+  );
+}
