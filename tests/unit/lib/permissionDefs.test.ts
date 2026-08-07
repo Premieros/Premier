@@ -41,6 +41,26 @@ describe('hasPermission', () => {
     expect(hasPermission('accountant', null, 'reports.financial')).toBe(true);
   });
 
+  it('POS action permissions follow the default role matrix', () => {
+    expect(hasPermission('cashier', null, 'pos.reprint')).toBe(true);
+    expect(hasPermission('cashier', null, 'pos.discount')).toBe(false);
+    expect(hasPermission('cashier', null, 'pos.change_price')).toBe(false);
+    expect(hasPermission('branch_manager', null, 'pos.discount')).toBe(true);
+    expect(hasPermission('branch_manager', null, 'pos.change_price')).toBe(true);
+    expect(hasPermission('super_admin', null, 'pos.discount')).toBe(true);
+  });
+
+  it('print/export/import permissions follow the default role matrix', () => {
+    expect(hasPermission('cashier', null, 'products.print')).toBe(true);
+    expect(hasPermission('cashier', null, 'products.export')).toBe(false);
+    expect(hasPermission('warehouse_manager', null, 'products.export')).toBe(true);
+    expect(hasPermission('warehouse_manager', null, 'products.import')).toBe(true);
+    expect(hasPermission('accountant', null, 'sales.export')).toBe(true);
+    expect(hasPermission('accountant', null, 'reports.print')).toBe(true);
+    expect(hasPermission('branch_manager', null, 'reports.export')).toBe(true);
+    expect(hasPermission('production_manager', null, 'products.import')).toBe(true);
+  });
+
   it('DB map overrides code defaults', () => {
     const map: Record<string, Permission[]> = { cashier: ['pos.sell'] };
     expect(hasPermission('cashier', map, 'sales.view')).toBe(false);

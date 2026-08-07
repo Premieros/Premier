@@ -71,6 +71,8 @@ interface BranchCtx {
 
 type WriteMode =
   | 'full' // branch staff may also write their own branch
+  | 'perm' // writes: admin OR can_permission('<module>.manage') AND own branch (branch_manager holds it)
+  | 'permProduction' // writes: admin OR production.manage AND own branch (production_manager holds it)
   | 'adminWrite' // writes are admin-only
   | 'adminInsOnly' // INSERT admin-only; UPDATE/DELETE have no policy (deny-all)
   | 'adminInsUpd' // INSERT/UPDATE admin-only; DELETE has no policy (deny-all)
@@ -97,7 +99,8 @@ describe.skipIf(skip)('RLS branch isolation', () => {
 
   const adminId = () => ids.users.super_admin;
   const cashierId = () => ids.users.cashier; // branch A
-  const bmId = () => ids.users.branch_manager; // branch A, holds accounts.manage
+  const bmId = () => ids.users.branch_manager; // branch A, holds the *.manage perms from the seed
+  const pmId = () => ids.users.production_manager; // branch A, holds production.manage
 
   const t = (name: string, fn: () => Promise<void>) =>
     it(name, async (ctx: { skip?: () => unknown }) => {
@@ -166,19 +169,25 @@ describe.skipIf(skip)('RLS branch isolation', () => {
   // -------------------------------------------------------------------------
   const SPEC: SpecTable[] = [
     // Full access: branch staff can create/edit/delete their own branch rows.
-    { name: 'products', key: 'products', mode: 'full', ins: (c) => `INSERT INTO public.products (name, branch_id, cost_price, sale_price, is_active) VALUES ('P', '${c.branch}', 1, 2, true)`, upd: () => `SET name = 'probe'` },
+    // (044: customers is gated by customers.manage, which the cashier role holds.)
     { name: 'customers', key: 'customers', mode: 'full', ins: (c) => `INSERT INTO public.customers (name, branch_id) VALUES ('C', '${c.branch}')`, upd: () => `SET name = 'probe'` },
-    { name: 'suppliers', key: 'suppliers', mode: 'full', ins: (c) => `INSERT INTO public.suppliers (name, branch_id) VALUES ('S', '${c.branch}')`, upd: () => `SET name = 'probe'` },
-    { name: 'categories', key: 'categories', mode: 'full', ins: (c) => `INSERT INTO public.categories (name, branch_id) VALUES ('Ca', '${c.branch}')`, upd: () => `SET name = 'probe'` },
-    { name: 'warehouses', key: 'warehouses', mode: 'full', ins: (c) => `INSERT INTO public.warehouses (name, branch_id, is_active) VALUES ('W', '${c.branch}', true)`, upd: () => `SET name = 'probe'` },
-    { name: 'inventory', key: 'inventory', mode: 'full', ins: (c) => `INSERT INTO public.inventory (product_id, warehouse_id, branch_id, quantity) VALUES ('${c.invProd}', '${c.wh}', '${c.branch}', 1)`, upd: () => `SET quantity = 2` },
     { name: 'sales', key: 'sales', mode: 'full', ins: (c) => `INSERT INTO public.sales (invoice_number, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status) VALUES ('${uniq('INV')}', '${c.branch}', '${c.wh}', 0, 0, 0, 0, 0, 'cash', 'completed')`, upd: () => `SET payment_method = 'cash'` },
     { name: 'purchases', key: 'purchases', mode: 'full', ins: (c) => `INSERT INTO public.purchases (invoice_number, supplier_id, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status) VALUES ('${uniq('PINV')}', '${c.supp}', '${c.branch}', '${c.wh}', 0, 0, 0, 0, 0, 'cash', 'completed')`, upd: () => `SET payment_method = 'cash'` },
-    { name: 'expenses', key: 'expenses', mode: 'full', ins: (c) => `INSERT INTO public.expenses (category, description, amount, branch_id, expense_date, payment_method) VALUES ('ops', 'x', 10, '${c.branch}', CURRENT_DATE, 'cash')`, upd: () => `SET amount = 11` },
-    { name: 'production_orders', key: 'production_orders', mode: 'full', ins: (c) => `INSERT INTO public.production_orders (order_number, product_id, branch_id, warehouse_id, quantity) VALUES ('${uniq('PO')}', '${c.prod}', '${c.branch}', '${c.wh}', 1)`, upd: () => `SET notes = 'probe'` },
     { name: 'warehouse_transfers', key: 'warehouse_transfers', mode: 'full', ins: (c) => `INSERT INTO public.warehouse_transfers (transfer_number, from_warehouse_id, to_warehouse_id, branch_id, status) VALUES ('${uniq('WT')}', '${c.wh}', '${c.whOther}', '${c.branch}', 'pending')`, upd: () => `SET notes = 'probe'` },
     { name: 'dining_tables', key: 'dining_tables', mode: 'full', ins: (c) => `INSERT INTO public.dining_tables (name, branch_id, capacity, status) VALUES ('Probe', '${c.branch}', 4, 'vacant')`, upd: () => `SET name = 'probe'` },
     { name: 'orders', key: 'orders', mode: 'full', ins: (c) => `INSERT INTO public.orders (order_number, branch_id, order_type, status) VALUES ('${uniq('ORD')}', '${c.branch}', 'dine_in', 'open')`, upd: () => `SET notes = 'probe'` },
+
+    // 044 `*.manage` write gating: admin OR can_permission('<module>.manage') AND own
+    // branch. branch_manager holds all of these manage permissions in the seed.
+    { name: 'products', key: 'products', mode: 'perm', ins: (c) => `INSERT INTO public.products (name, branch_id, cost_price, sale_price, is_active) VALUES ('P', '${c.branch}', 1, 2, true)`, upd: () => `SET name = 'probe'` },
+    { name: 'suppliers', key: 'suppliers', mode: 'perm', ins: (c) => `INSERT INTO public.suppliers (name, branch_id) VALUES ('S', '${c.branch}')`, upd: () => `SET name = 'probe'` },
+    { name: 'categories', key: 'categories', mode: 'perm', ins: (c) => `INSERT INTO public.categories (name, branch_id) VALUES ('Ca', '${c.branch}')`, upd: () => `SET name = 'probe'` },
+    { name: 'warehouses', key: 'warehouses', mode: 'perm', ins: (c) => `INSERT INTO public.warehouses (name, branch_id, is_active) VALUES ('W', '${c.branch}', true)`, upd: () => `SET name = 'probe'` },
+    { name: 'inventory', key: 'inventory', mode: 'perm', ins: (c) => `INSERT INTO public.inventory (product_id, warehouse_id, branch_id, quantity) VALUES ('${c.invProd}', '${c.wh}', '${c.branch}', 1)`, upd: () => `SET quantity = 2` },
+    { name: 'expenses', key: 'expenses', mode: 'perm', ins: (c) => `INSERT INTO public.expenses (category, description, amount, branch_id, expense_date, payment_method) VALUES ('ops', 'x', 10, '${c.branch}', CURRENT_DATE, 'cash')`, upd: () => `SET amount = 11` },
+
+    // production.manage write gating (production_manager holds the permission).
+    { name: 'production_orders', key: 'production_orders', mode: 'permProduction', ins: (c) => `INSERT INTO public.production_orders (order_number, product_id, branch_id, warehouse_id, quantity) VALUES ('${uniq('PO')}', '${c.prod}', '${c.branch}', '${c.wh}', 1)`, upd: () => `SET notes = 'probe'` },
 
     // Admin-only writes.
     { name: 'inventory_batches', key: 'inventory_batches', mode: 'adminWrite', ins: (c) => `INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type) VALUES ('${c.prod}', '${c.wh}', '${c.branch}', 5, 10, 'opening')`, upd: () => `SET quantity = 6` },
@@ -264,6 +273,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
         await runProbe(client, `${tbl.name} DELETE cashier other`, cashierId(), del(other), 'denied');
         break;
 
+      case 'perm':
       case 'permAccounts':
         if (tbl.ins) {
           await runProbe(client, `${tbl.name} INSERT bm→A`, bmId(), tbl.ins(ctxA), 'ok');
@@ -277,6 +287,22 @@ describe.skipIf(skip)('RLS branch isolation', () => {
         }
         await runProbe(client, `${tbl.name} DELETE bm own`, bmId(), del(own), 'ok');
         await runProbe(client, `${tbl.name} DELETE bm other`, bmId(), del(other), 'denied');
+        await runProbe(client, `${tbl.name} DELETE cashier other`, cashierId(), del(other), 'denied');
+        break;
+
+      case 'permProduction':
+        if (tbl.ins) {
+          await runProbe(client, `${tbl.name} INSERT pm→A`, pmId(), tbl.ins(ctxA), 'ok');
+          await runProbe(client, `${tbl.name} INSERT pm→B`, pmId(), tbl.ins(ctxB), 'denied');
+          await runProbe(client, `${tbl.name} INSERT cashier→A`, cashierId(), tbl.ins(ctxA), 'denied');
+        }
+        if (tbl.upd) {
+          await runProbe(client, `${tbl.name} UPDATE pm own`, pmId(), upd(own), 'ok');
+          await runProbe(client, `${tbl.name} UPDATE pm other`, pmId(), upd(other), 'denied');
+          await runProbe(client, `${tbl.name} UPDATE cashier own`, cashierId(), upd(own), 'denied');
+        }
+        await runProbe(client, `${tbl.name} DELETE pm own`, pmId(), del(own), 'ok');
+        await runProbe(client, `${tbl.name} DELETE pm other`, pmId(), del(other), 'denied');
         await runProbe(client, `${tbl.name} DELETE cashier other`, cashierId(), del(other), 'denied');
         break;
 
@@ -358,16 +384,15 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       expect(Number(other.rows[0].c)).toBe(0);
     });
 
-    t('INSERT: cashier may open own-branch shift only; admin cannot open for others', async () => {
+    t('INSERT: direct writes are admin-only (044); cashier uses open_shift RPC', async () => {
       const own = `INSERT INTO public.shifts (branch_id, cashier_id, opening_amount, status) VALUES ($1, $2, 0, 'open')`;
-      await runProbe(client, 'shifts INSERT cashier own branch', cashierId(), own, 'ok', [ids.branchA, ids.users.cashier]);
+      await runProbe(client, 'shifts INSERT cashier own branch', cashierId(), own, 'denied', [ids.branchA, ids.users.cashier]);
       await runProbe(client, 'shifts INSERT cashier other branch', cashierId(), own, 'denied', [ids.branchB, ids.users.cashier]);
-      await runProbe(client, 'shifts INSERT admin for another cashier', adminId(), own, 'denied', [ids.branchA, ids.users.cashier]);
+      await runProbe(client, 'shifts INSERT admin for another cashier', adminId(), own, 'ok', [ids.branchA, ids.users.cashier]);
     });
 
-    t('UPDATE/DELETE: cashier edits own shift only; admin may delete', async () => {
-      await runProbe(client, 'shifts UPDATE cashier own', cashierId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'ok', [ids.shiftA]);
-      await runProbe(client, 'shifts UPDATE cashier other', cashierId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'denied', [ids.shiftB]);
+    t('UPDATE/DELETE: admin-only (044); cashier may not tamper directly', async () => {
+      await runProbe(client, 'shifts UPDATE cashier own', cashierId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'denied', [ids.shiftA]);
       await runProbe(client, 'shifts UPDATE admin other', adminId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'ok', [ids.shiftB]);
       await runProbe(client, 'shifts DELETE cashier other', cashierId(), `DELETE FROM public.shifts WHERE id::text = $1`, 'denied', [ids.shiftB]);
       await runProbe(client, 'shifts DELETE admin other', adminId(), `DELETE FROM public.shifts WHERE id::text = $1`, 'ok', [ids.shiftB]);
@@ -608,9 +633,9 @@ describe.skipIf(skip)('RLS branch isolation', () => {
             break;
 
           case 'shiftOps':
-            await runProbe(client, `${ch.name} INSERT cashier own shift`, cashierId(), sql, 'ok', paramsA);
+            await runProbe(client, `${ch.name} INSERT cashier own shift`, cashierId(), sql, 'denied', paramsA);
             await runProbe(client, `${ch.name} INSERT cashier other shift`, cashierId(), sql, 'denied', paramsB);
-            await runProbe(client, `${ch.name} INSERT admin into cashier shift`, adminId(), sql, 'denied', paramsA);
+            await runProbe(client, `${ch.name} INSERT admin own shift`, adminId(), sql, 'ok', paramsA);
             await runProbe(client, `${ch.name} UPDATE admin own (no policy)`, adminId(), upd(own, `SET amount = 2`), 'denied');
             await runProbe(client, `${ch.name} DELETE admin other (no policy)`, adminId(), del(other), 'denied');
             break;
@@ -669,6 +694,116 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await runProbe(client, 'document_sequences SELECT admin', adminId(), `SELECT count(*)::int AS c FROM public.document_sequences`, 'ok');
       await runProbe(client, 'document_sequences INSERT admin', adminId(), `INSERT INTO public.document_sequences (seq_type, next_value) VALUES ('${uniq('seq')}', 1)`, 'denied');
       await runProbe(client, 'document_sequences UPDATE admin', adminId(), `UPDATE public.document_sequences SET next_value = 2 WHERE seq_type = 'sale'`, 'denied');
+    });
+  });
+
+  describe('RBAC hardening (044)', () => {
+    t('REVOKE: _post_journal_entry and log_audit_action are internal-only', async () => {
+      // A valid, balanced payload that WOULD post if EXECUTE were still granted —
+      // so a denial here proves the REVOKE, not a body error.
+      const codeA = (await client.query<{ code: string }>(
+        `SELECT code FROM public.chart_of_accounts WHERE id = $1`, [ids.coaCashA],
+      )).rows[0].code;
+      const payload = JSON.stringify([
+        { account_code: codeA, debit: 100, credit: 0 },
+        { account_code: codeA, debit: 0, credit: 100 },
+      ]);
+      const call = `SELECT public._post_journal_entry(NULL::uuid, 'probe', NULL::uuid, NULL::text, NULL::text, $1::jsonb)`;
+      await runProbe(client, '_post_journal_entry admin', adminId(), call, 'denied', [payload]);
+      await runProbe(client, '_post_journal_entry cashier', cashierId(), call, 'denied', [payload]);
+      await runProbe(client, 'log_audit_action admin', adminId(),
+        `SELECT public.log_audit_action(NULL::uuid, 'x', 'x', NULL::uuid, '{}'::jsonb)`, 'denied');
+      await runProbe(client, 'log_audit_action cashier', cashierId(),
+        `SELECT public.log_audit_action(NULL::uuid, 'x', 'x', NULL::uuid, '{}'::jsonb)`, 'denied');
+    });
+
+    t('get_audit_trail: audit.view required; otherwise empty', async () => {
+      // Direct SELECT on audit_log stays branch-scoped (cashier can read own), but
+      // the RPC guard requires audit.view on top (044).
+      const direct = await runProbe(client, 'audit_log SELECT cashier own', cashierId(),
+        `SELECT count(*)::int AS c FROM public.audit_log WHERE branch_id = $1`, 'ok', [ids.branchA]);
+      expect(Number(direct.rows[0].c)).toBeGreaterThanOrEqual(1);
+
+      const parseTrail = (v: unknown): unknown[] =>
+        typeof v === 'string' ? JSON.parse(v) : (v as unknown[]);
+      const admin = await runProbe(client, 'get_audit_trail admin', adminId(),
+        `SELECT public.get_audit_trail($1) AS trail`, 'ok', [ids.branchA]);
+      expect(parseTrail(admin.rows[0].trail).length).toBeGreaterThanOrEqual(1);
+
+      const cashier = await runProbe(client, 'get_audit_trail cashier', cashierId(),
+        `SELECT public.get_audit_trail($1) AS trail`, 'ok', [ids.branchA]);
+      expect(parseTrail(cashier.rows[0].trail)).toHaveLength(0);
+    });
+
+    t('sale discount guard: pos.discount required for discounted sales (044)', async () => {
+      const ins = (discount: number, branch: string) =>
+        `INSERT INTO public.sales (invoice_number, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status) VALUES ('${uniq('INV')}', '${branch}', '${ids.whA}', 100, ${discount}, 0, 100, 100, 'cash', 'completed')`;
+      // cashier has no pos.discount -> trigger rejects the discount.
+      await runProbe(client, 'sales cashier discounted', cashierId(), ins(5, ids.branchA), 'denied');
+      // cashier may still insert a no-discount sale in own branch.
+      await runProbe(client, 'sales cashier no-discount own', cashierId(), ins(0, ids.branchA), 'ok');
+      // branch_manager holds pos.discount (043) -> allowed.
+      await runProbe(client, 'sales bm discounted own', bmId(), ins(5, ids.branchA), 'ok');
+      await runProbe(client, 'sales admin discounted other', adminId(), ins(5, ids.branchB), 'ok');
+    });
+
+    t('product_units / product_components: gated by products.manage / components.manage (044)', async () => {
+      const unitA = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodA}', 'piece', 1, 20, 10, false)`;
+      const unitB = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodB}', 'piece', 1, 20, 10, false)`;
+      await runProbe(client, 'product_units INSERT bm own product', bmId(), unitA, 'ok');
+      await runProbe(client, 'product_units INSERT bm other product', bmId(), unitB, 'denied');
+      await runProbe(client, 'product_units INSERT cashier own product', cashierId(), unitA, 'denied');
+      await runProbe(client, 'product_units INSERT admin other product', adminId(), unitB, 'ok');
+
+      const compA = `INSERT INTO public.product_components (product_id, component_product_id, quantity) VALUES ('${ids.prodA}', '${ids.prodB}', 1)`;
+      const compB = `INSERT INTO public.product_components (product_id, component_product_id, quantity) VALUES ('${ids.prodB}', '${ids.prodA}', 1)`;
+      await runProbe(client, 'product_components INSERT bm own product', bmId(), compA, 'ok');
+      await runProbe(client, 'product_components INSERT bm other product', bmId(), compB, 'denied');
+      await runProbe(client, 'product_components INSERT cashier own product', cashierId(), compA, 'denied');
+      await runProbe(client, 'product_components INSERT admin other product', adminId(), compB, 'ok');
+    });
+
+    t('record_login_failure: does not extend an in-force lock (044)', async () => {
+      const uid = ids.users.cashier;
+      // Lock the user directly (session role; the role-guard trigger's
+      // unknown-caller branch permits lockout-counter changes).
+      await client.query(
+        `UPDATE public.users SET failed_attempts = 4, is_locked = true, lock_until = now() + interval '5 minutes' WHERE id = $1`,
+        [uid],
+      );
+      const before = await client.query<{ failed_attempts: number; lock_until: string }>(
+        `SELECT failed_attempts, lock_until FROM public.users WHERE id = $1`, [uid],
+      );
+      const res = await client.query(`SELECT public.record_login_failure('ca') AS out`);
+      expect((res.rows[0].out as { success: boolean }).success).toBe(true);
+      const after = await client.query<{ failed_attempts: number; lock_until: string }>(
+        `SELECT failed_attempts, lock_until FROM public.users WHERE id = $1`, [uid],
+      );
+      expect(Number(after.rows[0].failed_attempts)).toBe(4);
+      expect(String(after.rows[0].lock_until)).toBe(String(before.rows[0].lock_until));
+
+      // A not-locked user still gets their counter incremented.
+      await client.query(
+        `UPDATE public.users SET failed_attempts = 0, is_locked = false, lock_until = NULL WHERE id = $1`, [uid],
+      );
+      await client.query(`SELECT public.record_login_failure('ca')`);
+      const inc = await client.query<{ failed_attempts: number }>(
+        `SELECT failed_attempts FROM public.users WHERE id = $1`, [uid],
+      );
+      expect(Number(inc.rows[0].failed_attempts)).toBe(1);
+      // Restore so later assertions see a clean cashier.
+      await client.query(
+        `UPDATE public.users SET failed_attempts = 0, is_locked = false, lock_until = NULL WHERE id = $1`, [uid],
+      );
+    });
+
+    t('guard_role_permissions: branch managers cannot mint admin-only roles (044)', async () => {
+      const ins = (perms: string) =>
+        `INSERT INTO public.roles (role, name_ar, name_en, permissions) VALUES ('${uniq('RG')}', 'X', 'Y', '${perms}'::jsonb)`;
+      // bm is blocked by RLS regardless of the trigger (roles INSERT is admin-only).
+      await runProbe(client, 'roles INSERT bm with settings.manage', bmId(), ins('["settings.manage"]'), 'denied');
+      // admin can create a normal role carrying granular perms.
+      await runProbe(client, 'roles INSERT admin plain', adminId(), ins('["pos.sell"]'), 'ok');
     });
   });
 

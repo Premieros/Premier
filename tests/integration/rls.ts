@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 export const ADMIN_ROLES = new Set(['super_admin', 'owner']);
 export const PERM_ROLES = new Set(['branch_manager']); // granted accounts.manage in the fixture
 
-export const ROLES = ['super_admin', 'owner', 'branch_manager', 'cashier', 'warehouse_manager', 'accountant'] as const;
+export const ROLES = ['super_admin', 'owner', 'branch_manager', 'cashier', 'warehouse_manager', 'accountant', 'production_manager'] as const;
 export type RoleName = (typeof ROLES)[number];
 
 let seq = 0;
@@ -30,6 +30,7 @@ export interface RlsUsers {
   cashier_b: string;
   warehouse_manager: string;
   accountant: string;
+  production_manager: string;
 }
 
 export interface RlsIds {
@@ -134,8 +135,8 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
 
   const user = async (email: string, fullName: string, role: string, branchId: string | null) =>
     (await client.query<{ id: string }>(
-      `INSERT INTO public.users (id, email, full_name, role, branch_id, is_active) VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
-      [randomUUID(), email, fullName, role, branchId],
+      `INSERT INTO public.users (id, email, username, full_name, role, branch_id, is_active) VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
+      [randomUUID(), email, email.split('@')[0], fullName, role, branchId],
     )).rows[0].id;
 
   ids.users = {
@@ -146,6 +147,7 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
     cashier_b: await user('cb@rls.test', 'Cashier B', 'cashier', ids.branchB),
     warehouse_manager: await user('wh@rls.test', 'Whouse Mgr', 'warehouse_manager', ids.branchA),
     accountant: await user('ac@rls.test', 'Accountant', 'accountant', ids.branchA),
+    production_manager: await user('pm@rls.test', 'Production Mgr', 'production_manager', ids.branchA),
   };
 
   await client.query('ALTER TABLE public.users ENABLE TRIGGER trg_users_role_guard');
