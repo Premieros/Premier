@@ -247,7 +247,7 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 - **H2** — لا حارس اشغال: `create_order`/`set_table_status` لا تتحقق من تناقض الحالات (037). → أُصلح في PHASE 2b (046): `create_order` يرفض table مشغول، `set_table_status` يرفض تحرير طاولة عليها طلبات.
 - **H3** — تحرير الطاولة في البيع المباشر غير ذرّي + `.catch(()=>{})` (PosPage:741-743). → ✅ (PHASE 5) أُصلح: `process_sale` (047) يحرر الطاولة ذرّيًا (إنشاء/ربط/تحرير في نفس المعاملة مع إعادة فحص الطلبات)؛ أُزيل تحرير العميل؛ لا `.catch(()=>{})` صامت.
 - **H4** — `process_sale` يحرر الطاولة بأول طلب فقط ولا يفحص طلبات أخرى على نفس الطاولة (038:205-206). → ✅ (PHASE 5) أُصلح في 047: يتحرر فقط إن لم تبقَ طلبات open/held أخرى على الطاولة (اختبار تغطية H4).
-- **H5** — `xlsx@0.18.5` CVEs في رفع الملفات. (معلق — PHASE 5d)
+- **H5** — `xlsx@0.18.5` CVEs في رفع الملفات. → ✅ (PHASE 5d) أُصلح: ترقية إلى SheetJS `0.20.3` (إصلاح Prototype Pollution + ReDoS) عبر tarball مُستضاف في `vendor/xlsx-0.20.3.tgz` (بديل npm الرسمي — المرجع الرسمي هو CDN SheetJS)؛ التحميل يبقى lazy chunk.
 - **H6** — `.env.production` متتبع في git. → أُصلح في PHASE 3: `git rm --cached` + إزالة من المحفوظات.
 
 ### MEDIUM
