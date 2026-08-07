@@ -24,6 +24,9 @@ dist-ssr
 # build artifacts
 *.tsbuildinfo
 
+# eslint cache
+.eslintcache
+
 .env
 .env.*
 !.env.example
