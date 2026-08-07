@@ -617,35 +617,77 @@ export function PosPage() {
   }));
 
   // Saves the current cart as a held order (recoverable from the floor plan).
+  // When the cart was resumed from an existing order (orderId set) the SAME
+  // order is updated instead of creating a duplicate (audit C2).
   const holdOrder = async () => {
     if (cart.length === 0 || completing || orderLoading) return;
     if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
     setCompleting(true);
-    const { data, error } = await api.floorPlan.createOrder({
-      p_branch_id: effectiveBranch,
-      p_order_type: orderType,
-      p_table_id: tableId,
-      p_customer_id: customerId || null,
-      p_guest_count: guestCount,
-      p_notes: null,
-      p_items: buildItemsPayload(),
-      p_subtotal: subtotal,
-      p_discount_amount: discountValue,
-      p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
-      p_tax_amount: taxAmount,
-      p_total: total,
-      p_cashier_id: user?.id || null,
-    });
-    if (error) { show(error.message, 'error'); setCompleting(false); return; }
-    const result = data as RpcResult | null;
+
+    const itemRows = buildItemsPayload();
+    // A non-dine-in order is detached from its table, matching completeSale.
+    const targetTable = orderType === 'dine_in' ? tableId : null;
+
+    let result: RpcResult | null = null;
+    if (orderId) {
+      const { data, error } = await api.floorPlan.updateOrder({
+        p_order_id: orderId,
+        p_order_type: orderType,
+        p_table_id: targetTable,
+        p_customer_id: customerId || null,
+        p_guest_count: guestCount,
+        p_notes: null,
+        p_items: itemRows,
+        p_subtotal: subtotal,
+        p_discount_amount: discountValue,
+        p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+        p_tax_amount: taxAmount,
+        p_total: total,
+        p_status: 'held',
+      });
+      if (error) { show(error.message, 'error'); setCompleting(false); return; }
+      result = data as RpcResult | null;
+    } else {
+      const { data, error } = await api.floorPlan.createOrder({
+        p_branch_id: effectiveBranch,
+        p_order_type: orderType,
+        p_table_id: targetTable,
+        p_customer_id: customerId || null,
+        p_guest_count: guestCount,
+        p_notes: null,
+        p_items: itemRows,
+        p_subtotal: subtotal,
+        p_discount_amount: discountValue,
+        p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+        p_tax_amount: taxAmount,
+        p_total: total,
+        p_cashier_id: user?.id || null,
+      });
+      if (error) { show(error.message, 'error'); setCompleting(false); return; }
+      result = data as RpcResult | null;
+    }
+
     if (!result?.success) {
       show(result?.detail || result?.error || t('error'), 'error');
       setCompleting(false);
       return;
     }
-    if (result.order_id) {
-      await api.floorPlan.setOrderStatus({ p_order_id: result.order_id, p_status: 'held' });
+
+    // New orders are created 'open'; flip to 'held' and verify the flip so a
+    // failure does not silently leave an open order invisible to the held
+    // filter (audit M3). On failure keep the order id so a retry updates it
+    // instead of creating yet another order (audit C2).
+    if (!orderId && result.order_id) {
+      const heldRes = await api.floorPlan.setOrderStatus({ p_order_id: result.order_id, p_status: 'held' });
+      if (heldRes.error || !(heldRes.data as RpcResult | null)?.success) {
+        show(t('orderHeld') + ': ' + (heldRes.error?.message || (heldRes.data as RpcResult | null)?.detail || (heldRes.data as RpcResult | null)?.error || ''), 'error');
+        setOrderId(result.order_id as string);
+        setActiveOrderNumber((result as RpcResult & { order_number?: string }).order_number || null);
+        setCompleting(false);
+        return;
+      }
     }
+
     show(t('orderHeld'), 'success');
     setOrderId(null);
     setTableId(null);
