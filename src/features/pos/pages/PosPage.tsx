@@ -28,6 +28,10 @@ interface ReceiptData {
   change: number;
   date: string;
   customerName: string;
+  orderNumber?: string;
+  tableName?: string;
+  orderTypeLabel?: string;
+  guestCount?: number | null;
 }
 
 const ORDER_TYPE_KEY = {
@@ -71,6 +75,10 @@ async function buildReceiptHtml(receipt: ReceiptData, s: Settings, lang: Languag
     <div class="divider"></div>
     <div class="row"><span>${isAr ? 'الفاتورة' : 'Invoice'}: ${escapeHtml(receipt.invoice)}</span></div>
     <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${new Date(receipt.date).toLocaleString(isAr ? 'ar-SA' : 'en-US')}</span></div>
+    ${receipt.orderTypeLabel ? `<div class="row"><span>${isAr ? 'النوع' : 'Type'}: ${escapeHtml(receipt.orderTypeLabel)}</span></div>` : ''}
+    ${receipt.orderNumber ? `<div class="row"><span>${isAr ? 'الطلب' : 'Order'}: ${escapeHtml(receipt.orderNumber)}</span></div>` : ''}
+    ${receipt.tableName ? `<div class="row"><span>${isAr ? 'طاولة' : 'Table'}: ${escapeHtml(receipt.tableName)}</span></div>` : ''}
+    ${receipt.guestCount ? `<div class="row"><span>${isAr ? 'الضيوف' : 'Guests'}: ${receipt.guestCount}</span></div>` : ''}
     ${receipt.customerName ? `<div class="row"><span>${isAr ? 'العميل' : 'Customer'}: ${escapeHtml(receipt.customerName)}</span></div>` : ''}
     <div class="divider"></div>
     ${receipt.items.map((i) => `<div class="item-row"><div class="item-name">${escapeHtml(i.name)}</div><div class="row item-detail"><span>${i.qty} x ${formatCurrency(i.price, currency, lang)}</span><span>${formatCurrency(i.total, currency, lang)}</span></div></div>`).join('')}
@@ -215,6 +223,9 @@ export function PosPage() {
       setOrderId(order.id);
       setActiveOrderNumber(order.order_number);
       setGuestCount(order.guest_count);
+      if (order.table_id) {
+        api.floorPlan.setTableStatus({ p_table_id: order.table_id, p_status: 'occupied' }).catch(() => {});
+      }
 
       const { data: items } = await supabase.from('order_items').select('*').eq('order_id', oId);
       const itemRows = (items as OrderItem[]) || [];
@@ -431,6 +442,51 @@ export function PosPage() {
   const removeFromCart = (productId: string) => setCart((prev) => prev.filter((i) => i.product.id !== productId));
   const clearCart = () => setCart([]);
 
+  // Order type switching: blocked while an active order is linked; switching
+  // away from dine-in frees the attached table.
+  const switchOrderType = async (ot: OrderType) => {
+    if (ot === orderType) return;
+    if (activeOrderNumber) {
+      show(isAr ? `لا يمكن تغيير نوع طلب نشط (${activeOrderNumber})` : `Cannot change order type of active order (${activeOrderNumber})`, 'error');
+      return;
+    }
+    if (activeTable && ot !== 'dine_in') {
+      const ok = window.confirm(isAr
+        ? `التبديل إلى ${t(ORDER_TYPE_KEY[ot])} سيفصل الطاولة ${activeTable.name} ويحررها. متابعة؟`
+        : `Switching to ${t(ORDER_TYPE_KEY[ot])} will detach and free table ${activeTable.name}. Continue?`);
+      if (!ok) return;
+      await api.floorPlan.setTableStatus({ p_table_id: tableId || activeTable.id, p_status: 'vacant' }).catch(() => {});
+      setTableId(null);
+      setActiveTable(null);
+    }
+    setOrderType(ot);
+  };
+
+  const detachTable = async () => {
+    if (!activeTable) return;
+    const ok = window.confirm(isAr
+      ? `فصل الطلب عن الطاولة ${activeTable.name}؟ سيتم تحرير الطاولة.`
+      : `Detach order from table ${activeTable.name}? The table will be freed.`);
+    if (!ok) return;
+    if (tableId) {
+      await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' }).catch(() => {});
+    }
+    setOrderId(null);
+    setActiveOrderNumber(null);
+    setTableId(null);
+    setActiveTable(null);
+    setGuestCount(null);
+  };
+
+  const detachOrder = () => {
+    const ok = window.confirm(isAr ? 'فصل الطلب الحالي؟' : 'Detach the current order?');
+    if (!ok) return;
+    setOrderId(null);
+    setActiveOrderNumber(null);
+    setTableId(null);
+    setGuestCount(null);
+  };
+
   const setItemDiscount = (productId: string, discount: number) => {
     const item = cart.find((i) => i.product.id === productId);
     if (!item) return;
@@ -551,7 +607,7 @@ export function PosPage() {
       p_status: 'completed',
       p_items: itemsPayload,
       p_order_type: orderType,
-      p_table_id: tableId,
+      p_table_id: orderType === 'dine_in' ? tableId : null,
       p_order_id: orderId,
     });
     if (error) { show(error.message, 'error'); setCompleting(false); return; }
@@ -571,6 +627,10 @@ export function PosPage() {
       subtotal, discount: discountValue, tax: taxAmount, total,
       paid: paidAmountToUse, change, date: new Date().toISOString(),
       customerName: customers.find((c) => c.id === customerId)?.name || '',
+      orderNumber: activeOrderNumber || undefined,
+      tableName: activeTable?.name || undefined,
+      orderTypeLabel: t(ORDER_TYPE_KEY[orderType]),
+      guestCount: guestCount || undefined,
     };
     setLastReceipt(receiptPayload);
     setReceiptSaleId(saleId);
@@ -825,67 +885,27 @@ export function PosPage() {
           <select
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
-            onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); setTableId(null); setOrderId(null); setActiveOrderNumber(null); setActiveTable(null); setGuestCount(null); }}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v !== effectiveBranch && cart.length > 0) {
+                const ok = window.confirm(isAr ? 'تبديل الفرع سيمسح السلة الحالية. متابعة؟' : 'Switching branch will clear the current cart. Continue?');
+                if (!ok) { e.target.value = effectiveBranch; return; }
+              }
+              setSelectedBranch(v);
+              loadStock(v);
+              setCart([]);
+              setTableId(null);
+              setOrderId(null);
+              setActiveOrderNumber(null);
+              setActiveTable(null);
+              setGuestCount(null);
+            }}
             className="text-sm border-0 bg-slate-100 dark:bg-navy-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 max-w-[130px] sm:max-w-none truncate"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
           </select>
         </div>
-
-        {currentBranchName && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold-900/20 border border-gold-200 dark:border-gold-800">
-            <span className="text-xs font-bold text-gold-700 dark:text-gold-300">{currentBranchName}</span>
-          </div>
-        )}
-
-        {/* Order type selector */}
-        <div className="hidden md:flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-navy-800 p-1">
-          {(['dine_in', 'takeaway', 'delivery', 'drive_thru'] as const).map((ot) => (
-            <button
-              key={ot}
-              onClick={() => setOrderType(ot)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                orderType === ot
-                  ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              {t(ORDER_TYPE_KEY[ot])}
-            </button>
-          ))}
-        </div>
-
-        {/* Active table chip */}
-        {activeTable && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-            <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
-            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{activeTable.name}</span>
-            {orderId && (
-              <button
-                onClick={() => { setOrderId(null); setActiveOrderNumber(null); setActiveTable(null); setTableId(null); setGuestCount(null); }}
-                className="ms-0.5 text-emerald-500 hover:text-emerald-700"
-                title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Resumed order chip */}
-        {activeOrderNumber && !activeTable && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{isAr ? 'طلب' : 'Order'}: {activeOrderNumber}</span>
-            <button
-              onClick={() => { setOrderId(null); setActiveOrderNumber(null); setTableId(null); setGuestCount(null); }}
-              className="text-amber-500 hover:text-amber-700"
-              title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
 
         <div className="flex-1" />
 
@@ -905,6 +925,48 @@ export function PosPage() {
           <span className="text-sm font-medium text-slate-600 dark:text-slate-300 hidden sm:inline">{user?.full_name || user?.email}</span>
         </div>
       </header>
+
+      {/* ===== ORDER CONTEXT BAR (all sizes) ===== */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 overflow-x-auto">
+        <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-navy-800 p-1">
+          {(['dine_in', 'takeaway', 'delivery', 'drive_thru'] as const).map((ot) => (
+            <button
+              key={ot}
+              type="button"
+              onClick={() => switchOrderType(ot)}
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                orderType === ot
+                  ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              {t(ORDER_TYPE_KEY[ot])}
+            </button>
+          ))}
+        </div>
+
+        {activeTable && (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+            <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{activeTable.name}</span>
+            {activeOrderNumber && (
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">#{activeOrderNumber}</span>
+            )}
+            <button onClick={detachTable} className="ms-0.5 text-emerald-500 hover:text-emerald-700" title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {activeOrderNumber && !activeTable && (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{isAr ? 'طلب' : 'Order'}: {activeOrderNumber}</span>
+            <button onClick={detachOrder} className="text-amber-500 hover:text-amber-700" title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ===== SHIFT STATUS BANNER (cashier) ===== */}
       {isCashier && shiftChecked && (
@@ -1159,9 +1221,22 @@ export function PosPage() {
           {(orderType !== 'takeaway' || activeTable || activeOrderNumber) && (
             <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-navy-800/60 rounded-xl p-3 text-sm border border-slate-100 dark:border-navy-700">
               <UtensilsCrossed className="w-4 h-4 text-brand-500 dark:text-gold-400" />
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-                {t(ORDER_TYPE_KEY[orderType])}
-              </span>
+              <div className="flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-navy-800 p-0.5">
+                {(['dine_in', 'takeaway', 'delivery', 'drive_thru'] as const).map((ot) => (
+                  <button
+                    key={ot}
+                    type="button"
+                    onClick={() => switchOrderType(ot)}
+                    className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${
+                      orderType === ot
+                        ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t(ORDER_TYPE_KEY[ot])}
+                  </button>
+                ))}
+              </div>
               {activeTable && (
                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{activeTable.name}</span>
               )}
