@@ -24,10 +24,46 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply auth stub (CI only, never on real Supabase)
+        run: node scripts/db/apply-migration.js --file supabase/ci/stub_auth.sql
+      - name: Apply canonical migrations
+        run: node scripts/db/apply-migration.js --dir supabase/migrations
+      - name: Verify schema
+        run: node scripts/db/verify-schema.js
+      - name: Run integration tests (BEGIN/ROLLBACK)
+        run: npm run test:integration
 
   deploy:
     needs: build

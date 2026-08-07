@@ -1,40 +1,47 @@
 # قاعدة البيانات (Supabase)
 
-يحتوي هذا المجلد على ملفات SQL المطلوبة لبناء قاعدة بيانات تطبيق نقاط البيع.
+يحتوي هذا المجلد على ملفات SQL المطلوبة لبناء قاعدة بيانات تطبيق نقاط البيع،
+وأدوات لتطبيقها والتحقق منها تلقائيًا.
 
-## الترتيب الكنسي للتطبيق (من صفر أو على قاعدة موجودة)
+## البنية
 
-نفّذ الملفات بالترتيب التالي في Supabase SQL Editor على قاعدة موجودة،
-أو بالكامل لبناء قاعدة جديدة:
+- `migrations/` — الترتيب الكنسي (001–031). هذا هو مصدر الحقيقة الوحيد:
+  كل جدول/دالة يُبنى منها قاعدة كاملة قابلة للتكرار.
+- `legacy/` — ملفات قديمة استُبدلت بالترقيم الجديد، محفوظة للمرجعية فقط ولا تُطبَّق.
+- `ci/stub_auth.sql` — يحاكي الحد الأدنى من بيئة Supabase Auth (أدوار
+  `anon/authenticated/service_role` + جداول `auth.*` + `auth.uid()`/`auth.jwt()`
+  ترجعان NULL) لتمكين التحقق في حاوية PostgreSQL عادية. **لا يُطبَّق على قاعدة
+  Supabase حقيقية** — في CI فقط.
 
-1. `combined_setup.sql` — البنية الأساسية (16 جدولًا) + سياسات RLS + `is_pos_admin()`.
-2. `migration_inventory_v2.sql` — `stock_transactions` + دوال `process_sale` / `process_purchase` / `adjust_stock`.
-3. `migration_components.sql` — جدول `product_components` (المكونات/BOM).
-4. `migration_enterprise_core.sql` — العزل بالفروع + الأدوار المؤسسية + نظام الشيفتات + دوال إدارة المستخدمين
-   (`create_user`, `delete_user`, `update_user_password`, `open_shift`, `close_shift`, `get_active_shift`, `process_sale`).
-5. `migration_branch_products.sql` — تخصيص المنتجات لكل فرع.
-6. `migration_audit_fixes.sql` — أحدث إصلاحات مرجعية (آمن لإعادة التشغيل):
-   - إسقاط/إعادة تعريف الدوال بحراسة لتجنب خطأ `42P13`.
-   - إعادة بناء جدولي الشيفتات تلقائيًا إذا كانت بنيتهما قديمة (`shifts` / `shift_operations`).
-   - ضمان مفاتيح أجنبية (بينها `shifts_cashier_id_fkey` ومفاتيح المستخدمين الأساسية).
-   - سياسات RLS صارمة للجداول الحساسة.
-   - توسيع `settings` وإضافة `branch_settings` (إعدادات عامة + لكل فرع).
-   - جدول `roles` (مصفوفة الصلاحيات بالدور، قابلة للتعديل من شاشة الإعدادات)،
-     إسقاط `users.permissions` (نموذج دور فقط)، وإزالة دورَي `kitchen` / `customer_display`.
-7. `migration_fix_login.sql` — أدوات تشخيص/إصلاح تسجيل الدخول للمستخدمين الجدد
-   (`verify_auth_account` / `repair_auth_account` / `password_matches`) — تُشغَّل عند الحاجة فقط.
-8. `migration_pin_login.sql` — تسجيل الدخول باسم المستخدم + رقم سري (4 أرقام):
-   - عمود `username` في `users` + تعبئة تلقائية من البريد الإلكتروني للحسابات الموجودة.
-   - دالة `get_login_email(username)` (متاحة للـ anon) للبحث قبل تسجيل الدخول.
-   - `create_user` يقبل `p_username`، و`update_user_password` يقبل رقماً سرياً من 4 أرقام.
+## التطبيق
 
-> ملاحظة: الملفات القديمة (`migrations/` المؤرّخة، `migration_phase1/2`,
-> `migration_create_user`, `migration_user_password_delete`, `run_all_migrations`,
-> `demo_data`) أُزيلت لأنها كانت مكرّرة أو مكسورة؛ كل ما كان فيها أُدمج في الملفات أعلاه.
+استخدم `scripts/db/apply-migration.js` (لا تلصق الملفات في SQL Editor بعد الآن):
 
-## ملاحظات مهمة
+```bash
+# من مجلد الجذر، بعد ضبط SUPABASE_DB_URL (أو DATABASE_URL) في .env
+node scripts/db/apply-migration.js --dir supabase/migrations   # كل المهاجرات
+node scripts/db/apply-migration.js --file supabase/ci/stub_auth.sql  # CI/محلي فقط
+node scripts/db/apply-migration.js --dir supabase/migrations --dry-run  # تجربة داخل BEGIN/ROLLBACK
+```
 
-- `migration_audit_fixes.sql` مصمم ليكون **قابلًا لإعادة التشغيل** بأمان (idempotent)
-  ويُعيد فرض الحالة المرجعية الحالية للقاعدة. إذا واجهت خطأ من ترحيل قديم، شغّله مجددًا.
-- بعد أي تشغيل لتغييرات بنيوية، أعد تحميل كاش schema الخاص بـ PostgREST
-  (الملف يفعل ذلك تلقائيًا عبر `NOTIFY pgrst, 'reload schema'`).
+- المسار يُحفظ في `schema_migrations` مع SHA-256؛ إعادة التشغيل تتخطى المطبَّق.
+- تعديل مهاجرة مطبَّقة مرفوض (خطأ `42P13`). لتغيير قاعدة حية، أضف مهاجرة جديدة.
+- كل الملفات **إضافية فقط** (additive-only): لا تعديل لمهاجرة مطبَّقة، ولا حذف
+  بيانات — إن استدعى الأمر إسقاط توقيع دالة قديم (مثل overload متجاوز)، يُوثَّق
+  داخل المهاجرة الجديدة مع سبب الإسقاط.
+- الاتصال المحلي بلا SSL؛ لـ Supabase pooler استخدم `sslmode=require` في الرابط.
+
+## التحقق
+
+```bash
+node scripts/db/verify-schema.js        # عدد الجداول/الدوال مقابل القاعدة
+npm run test:integration                # اختبارات تكامل (داخل BEGIN/ROLLBACK، آمنة على الحية)
+```
+
+اختبارات التكامل تعمل داخل معاملة واحدة وتُتراجع، فلا تترك أثرًا على قاعدة حية.
+عند غياب رابط قاعدة في `.env` تُتخطى تلقائيًا.
+
+## ملاحظات
+
+- أي تغيير بنيوي على قاعدة حية = مهاجرة جديدة مرقّمة في `migrations/`.
+- بعد تطبيق تغييرات عبر PostgREST، أعد تحميل الكاش (`NOTIFY pgrst, 'reload schema'`).
