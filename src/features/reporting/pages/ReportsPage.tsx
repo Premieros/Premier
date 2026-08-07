@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Card } from '@/components/PageHeader';

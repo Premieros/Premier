@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Download } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';

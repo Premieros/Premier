@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Search, ScrollText } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';

@@ -21,7 +21,7 @@ const ROOT = resolve(__dirname, '..', '..');
 const EXPECTED_TABLES = [
   'branches', 'warehouses', 'categories', 'products', 'product_units', 'inventory',
   'customers', 'suppliers', 'sales', 'sale_items', 'purchases', 'purchase_items',
-  'expenses', 'users', 'audit_log', 'settings', 'units', 'stock_transactions',
+  'expenses', 'users', 'audit_log', 'settings', 'branch_settings', 'units', 'stock_transactions',
   'product_components', 'shifts', 'shift_operations', 'roles', 'document_sequences',
   'raw_materials', 'raw_material_inventory', 'raw_material_batches', 'recipes',
   'recipe_items', 'production_orders', 'production_waste', 'inventory_batches',

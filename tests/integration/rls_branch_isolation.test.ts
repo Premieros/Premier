@@ -413,6 +413,79 @@ describe.skipIf(skip)('RLS branch isolation', () => {
     });
   });
 
+  describe('branch_settings (per-branch settings)', () => {
+    const own = () => ids.rows.branch_settings.own;
+    const other = () => ids.rows.branch_settings.other;
+    const ins = (branch: string) => `INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ('${branch}', 'H')`;
+
+    // branch_settings keys on branch_id (PK), and branch A/B already own seeded
+    // rows, so INSERT probes target throwaway branches created by the session
+    // role (bypasses RLS; all discarded at the final ROLLBACK).
+    const tmpBranch = async () =>
+      (await client.query<{ id: string }>(`INSERT INTO public.branches (name) VALUES ('tmp') RETURNING id`)).rows[0].id;
+    const tmpRow = async () => {
+      const b = await tmpBranch();
+      await client.query(`INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H')`, [b]);
+      return b;
+    };
+
+    t('SELECT: staff see only their branch, admins see all', async () => {
+      const both = [own(), other()];
+      const admin = await runProbe(client, 'branch_settings SELECT admin', adminId(), `SELECT branch_id FROM public.branch_settings WHERE branch_id::text = ANY($1)`, 'ok', [both]);
+      expect(admin.rowCount).toBe(2);
+
+      const cashier = await runProbe(client, 'branch_settings SELECT cashier', cashierId(), `SELECT branch_id FROM public.branch_settings WHERE branch_id::text = ANY($1)`, 'ok', [both]);
+      expect(cashier.rowCount).toBe(1);
+      expect(cashier.rows[0].branch_id).toBe(own());
+
+      const otherCount = await runProbe(client, 'branch_settings count other branch', cashierId(), `SELECT count(*)::int AS c FROM public.branch_settings WHERE branch_id = $1`, 'ok', [ids.branchB]);
+      expect(Number(otherCount.rows[0].c)).toBe(0);
+    });
+
+    t('writes: admin-only by default (branch_manager lacks settings.manage)', async () => {
+      await runProbe(client, 'branch_settings INSERT admin', adminId(), ins(await tmpBranch()), 'ok');
+      await runProbe(client, 'branch_settings INSERT cashier', cashierId(), ins(await tmpBranch()), 'denied');
+      await runProbe(client, 'branch_settings INSERT bm', bmId(), ins(await tmpBranch()), 'denied');
+      await runProbe(client, 'branch_settings UPDATE admin', adminId(), `UPDATE public.branch_settings SET receipt_header = 'X' WHERE branch_id = '${await tmpRow()}'`, 'ok');
+      await runProbe(client, 'branch_settings UPDATE cashier own row', cashierId(), `UPDATE public.branch_settings SET receipt_header = 'X' WHERE branch_id = '${own()}'`, 'denied');
+      await runProbe(client, 'branch_settings DELETE admin', adminId(), `DELETE FROM public.branch_settings WHERE branch_id = '${await tmpRow()}'`, 'ok');
+      await runProbe(client, 'branch_settings DELETE cashier own row', cashierId(), `DELETE FROM public.branch_settings WHERE branch_id = '${own()}'`, 'denied');
+    });
+
+    t('settings.manage: own-branch writes allowed, other branch denied', async () => {
+      // Grant the permission as the session role (bypasses RLS); the whole
+      // fixture is rolled back with the outer transaction.
+      await client.query(`UPDATE public.roles SET permissions = permissions || '["settings.manage"]'::jsonb WHERE role = 'branch_manager'`);
+
+      // INSERT probes: the row is discarded by runProbe's savepoint rollback,
+      // so own-branch INSERT needs the PK row cleared first, and UPDATE/DELETE
+      // probes re-seed their target rows through the session role below.
+      await client.query(`DELETE FROM public.branch_settings WHERE branch_id = $1`, [own()]);
+      await runProbe(client, 'branch_settings INSERT bm own branch', bmId(), ins(ctxA.branch), 'ok');
+      await runProbe(client, 'branch_settings INSERT bm other branch', bmId(), ins(await tmpBranch()), 'denied');
+
+      await client.query(`INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H')`, [own()]);
+      await runProbe(client, 'branch_settings UPDATE bm own', bmId(), `UPDATE public.branch_settings SET receipt_header = 'Y' WHERE branch_id = '${own()}'`, 'ok');
+      await runProbe(client, 'branch_settings UPDATE bm other', bmId(), `UPDATE public.branch_settings SET receipt_header = 'Y' WHERE branch_id = '${await tmpRow()}'`, 'denied');
+      await runProbe(client, 'branch_settings DELETE bm own', bmId(), `DELETE FROM public.branch_settings WHERE branch_id = '${own()}'`, 'ok');
+      await runProbe(client, 'branch_settings DELETE bm other', bmId(), `DELETE FROM public.branch_settings WHERE branch_id = '${await tmpRow()}'`, 'denied');
+    });
+  });
+
+  describe('settings (global, admin-write only)', () => {
+    t('staff read the global row; only admins can write it', async () => {
+      const read = await runProbe(client, 'settings SELECT cashier', cashierId(), `SELECT count(*)::int AS c FROM public.settings`, 'ok');
+      expect(Number(read.rows[0].c)).toBeGreaterThanOrEqual(1);
+
+      const upd = `UPDATE public.settings SET store_name = 'probe' WHERE id = (SELECT id FROM public.settings LIMIT 1)`;
+      await runProbe(client, 'settings UPDATE cashier', cashierId(), upd, 'denied');
+      await runProbe(client, 'settings UPDATE admin', adminId(), upd, 'ok');
+      await runProbe(client, 'settings DELETE cashier', cashierId(), `DELETE FROM public.settings`, 'denied');
+      await runProbe(client, 'settings INSERT cashier', cashierId(), `INSERT INTO public.settings (store_name) VALUES ('probe')`, 'denied');
+      await runProbe(client, 'settings INSERT admin', adminId(), `INSERT INTO public.settings (store_name) VALUES ('probe')`, 'ok');
+    });
+  });
+
   describe('child tables (isolation through the parent)', () => {
     interface ChildSpec {
       name: string;

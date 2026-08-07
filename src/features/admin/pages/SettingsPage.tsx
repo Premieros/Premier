@@ -3,7 +3,7 @@ import {
   Save, Store, Receipt, Palette, ShoppingCart, FileText, Boxes, ShieldCheck,
   Building2, Trash2,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';

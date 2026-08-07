@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { HandCoins, Search, Phone, User, Building2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';

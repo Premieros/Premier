@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, ChefHat } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';

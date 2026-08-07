@@ -243,6 +243,19 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
   await row('journal_entries', `INSERT INTO public.journal_entries (entry_number, branch_id, entry_date, description) VALUES ('${uniq('JE')}', '${ids.branchA}', CURRENT_DATE, 'rls')`,
       `INSERT INTO public.journal_entries (entry_number, branch_id, entry_date, description) VALUES ('${uniq('JE')}', '${ids.branchB}', CURRENT_DATE, 'rls')`);
 
+  // branch_settings keys on branch_id (no surrogate id), so it cannot use the
+  // RETURNING id helper above; insert it explicitly.
+  R.branch_settings = {
+    own: (await client.query<{ branch_id: string }>(
+      `INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H') RETURNING branch_id`,
+      [ids.branchA],
+    )).rows[0].branch_id,
+    other: (await client.query<{ branch_id: string }>(
+      `INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H') RETURNING branch_id`,
+      [ids.branchB],
+    )).rows[0].branch_id,
+  };
+
   ids.rows = R;
 
   // Child fixtures (no branch column; isolation goes through the parent).

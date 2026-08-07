@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Search, BookOpenText } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { PageHeader, Card } from '@/components/PageHeader';

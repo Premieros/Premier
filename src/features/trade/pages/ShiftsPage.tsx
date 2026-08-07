@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Timer, Play, Square, Printer, Search } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import * as api from '@/api';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';

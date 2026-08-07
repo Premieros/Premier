@@ -6,7 +6,7 @@ import {
   ShoppingBag, Truck, FileText, ChevronLeft, Activity, Calendar, Filter,
   Lightbulb, TrendingDown, Zap,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatCurrency, formatNumber, formatDateTime } from '@/lib/format';

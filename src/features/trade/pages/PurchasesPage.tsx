@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
 import { Plus, Trash2, Search, Eye, Download } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';

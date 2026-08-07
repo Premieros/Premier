@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { PageHeader, Card } from '@/components/PageHeader';

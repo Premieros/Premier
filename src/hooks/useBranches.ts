@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/api';
 import type { Branch } from '@/lib/types';
 
 let cache: Branch[] | null = null;
