@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -12,6 +12,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Warehouse, Branch } from '@/lib/types';
 
 export function WarehousesPage() {
@@ -19,30 +21,24 @@ export function WarehousesPage() {
   const { show } = useToast();
   const can = useCan();
   const branchFilter = useBranchFilter();
-  const [items, setItems] = useState<Warehouse[]>([]);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadWarehouses } = usePaginatedRows<Warehouse>({
+    table: 'warehouses',
+    select: '*, branch:branches(*)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', branch_id: '', address: '', is_active: true });
 
-  async function load() {
-    setLoading(true);
-    try {
-      let wq = supabase.from('warehouses').select('*, branch:branches(*)');
-      if (branchFilter) wq = wq.eq('branch_id', branchFilter);
-      const [w, b] = await Promise.all([
-        wq.order('created_at', { ascending: false }),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setItems((w.data as Warehouse[]) || []);
-      setBranches((b.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const { data: b } = await supabase.from('branches').select('*').order('name');
+    setBranches((b as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const openAdd = () => { setEditing(null); setForm({ name: '', branch_id: branchFilter || '', address: '', is_active: true }); setModalOpen(true); };
   const openEdit = (w: Warehouse) => { setEditing(w); setForm({ name: w.name, branch_id: w.branch_id || '', address: w.address || '', is_active: w.is_active }); setModalOpen(true); };
@@ -61,7 +57,7 @@ export function WarehousesPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadWarehouses();
   };
 
   const remove = async () => {
@@ -70,7 +66,7 @@ export function WarehousesPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'warehouses', deleteId); }
     setDeleteId(null);
-    load();
+    reloadWarehouses();
   };
 
   const columns: Column<Warehouse>[] = [
@@ -101,6 +97,7 @@ export function WarehousesPage() {
       } />
       <Card className="p-4">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} onRowClick={can('warehouses.manage') ? openEdit : undefined} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

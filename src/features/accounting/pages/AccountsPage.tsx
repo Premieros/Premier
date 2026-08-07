@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Coins, Landmark } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -18,6 +18,8 @@ import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { ChartOfAccount, AccountType, TrialBalanceRow } from '@/lib/types';
 
 const ACCOUNT_TYPES: { value: AccountType; labelKey: 'typeAsset' | 'typeLiability' | 'typeEquity' | 'typeIncome' | 'typeExpense' }[] = [
@@ -36,9 +38,7 @@ export function AccountsPage() {
   const can = useCan();
   const { effectiveSettings } = useSettings();
   const { branches } = useBranches();
-  const [items, setItems] = useState<ChartOfAccount[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ChartOfAccount | null>(null);
@@ -51,30 +51,28 @@ export function AccountsPage() {
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
   const canManage = can('accounts.manage');
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadAccounts } = usePaginatedRows<ChartOfAccount>({
+    table: 'chart_of_accounts',
+    select: '*',
+    order: { column: 'code', ascending: true },
+    branch_id: effectiveBranchFilter,
+    pageSize: 100,
+    enabled: !!effectiveBranchFilter,
+  });
 
-  async function load() {
-    setLoading(true);
-    try {
-      let q = supabase.from('chart_of_accounts').select('*');
-      if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
-      const res = await q.order('code', { ascending: true });
-      setItems((res.data as ChartOfAccount[]) || []);
-
-      if (effectiveBranchFilter) {
-        const { data: tb } = await api.accounting.getTrialBalance( { p_branch_id: effectiveBranchFilter, p_to_date: new Date().toISOString().slice(0, 10) });
-        if (tb && Array.isArray(tb)) {
-          const map: Record<string, number> = {};
-          (tb as TrialBalanceRow[]).forEach((r) => { map[r.code] = Number(r.balance); });
-          setBalances(map);
-        }
-      } else {
-        setBalances({});
+  async function loadBalances() {
+    if (effectiveBranchFilter) {
+      const { data: tb } = await api.accounting.getTrialBalance( { p_branch_id: effectiveBranchFilter, p_to_date: new Date().toISOString().slice(0, 10) });
+      if (tb && Array.isArray(tb)) {
+        const map: Record<string, number> = {};
+        (tb as TrialBalanceRow[]).forEach((r) => { map[r.code] = Number(r.balance); });
+        setBalances(map);
       }
-    } finally {
-      setLoading(false);
+    } else {
+      setBalances({});
     }
   }
-  useEffect(() => { load(); }, [effectiveBranchFilter]);
+  useEffect(() => { loadBalances(); }, [effectiveBranchFilter]);
 
   const filtered = items.filter((a) => !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.name_en?.toLowerCase().includes(search.toLowerCase()) || a.code.toLowerCase().includes(search.toLowerCase()));
 
@@ -101,7 +99,7 @@ export function AccountsPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadAccounts();
   };
 
   const remove = async () => {
@@ -110,7 +108,7 @@ export function AccountsPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'chart_of_accounts', deleteId); }
     setDeleteId(null);
-    load();
+    reloadAccounts();
   };
 
   const seedOpening = async () => {
@@ -126,12 +124,12 @@ export function AccountsPage() {
       return;
     }
     show(r.skipped ? t('openingBalanceExists') : `${t('openingBalanceDone')} (${formatCurrency(r.total || 0, currency, lang)})`, 'success');
-    load();
+    reloadAccounts();
   };
 
   const typeLabel = (t: AccountType) => {
     const found = ACCOUNT_TYPES.find((x) => x.value === t);
-    return found ? (isAr ? { typeAsset: 'ط£طµظ„', typeLiability: 'ط§ظ„طھط²ط§ظ…', typeEquity: 'ط­ظ‚ظˆظ‚ ظ…ظ„ظƒظٹط©', typeIncome: 'ط¥ظٹط±ط§ط¯', typeExpense: 'ظ…طµط±ظˆظپ' }[found.labelKey] : { typeAsset: 'Asset', typeLiability: 'Liability', typeEquity: 'Equity', typeIncome: 'Income', typeExpense: 'Expense' }[found.labelKey]) : t;
+    return found ? (isAr ? { typeAsset: 'أصل', typeLiability: 'التزام', typeEquity: 'حقوق ملكية', typeIncome: 'إيراد', typeExpense: 'مصروف' }[found.labelKey] : { typeAsset: 'Asset', typeLiability: 'Liability', typeEquity: 'Equity', typeIncome: 'Income', typeExpense: 'Expense' }[found.labelKey]) : t;
   };
 
   const columns: Column<ChartOfAccount>[] = [
@@ -203,6 +201,7 @@ export function AccountsPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>

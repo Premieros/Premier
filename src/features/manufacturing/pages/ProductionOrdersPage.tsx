@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, Play, CheckCircle2, XCircle, Trash2, Factory, PackageOpen } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -15,6 +15,8 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber, formatDate } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { ProductionOrder, Product, Warehouse, Branch, Recipe, RecipeItem, RpcResult } from '@/lib/types';
 
 interface WasteForm {
@@ -33,13 +35,17 @@ export function ProductionOrdersPage() {
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
 
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  const { rows: orders, loading, total, hasMore, loadMore, loadingMore, refresh: reloadOrders } = usePaginatedRows<ProductionOrder>({
+    table: 'production_orders',
+    select: '*, product:products(*), warehouse:warehouses(*), branch:branches(*), creator:users(id, full_name, email)',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 100,
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,26 +59,19 @@ export function ProductionOrdersPage() {
   const [cancelTarget, setCancelTarget] = useState<ProductionOrder | null>(null);
   const [cancelReason, setCancelReason] = useState('');
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [o, pr, w, br, r] = await Promise.all([
-        supabase.from('production_orders').select('*, product:products(*), warehouse:warehouses(*), branch:branches(*), creator:users(id, full_name, email)').order('created_at', { ascending: false }),
-        supabase.from('products').select('*').eq('product_type', 'manufactured').eq('is_active', true).order('name'),
-        supabase.from('warehouses').select('*').eq('is_active', true).order('name'),
-        supabase.from('branches').select('*').eq('is_active', true).order('name'),
-        supabase.from('recipes').select('*').eq('is_active', true),
-      ]);
-      setOrders((o.data as ProductionOrder[]) || []);
-      setProducts((pr.data as Product[]) || []);
-      setWarehouses((w.data as Warehouse[]) || []);
-      setBranches((br.data as Branch[]) || []);
-      setRecipes((r.data as Recipe[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [pr, w, br, r] = await Promise.all([
+      supabase.from('products').select('*').eq('product_type', 'manufactured').eq('is_active', true).order('name'),
+      supabase.from('warehouses').select('*').eq('is_active', true).order('name'),
+      supabase.from('branches').select('*').eq('is_active', true).order('name'),
+      supabase.from('recipes').select('*').eq('is_active', true),
+    ]);
+    setProducts((pr.data as Product[]) || []);
+    setWarehouses((w.data as Warehouse[]) || []);
+    setBranches((br.data as Branch[]) || []);
+    setRecipes((r.data as Recipe[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = orders.filter((o) => {
     if (branchFilter && o.branch_id !== branchFilter) return false;
@@ -107,7 +106,7 @@ export function ProductionOrdersPage() {
     await logAudit('create', 'production_orders', result.order_id, { number: result.order_number });
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadOrders();
   };
 
   const startOrder = async (o: ProductionOrder) => {
@@ -117,7 +116,7 @@ export function ProductionOrdersPage() {
     if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
     await logAudit('update', 'production_orders', o.id, { action: 'start' });
     show(t('saveSuccess'), 'success');
-    load();
+    reloadOrders();
   };
 
   const openComplete = async (o: ProductionOrder) => {
@@ -155,7 +154,7 @@ export function ProductionOrdersPage() {
     await logAudit('update', 'production_orders', completeTarget.id, { action: 'complete', total_cost: result.total_cost });
     show(t('productionCompleted'), 'success');
     setCompleteTarget(null);
-    load();
+    reloadOrders();
   };
 
   const openCancel = (o: ProductionOrder) => { setCancelTarget(o); setCancelReason(''); };
@@ -172,7 +171,7 @@ export function ProductionOrdersPage() {
     await logAudit('update', 'production_orders', cancelTarget.id, { action: 'cancel', reason: cancelReason });
     show(t('saveSuccess'), 'success');
     setCancelTarget(null);
-    load();
+    reloadOrders();
   };
 
   const statusPill = (status: string) => {
@@ -236,7 +235,7 @@ export function ProductionOrdersPage() {
 
   return (
     <div>
-      <PageHeader title={t('productionOrders')} subtitle={isAr ? 'طھط®ط·ظٹط· ظˆطھظ†ظپظٹط° ط£ظˆط§ظ…ط± ط§ظ„طھطµظ†ظٹط¹ ظ…ظ† ط§ظ„ظ…ظˆط§ط¯ ط§ظ„ط®ط§ظ…' : 'Plan and execute manufacturing orders from raw materials'} actions={
+      <PageHeader title={t('productionOrders')} subtitle={isAr ? 'تخطيط وتنفيذ أوامر التصنيع من المواد الخام' : 'Plan and execute manufacturing orders from raw materials'} actions={
         can('production.manage') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('newProductionOrder')}</Button>
         ) : undefined
@@ -252,6 +251,7 @@ export function ProductionOrdersPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={orders.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('newProductionOrder')} size="lg">
@@ -281,7 +281,7 @@ export function ProductionOrdersPage() {
         </div>
       </Modal>
 
-      <Modal open={!!completeTarget} onClose={() => setCompleteTarget(null)} title={`${t('completeProduction')} â€” ${completeTarget?.order_number || ''}`} size="lg">
+      <Modal open={!!completeTarget} onClose={() => setCompleteTarget(null)} title={`${t('completeProduction')} — ${completeTarget?.order_number || ''}`} size="lg">
         {completeTarget && (
           <div className="space-y-4">
             <div className="rounded-xl bg-slate-50 dark:bg-navy-800/50 p-4">
@@ -315,7 +315,7 @@ export function ProductionOrdersPage() {
                         ))}
                       </Select>
                       <Input type="number" step="0.0001" value={w.quantity} onChange={(e) => setWasteItems(wasteItems.map((x, i) => i === idx ? { ...x, quantity: parseFloat(e.target.value) || 0 } : x))} />
-                      <Input value={w.reason} onChange={(e) => setWasteItems(wasteItems.map((x, i) => i === idx ? { ...x, reason: e.target.value } : x))} placeholder={isAr ? 'ط§ظ„ط³ط¨ط¨' : 'Reason'} />
+                      <Input value={w.reason} onChange={(e) => setWasteItems(wasteItems.map((x, i) => i === idx ? { ...x, reason: e.target.value } : x))} placeholder={isAr ? 'السبب' : 'Reason'} />
                       <button onClick={() => setWasteItems(wasteItems.filter((_, i) => i !== idx))} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('delete')}>
                         <Trash2 className="w-4 h-4" />
                       </button>

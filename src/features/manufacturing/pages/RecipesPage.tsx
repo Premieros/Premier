@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, ChefHat } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,6 +14,8 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Recipe, RecipeItem, RawMaterial, Product, Branch, RecipeItemInput } from '@/lib/types';
 
 interface ItemForm {
@@ -32,11 +34,15 @@ export function RecipesPage() {
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
 
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const { rows: recipes, loading, total, hasMore, loadMore, loadingMore, refresh: reloadRecipes } = usePaginatedRows<Recipe>({
+    table: 'recipes',
+    select: '*, product:products(*), branch:branches(*)',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 100,
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,24 +58,17 @@ export function RecipesPage() {
   const [items, setItems] = useState<ItemForm[]>([{ ...EMPTY_ITEM }]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [r, pr, m, br] = await Promise.all([
-        supabase.from('recipes').select('*, product:products(*), branch:branches(*)').order('created_at', { ascending: false }),
-        supabase.from('products').select('*').eq('product_type', 'manufactured').eq('is_active', true).order('name'),
-        supabase.from('raw_materials').select('*').eq('is_active', true).order('name'),
-        supabase.from('branches').select('*').eq('is_active', true).order('name'),
-      ]);
-      setRecipes((r.data as Recipe[]) || []);
-      setProducts((pr.data as Product[]) || []);
-      setMaterials((m.data as RawMaterial[]) || []);
-      setBranches((br.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [pr, m, br] = await Promise.all([
+      supabase.from('products').select('*').eq('product_type', 'manufactured').eq('is_active', true).order('name'),
+      supabase.from('raw_materials').select('*').eq('is_active', true).order('name'),
+      supabase.from('branches').select('*').eq('is_active', true).order('name'),
+    ]);
+    setProducts((pr.data as Product[]) || []);
+    setMaterials((m.data as RawMaterial[]) || []);
+    setBranches((br.data as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = recipes.filter((rc) => {
     if (branchFilter && rc.branch_id !== branchFilter) return false;
@@ -146,7 +145,7 @@ export function RecipesPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadRecipes();
   };
 
   const remove = async () => {
@@ -155,7 +154,7 @@ export function RecipesPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'recipes', deleteId); }
     setDeleteId(null);
-    load();
+    reloadRecipes();
   };
 
   const columns: Column<Recipe>[] = [
@@ -195,7 +194,7 @@ export function RecipesPage() {
 
   return (
     <div>
-      <PageHeader title={t('recipes')} subtitle={isAr ? 'ط±ط¨ط· ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…طµظ†ظ‘ط¹ط© ط¨ظ…ظƒظˆظ†ط§طھظ‡ط§ ظ…ظ† ط§ظ„ظ…ظˆط§ط¯ ط§ظ„ط®ط§ظ…' : 'Link manufactured products to their raw material components'} actions={
+      <PageHeader title={t('recipes')} subtitle={isAr ? 'ربط المنتجات المصنّعة بمكوناتها من المواد الخام' : 'Link manufactured products to their raw material components'} actions={
         can('recipes.manage') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addRecipe')}</Button>
         ) : undefined
@@ -211,6 +210,7 @@ export function RecipesPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={recipes.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('editRecipe') : t('addRecipe')} size="2xl">

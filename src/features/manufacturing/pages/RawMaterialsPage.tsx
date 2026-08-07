@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Boxes, Layers, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -14,6 +14,8 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber, formatDate } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { RawMaterial, RawMaterialInventory, RawMaterialBatch, Unit, Branch, RpcResult } from '@/lib/types';
 
 type Tab = 'materials' | 'stock' | 'batches';
@@ -43,7 +45,12 @@ export function RawMaterialsPage() {
   const branchFilter = useBranchFilter();
 
   const [tab, setTab] = useState<Tab>('materials');
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
+  const { rows: materials, loading: materialsLoading, total, hasMore, loadMore, loadingMore, refresh: reloadMaterials } = usePaginatedRows<RawMaterial>({
+    table: 'raw_materials',
+    select: '*, unit:units(*)',
+    order: { column: 'name', ascending: true },
+    pageSize: 100,
+  });
   const [inventory, setInventory] = useState<RawMaterialInventory[]>([]);
   const [batches, setBatches] = useState<RawMaterialBatch[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -59,17 +66,15 @@ export function RawMaterialsPage() {
   const [adjustReason, setAdjustReason] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function load() {
+  async function loadMeta() {
     setLoading(true);
     try {
-      const [m, inv, b, u, br] = await Promise.all([
-        supabase.from('raw_materials').select('*, unit:units(*)').order('name'),
+      const [inv, b, u, br] = await Promise.all([
         supabase.from('raw_material_inventory').select('*, raw_material:raw_materials(*), branch:branches(*)').order('updated_at', { ascending: false }),
         supabase.from('raw_material_batches').select('*, raw_material:raw_materials(*), branch:branches(*)').order('created_at', { ascending: false }),
         supabase.from('units').select('*').eq('is_active', true).order('name'),
         supabase.from('branches').select('*').eq('is_active', true).order('name'),
       ]);
-      setMaterials((m.data as RawMaterial[]) || []);
       setInventory((inv.data as RawMaterialInventory[]) || []);
       setBatches((b.data as RawMaterialBatch[]) || []);
       setUnits((u.data as Unit[]) || []);
@@ -78,7 +83,7 @@ export function RawMaterialsPage() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const branchLabel = (id: string | null | undefined) =>
     branches.find((br) => br.id === id)?.name || '-';
@@ -129,7 +134,7 @@ export function RawMaterialsPage() {
       show(t('saveSuccess'), 'success');
     }
     setModalOpen(false);
-    load();
+    reloadMaterials();
   };
 
   const remove = async () => {
@@ -138,7 +143,7 @@ export function RawMaterialsPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'raw_materials', deleteId); }
     setDeleteId(null);
-    load();
+    reloadMaterials();
   };
 
   const openAdjust = (inv: RawMaterialInventory) => {
@@ -161,7 +166,7 @@ export function RawMaterialsPage() {
     await logAudit('update', 'raw_material_inventory', adjustTarget.id, { from: adjustTarget.quantity, to: adjustQty });
     show(t('saveSuccess'), 'success');
     setAdjustTarget(null);
-    load();
+    loadMeta();
   };
 
   const materialColumns: Column<RawMaterial>[] = [
@@ -239,7 +244,7 @@ export function RawMaterialsPage() {
 
   return (
     <div>
-      <PageHeader title={t('rawMaterials')} subtitle={isAr ? 'ط¥ط¯ط§ط±ط© ط§ظ„ظ…ظˆط§ط¯ ط§ظ„ط®ط§ظ… ظˆط£ط±طµط¯طھظ‡ط§ ظˆط¯ظپط¹ط§طھظ‡ط§' : 'Manage raw materials, stock and batches'} actions={
+      <PageHeader title={t('rawMaterials')} subtitle={isAr ? 'إدارة المواد الخام وأرصدتها ودفعاتها' : 'Manage raw materials, stock and batches'} actions={
         can('raw_materials.manage') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addRawMaterial')}</Button>
         ) : undefined
@@ -285,7 +290,10 @@ export function RawMaterialsPage() {
 
       <Card className="p-4">
         {tab === 'materials' && (
-          <DataTable columns={materialColumns} data={filteredMaterials} loading={loading} emptyMessage={t('noData')} />
+          <>
+            <DataTable columns={materialColumns} data={filteredMaterials} loading={materialsLoading} emptyMessage={t('noData')} />
+            <PaginationBar loaded={materials.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+          </>
         )}
         {tab === 'stock' && (
           <DataTable columns={stockColumns} data={filteredStock} loading={loading} emptyMessage={t('noData')} />
@@ -333,7 +341,7 @@ export function RawMaterialsPage() {
               <p className="font-medium text-slate-800 dark:text-slate-200">{branchLabel(adjustTarget.branch_id)}</p>
             </div>
             <Input label={t('quantity')} type="number" step="0.0001" value={adjustQty} onChange={(e) => setAdjustQty(parseFloat(e.target.value) || 0)} />
-            <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? 'ظ…ط«ط§ظ„: ط¬ط±ط¯طŒ طھط§ظ„ظپطŒ طھطµط­ظٹط­' : 'e.g. count, damaged, correction'} />
+            <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? 'مثال: جرد، تالف، تصحيح' : 'e.g. count, damaged, correction'} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setAdjustTarget(null)}>{t('cancel')}</Button>
               <Button onClick={saveAdjust}>{t('save')}</Button>

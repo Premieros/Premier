@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -14,6 +14,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Inventory, Warehouse } from '@/lib/types';
 
 export function InventoryPage() {
@@ -21,10 +23,14 @@ export function InventoryPage() {
   const isAr = lang === 'ar';
   const { show } = useToast();
   const can = useCan();
-  const [items, setItems] = useState<Inventory[]>([]);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadInventory } = usePaginatedRows<Inventory>({
+    table: 'inventory',
+    select: '*, product:products(*), warehouse:warehouses(*)',
+    order: { column: 'updated_at', ascending: false },
+    pageSize: 100,
+  });
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [componentIds, setComponentIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterWarehouse, setFilterWarehouse] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -35,22 +41,15 @@ export function InventoryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [inv, wh, pc] = await Promise.all([
-        supabase.from('inventory').select('*, product:products(*), warehouse:warehouses(*)').order('updated_at', { ascending: false }),
-        supabase.from('warehouses').select('*').order('name'),
-        supabase.from('product_components').select('component_product_id'),
-      ]);
-      setItems((inv.data as Inventory[]) || []);
-      setWarehouses((wh.data as Warehouse[]) || []);
-      setComponentIds(new Set((pc.data || []).map((r: { component_product_id: string }) => r.component_product_id)));
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [wh, pc] = await Promise.all([
+      supabase.from('warehouses').select('*').order('name'),
+      supabase.from('product_components').select('component_product_id'),
+    ]);
+    setWarehouses((wh.data as Warehouse[]) || []);
+    setComponentIds(new Set((pc.data || []).map((r: { component_product_id: string }) => r.component_product_id)));
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((i) => {
     if (filterWarehouse && i.warehouse_id !== filterWarehouse) return false;
@@ -79,7 +78,7 @@ export function InventoryPage() {
     await logAudit('update', 'inventory', adjustModal.id, { from: adjustModal.quantity, to: adjustQty });
     show(t('saveSuccess'), 'success');
     setAdjustModal(null);
-    load();
+    reloadInventory();
   };
 
   const remove = async () => {
@@ -88,7 +87,7 @@ export function InventoryPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'inventory', deleteId); }
     setDeleteId(null);
-    load();
+    reloadInventory();
   };
 
   const removeSelected = async () => {
@@ -101,7 +100,7 @@ export function InventoryPage() {
     show(t('deleteSuccess'), 'success');
     setSelectedIds(new Set());
     setDeleteSelectedConfirm(false);
-    load();
+    reloadInventory();
   };
 
   const handleExport = () => {
@@ -206,6 +205,7 @@ export function InventoryPage() {
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')}
           onRowClick={can('inventory.manage') ? openAdjust : undefined} showCheckbox={can('inventory.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={!!adjustModal} onClose={() => setAdjustModal(null)} title={t('adjustStock')} size="sm">
@@ -220,7 +220,7 @@ export function InventoryPage() {
               <p className="font-medium text-slate-800 dark:text-slate-200">{adjustModal.warehouse?.name}</p>
             </div>
             <Input label={t('currentStock')} type="number" step="0.0001" value={adjustQty} onChange={(e) => setAdjustQty(parseFloat(e.target.value) || 0)} />
-            <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? 'مثال: جرد، تالف، تصحيح' : 'e.g. count, damaged, correction'} />
+            <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? '����: ��ϡ ���ݡ �����' : 'e.g. count, damaged, correction'} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setAdjustModal(null)}>{t('cancel')}</Button>
               <Button onClick={saveAdjust}>{t('save')}</Button>

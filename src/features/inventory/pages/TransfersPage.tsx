@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, CheckCircle2, XCircle, ArrowLeftRight, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -14,6 +14,8 @@ import { Input, Select } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { formatDateTime } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { WarehouseTransfer, Warehouse, Product, Branch, RpcResult } from '@/lib/types';
 interface TransferLine {
   product_id: string;
@@ -30,11 +32,15 @@ export function TransfersPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
 
-  const [transfers, setTransfers] = useState<WarehouseTransfer[]>([]);
+  const { rows: transfers, loading, total, hasMore, loadMore, loadingMore, refresh: reloadTransfers } = usePaginatedRows<WarehouseTransfer>({
+    table: 'warehouse_transfers',
+    select: '*, from_warehouse:warehouses!warehouse_transfers_from_warehouse_id_fkey(*), to_warehouse:warehouses!warehouse_transfers_to_warehouse_id_fkey(*), branch:branches(*), requester:users(id, full_name, email)',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 100,
+  });
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,24 +52,17 @@ export function TransfersPage() {
   const [rejectTarget, setRejectTarget] = useState<WarehouseTransfer | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [tr, w, pr, br] = await Promise.all([
-        supabase.from('warehouse_transfers').select('*, from_warehouse:warehouses!warehouse_transfers_from_warehouse_id_fkey(*), to_warehouse:warehouses!warehouse_transfers_to_warehouse_id_fkey(*), branch:branches(*), requester:users(id, full_name, email)').order('created_at', { ascending: false }),
-        supabase.from('warehouses').select('*').eq('is_active', true).order('name'),
-        supabase.from('products').select('*').eq('is_active', true).order('name'),
-        supabase.from('branches').select('*').eq('is_active', true).order('name'),
-      ]);
-      setTransfers((tr.data as WarehouseTransfer[]) || []);
-      setWarehouses((w.data as Warehouse[]) || []);
-      setProducts((pr.data as Product[]) || []);
-      setBranches((br.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [w, pr, br] = await Promise.all([
+      supabase.from('warehouses').select('*').eq('is_active', true).order('name'),
+      supabase.from('products').select('*').eq('is_active', true).order('name'),
+      supabase.from('branches').select('*').eq('is_active', true).order('name'),
+    ]);
+    setWarehouses((w.data as Warehouse[]) || []);
+    setProducts((pr.data as Product[]) || []);
+    setBranches((br.data as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = transfers.filter((tr) => {
     if (branchFilter && tr.branch_id !== branchFilter) return false;
@@ -131,7 +130,7 @@ export function TransfersPage() {
     await logAudit('create', 'warehouse_transfers', result.transfer_id, { number: result.transfer_number });
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadTransfers();
   };
 
   const approve = async (tr: WarehouseTransfer) => {
@@ -141,7 +140,7 @@ export function TransfersPage() {
     if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
     await logAudit('update', 'warehouse_transfers', tr.id, { action: 'approve' });
     show(t('saveSuccess'), 'success');
-    load();
+    reloadTransfers();
   };
 
   const openReject = (tr: WarehouseTransfer) => { setRejectTarget(tr); setRejectReason(''); };
@@ -158,7 +157,7 @@ export function TransfersPage() {
     await logAudit('update', 'warehouse_transfers', rejectTarget.id, { action: 'reject', reason: rejectReason });
     show(t('saveSuccess'), 'success');
     setRejectTarget(null);
-    load();
+    reloadTransfers();
   };
 
   const statusPill = (status: string) => {
@@ -226,6 +225,7 @@ export function TransfersPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={transfers.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('newTransfer')} size="lg">

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,6 +14,8 @@ import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Customer, Settings, Branch } from '@/lib/types';
 
 export function CustomersPage() {
@@ -21,8 +23,13 @@ export function CustomersPage() {
   const { show } = useToast();
   const can = useCan();
   const branchFilter = useBranchFilter();
-  const [items, setItems] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadCustomers } = usePaginatedRows<Customer>({
+    table: 'customers',
+    select: '*',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -32,24 +39,15 @@ export function CustomersPage() {
   const [currency, setCurrency] = useState('EGP');
   const [branches, setBranches] = useState<Branch[]>([]);
 
-  async function load() {
-    setLoading(true);
-    try {
-      let q = supabase.from('customers').select('*');
-      if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const [res, s, b] = await Promise.all([
-        q.order('created_at', { ascending: false }),
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setItems((res.data as Customer[]) || []);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [s, b] = await Promise.all([
+      supabase.from('settings').select('*').maybeSingle(),
+      supabase.from('branches').select('*').order('name'),
+    ]);
+    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+    setBranches((b.data as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search));
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: branchFilter || '' }); setModalOpen(true); };
@@ -69,7 +67,7 @@ export function CustomersPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadCustomers();
   };
 
   const remove = async () => {
@@ -78,7 +76,7 @@ export function CustomersPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'customers', deleteId); }
     setDeleteId(null);
-    load();
+    reloadCustomers();
   };
 
   const handleExport = () => exportToExcel(items.map((c) => ({ Name: c.name, Phone: c.phone || '', Email: c.email || '', Address: c.address || '', TaxNumber: c.tax_number || '', Balance: c.balance })), 'customers');
@@ -91,7 +89,7 @@ export function CustomersPage() {
       const payload = rows.map((r) => ({ name: String(r.Name || r.name || ''), phone: String(r.Phone || r.phone || ''), email: String(r.Email || r.email || ''), address: String(r.Address || r.address || ''), tax_number: String(r.TaxNumber || ''), balance: Number(r.Balance || 0), branch_id: branchFilter || branches[0]?.id || null })).filter((r) => r.name);
       const { error } = await supabase.from('customers').insert(payload);
       if (error) show(error.message, 'error');
-      else { show(`${payload.length} ${t('import')} OK`, 'success'); load(); }
+      else { show(`${payload.length} ${t('import')} OK`, 'success'); reloadCustomers(); }
     } catch (err) { show(String(err), 'error'); }
   };
 
@@ -140,6 +138,7 @@ export function CustomersPage() {
       </Card>
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

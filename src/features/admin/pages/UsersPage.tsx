@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Edit2, Plus, Search, Shield, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -15,6 +15,8 @@ import { logAudit } from '@/lib/audit';
 import { useAuth } from '@/context/AuthContext';
 import { useRoles } from '@/context/RolesContext';
 import { isAdminRole, ROLE_META } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { AppUser, Branch, Role } from '@/lib/types';
 
 const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
@@ -26,9 +28,14 @@ export function UsersPage() {
   const { user: me } = useAuth();
   const { roleMeta, rolesList } = useRoles();
   const isAdmin = isAdminRole(me?.role);
-  const [items, setItems] = useState<AppUser[]>([]);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadUsers } = usePaginatedRows<AppUser>({
+    table: 'users',
+    select: '*',
+    order: { column: 'created_at', ascending: false },
+    branch_id: !isAdmin && me?.branch_id ? me.branch_id : null,
+    pageSize: 100,
+  });
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
@@ -38,22 +45,11 @@ export function UsersPage() {
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier', branch_id: '', is_active: true });
 
-  async function load() {
-    setLoading(true);
-    try {
-      const usersQuery = supabase.from('users').select('*').order('created_at', { ascending: false });
-      if (!isAdmin && me?.branch_id) usersQuery.eq('branch_id', me.branch_id);
-      const [u, b] = await Promise.all([
-        usersQuery,
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setItems((u.data as AppUser[]) || []);
-      setBranches((b.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadBranches() {
+    const { data: b } = await supabase.from('branches').select('*').order('name');
+    setBranches((b as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadBranches(); }, []);
 
   const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
 
@@ -99,7 +95,7 @@ export function UsersPage() {
     await logAudit('create', 'users', result.user_id, { email });
     show(t('saveSuccess'), 'success');
     setAddModal(false);
-    load();
+    reloadUsers();
   };
 
   const save = async () => {
@@ -133,7 +129,7 @@ export function UsersPage() {
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
     setNewPassword('');
-    load();
+    reloadUsers();
   };
 
   const remove = async () => {
@@ -150,7 +146,7 @@ export function UsersPage() {
     }
     await logAudit('delete', 'users', deleteId, { email: target?.email });
     show(t('deleteSuccess'), 'success');
-    load();
+    reloadUsers();
   };
 
   const roleOptions = (() => {
@@ -200,6 +196,7 @@ export function UsersPage() {
       </Card>
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       {/* Edit User Modal */}
@@ -236,7 +233,7 @@ export function UsersPage() {
       <Modal open={addModal} onClose={() => setAddModal(false)} title={t('addUser')}>
         <div className="space-y-4">
           <Input label={t('fullName')} value={addForm.full_name} onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })} required />
-          <Input label={t('username')} value={addForm.username} onChange={(e) => setAddForm({ ...addForm, username: e.target.value })} required autoComplete="off" placeholder={isAr ? 'اسم المستخدم' : 'username'} />
+          <Input label={t('username')} value={addForm.username} onChange={(e) => setAddForm({ ...addForm, username: e.target.value })} required autoComplete="off" placeholder={isAr ? '��� ��������' : 'username'} />
           <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
           <Input label={t('pin')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value.replace(/\D/g, '').slice(0, 4) })} required inputMode="numeric" maxLength={4} placeholder="1234" />
           <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}>

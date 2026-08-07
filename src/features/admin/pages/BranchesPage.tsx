@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -10,28 +10,23 @@ import { Input, Select } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Branch } from '@/lib/types';
 
 export function BranchesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
-  const [items, setItems] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadBranches } = usePaginatedRows<Branch>({
+    table: 'branches',
+    select: '*',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 100,
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', name_en: '', address: '', phone: '', is_active: true });
-
-  async function load() {
-    setLoading(true);
-    try {
-      const { data } = await supabase.from('branches').select('*').order('created_at', { ascending: false });
-      setItems((data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => { load(); }, []);
 
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', address: '', phone: '', is_active: true }); setModalOpen(true); };
   const openEdit = (b: Branch) => { setEditing(b); setForm({ name: b.name, name_en: b.name_en || '', address: b.address || '', phone: b.phone || '', is_active: b.is_active }); setModalOpen(true); };
@@ -49,7 +44,7 @@ export function BranchesPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadBranches();
   };
 
   const remove = async () => {
@@ -58,7 +53,7 @@ export function BranchesPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'branches', deleteId); }
     setDeleteId(null);
-    load();
+    reloadBranches();
   };
 
   const columns: Column<Branch>[] = [
@@ -84,6 +79,7 @@ export function BranchesPage() {
       <PageHeader title={t('branches')} actions={<Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>} />
       <Card className="p-4">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

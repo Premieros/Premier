@@ -14,6 +14,8 @@ import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Supplier, Settings, Branch } from '@/lib/types';
 
 export function SuppliersPage() {
@@ -21,8 +23,13 @@ export function SuppliersPage() {
   const { show } = useToast();
   const can = useCan();
   const branchFilter = useBranchFilter();
-  const [items, setItems] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadSuppliers } = usePaginatedRows<Supplier>({
+    table: 'suppliers',
+    select: '*',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
@@ -31,24 +38,15 @@ export function SuppliersPage() {
   const [currency, setCurrency] = useState('EGP');
   const [branches, setBranches] = useState<Branch[]>([]);
 
-  async function load() {
-    setLoading(true);
-    try {
-      let q = supabase.from('suppliers').select('*');
-      if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const [res, s, b] = await Promise.all([
-        q.order('created_at', { ascending: false }),
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setItems((res.data as Supplier[]) || []);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [s, b] = await Promise.all([
+      supabase.from('settings').select('*').maybeSingle(),
+      supabase.from('branches').select('*').order('name'),
+    ]);
+    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+    setBranches((b.data as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.phone?.includes(search));
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: branchFilter || '' }); setModalOpen(true); };
@@ -68,7 +66,7 @@ export function SuppliersPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadSuppliers();
   };
 
   const remove = async () => {
@@ -77,7 +75,7 @@ export function SuppliersPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'suppliers', deleteId); }
     setDeleteId(null);
-    load();
+    reloadSuppliers();
   };
 
   const handleExport = () => exportToExcel(items.map((s) => ({ Name: s.name, Phone: s.phone || '', Email: s.email || '', Address: s.address || '', TaxNumber: s.tax_number || '', Balance: s.balance })), 'suppliers');
@@ -121,6 +119,7 @@ export function SuppliersPage() {
       </Card>
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('suppliers.manage') ? openEdit : undefined} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

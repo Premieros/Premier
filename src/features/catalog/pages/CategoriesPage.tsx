@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -12,6 +12,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Category, Branch } from '@/lib/types';
 
 export function CategoriesPage() {
@@ -19,8 +21,13 @@ export function CategoriesPage() {
   const { show } = useToast();
   const can = useCan();
   const branchFilter = useBranchFilter();
-  const [items, setItems] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadCategories } = usePaginatedRows<Category>({
+    table: 'categories',
+    select: '*',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -29,22 +36,11 @@ export function CategoriesPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [form, setForm] = useState({ name: '', name_en: '', description: '', branch_id: '' });
 
-  async function load() {
-    setLoading(true);
-    try {
-      let q = supabase.from('categories').select('*');
-      if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const [data, b] = await Promise.all([
-        q.order('created_at', { ascending: false }),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setItems((data.data as Category[]) || []);
-      setBranches((b.data as Branch[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const { data: b } = await supabase.from('branches').select('*').order('name');
+    setBranches((b as Branch[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', description: '', branch_id: branchFilter || '' }); setModalOpen(true); };
   const openEdit = (c: Category) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', description: c.description || '', branch_id: c.branch_id || branchFilter || '' }); setModalOpen(true); };
@@ -63,7 +59,7 @@ export function CategoriesPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadCategories();
   };
 
   const remove = async () => {
@@ -72,7 +68,7 @@ export function CategoriesPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'categories', deleteId); }
     setDeleteId(null);
-    load();
+    reloadCategories();
   };
 
   const removeSelected = async () => {
@@ -85,7 +81,7 @@ export function CategoriesPage() {
     show(t('deleteSuccess'), 'success');
     setSelectedIds(new Set());
     setDeleteSelectedConfirm(false);
-    load();
+    reloadCategories();
   };
 
   const columns: Column<Category>[] = [
@@ -121,6 +117,7 @@ export function CategoriesPage() {
       <Card className="p-4">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')}
           onRowClick={can('categories.manage') ? openEdit : undefined} showCheckbox={can('categories.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
