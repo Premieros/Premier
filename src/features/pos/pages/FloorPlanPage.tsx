@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Grid3x3, Plus, Pencil, Trash2, Users, UtensilsCrossed, Clock,
@@ -83,6 +83,12 @@ export function FloorPlanPage() {
   const [areaModal, setAreaModal] = useState(false);
   const [tableModal, setTableModal] = useState(false);
 
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scheduleReload = () => {
+    if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    reloadTimer.current = setTimeout(() => { load(); }, 400);
+  };
+
   const [areaName, setAreaName] = useState('');
   const [tableForm, setTableForm] = useState({
     name: '', capacity: 4, area_id: '', x: 0, y: 0, w: 120, h: 80,
@@ -130,6 +136,22 @@ export function FloorPlanPage() {
   useEffect(() => { load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBranch]);
 
+  // Live updates: keep the floor plan in sync with POS actions from any
+  // tab/device (audit M1). Deferred so burst edits coalesce into one reload.
+  useEffect(() => {
+    if (!effectiveBranch) return;
+    const channel = supabase
+      .channel(`floorplan-${effectiveBranch}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${effectiveBranch}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dining_tables', filter: `branch_id=eq.${effectiveBranch}` }, scheduleReload)
+      .subscribe();
+    return () => {
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveBranch]);
+
   // Apply a filter passed from the POS header tiles (location.state.filter).
   useEffect(() => {
     const st = (location.state || {}) as { filter?: '' | 'held' | 'delivery' | 'takeaway' | null };
@@ -145,10 +167,12 @@ export function FloorPlanPage() {
     return map;
   }, [products, isAr]);
 
+  // One table may legitimately carry several open/held orders (a detached
+  // order + a new one, or legacy data), so keep every order per table.
   const ordersByTable = useMemo(() => {
-    const map: Record<string, Order> = {};
+    const map: Record<string, Order[]> = {};
     for (const o of orders) {
-      if (o.table_id && !map[o.table_id]) map[o.table_id] = o;
+      if (o.table_id) (map[o.table_id] ||= []).push(o);
     }
     return map;
   }, [orders]);
@@ -353,7 +377,8 @@ export function FloorPlanPage() {
                         <div className="relative" style={{ width: Math.max(maxW, 900), height: Math.max(maxH, 380) }}>
                           {positions.map(({ table, left, top, width, height }) => {
                             const st = STATUS_STYLES[table.status] || STATUS_STYLES.vacant;
-                            const order = ordersByTable[table.id];
+                            const tableOrders = ordersByTable[table.id] || [];
+                            const order = tableOrders[0];
                             return (
                               <button
                                 key={table.id}
@@ -367,7 +392,7 @@ export function FloorPlanPage() {
                                 </span>
                                 {order && (
                                   <span className={`mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold truncate max-w-full ${st.badge}`}>
-                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}
+                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}{tableOrders.length > 1 ? ` +${tableOrders.length - 1}` : ''}
                                   </span>
                                 )}
                               </button>
@@ -395,7 +420,8 @@ export function FloorPlanPage() {
                         <div className="relative" style={{ width: Math.max(maxW, 900), height: Math.max(maxH, 380) }}>
                           {positions.map(({ table, left, top, width, height }) => {
                             const st = STATUS_STYLES[table.status] || STATUS_STYLES.vacant;
-                            const order = ordersByTable[table.id];
+                            const tableOrders = ordersByTable[table.id] || [];
+                            const order = tableOrders[0];
                             return (
                               <button
                                 key={table.id}
@@ -409,7 +435,7 @@ export function FloorPlanPage() {
                                 </span>
                                 {order && (
                                   <span className={`mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold truncate max-w-full ${st.badge}`}>
-                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}
+                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}{tableOrders.length > 1 ? ` +${tableOrders.length - 1}` : ''}
                                   </span>
                                 )}
                               </button>
@@ -516,7 +542,7 @@ export function FloorPlanPage() {
       <Modal open={!!tableTarget} onClose={() => setTableTarget(null)} title={tableTarget?.name || ''} size="md">
         {tableTarget && (() => {
           const st = STATUS_STYLES[tableTarget.status] || STATUS_STYLES.vacant;
-          const order = ordersByTable[tableTarget.id];
+          const tableOrders = ordersByTable[tableTarget.id] || [];
           const area = areas.find((a) => a.id === tableTarget.area_id);
           return (
             <div className="space-y-4">
@@ -527,32 +553,36 @@ export function FloorPlanPage() {
                 <span className="text-xs text-slate-400 flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {tableTarget.capacity}</span>
               </div>
 
-              {order ? (
-                <div className="rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-800 dark:text-white">{order.order_number}</span>
-                    <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(order.total, 'EGP', lang)}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 font-bold">{t(ORDER_TYPE_KEY[order.order_type])}</span>
-                    <span>{formatDateTime(order.created_at, lang)}</span>
-                  </div>
-                  <div className="space-y-1">
-                    {orderItemsOf(order).map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
-                        <span className="truncate">{productName[item.product_id || ''] || '—'} × {Number(item.quantity)}</span>
-                        <span className="shrink-0 font-medium">{formatCurrency(item.total, 'EGP', lang)}</span>
+              {tableOrders.length > 0 ? (
+                <div className="space-y-2">
+                  {tableOrders.map((order) => (
+                    <div key={order.id} className="rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{order.order_number}</span>
+                        <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(order.total, 'EGP', lang)}</span>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button size="sm" onClick={() => resumeOrder(order)}>
-                      <UtensilsCrossed className="w-4 h-4" /> {t('resumeOrder')}
-                    </Button>
-                    <Button size="sm" variant="success" onClick={() => resumeOrder(order)}>
-                      <Banknote className="w-4 h-4" /> {t('payOrder')}
-                    </Button>
-                  </div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 font-bold">{t(ORDER_TYPE_KEY[order.order_type])}</span>
+                        <span>{formatDateTime(order.created_at, lang)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {orderItemsOf(order).map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
+                            <span className="truncate">{productName[item.product_id || ''] || '—'} × {Number(item.quantity)}</span>
+                            <span className="shrink-0 font-medium">{formatCurrency(item.total, 'EGP', lang)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button size="sm" onClick={() => resumeOrder(order)}>
+                          <UtensilsCrossed className="w-4 h-4" /> {t('resumeOrder')}
+                        </Button>
+                        <Button size="sm" variant="success" onClick={() => resumeOrder(order)}>
+                          <Banknote className="w-4 h-4" /> {t('payOrder')}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div>

@@ -202,7 +202,7 @@ export function PosPage() {
   const [loadError, setLoadError] = useState('');
   const [catSidebarOpen, setCatSidebarOpen] = useState(true);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
-  const [activeShift, setActiveShift] = useState<{ id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number } | null>(null);
+  const [activeShift, setActiveShift] = useState<{ id: string; expected: number; opened_at: string; opening_amount: number } | null>(null);
   const [shiftChecked, setShiftChecked] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
@@ -230,7 +230,7 @@ export function PosPage() {
       api.pos.getActiveShift({ p_branch_id: effectiveBranch }).then(({ data }) => {
       if (cancelled) return;
       const res = data as RpcResult | null;
-      setActiveShift(res?.open ? (res.shift as unknown as { id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number }) : null);
+      setActiveShift(res?.open ? (res.shift as unknown as { id: string; expected: number; opened_at: string; opening_amount: number }) : null);
       setShiftChecked(true);
     });
     return () => { cancelled = true; };
@@ -264,13 +264,25 @@ export function PosPage() {
       const { data: o } = await supabase.from('orders').select('*').eq('id', oId).maybeSingle();
       const order = (o as Order | null);
       if (!order) { setOrderLoading(false); return; }
+      // Only open/held orders are resumable; completed/cancelled orders cannot
+      // be edited or re-occupy a table (audit M2).
+      if (order.status !== 'open' && order.status !== 'held') {
+        show(isAr ? 'لا يمكن استئناف طلب منتهي' : 'Cannot resume a completed order', 'error');
+        setOrderLoading(false);
+        return;
+      }
       setOrderType(order.order_type as OrderType);
       setTableId(order.table_id);
       setOrderId(order.id);
       setActiveOrderNumber(order.order_number);
       setGuestCount(order.guest_count);
+      // Repair a legacy 'vacant' row left under an open order, but never
+      // overwrite a manager's 'reserved'/'closed' status (audit L7).
       if (order.table_id) {
-        api.floorPlan.setTableStatus({ p_table_id: order.table_id, p_status: 'occupied' }).catch(() => {});
+        const { data: tbl } = await supabase.from('dining_tables').select('status').eq('id', order.table_id).maybeSingle();
+        if (tbl && (tbl as { status: string }).status === 'vacant') {
+          api.floorPlan.setTableStatus({ p_table_id: order.table_id, p_status: 'occupied' }).catch(() => {});
+        }
       }
 
       const { data: items } = await supabase.from('order_items').select('*').eq('order_id', oId);
@@ -278,7 +290,9 @@ export function PosPage() {
       const ids = itemRows.map((i) => i.product_id).filter(Boolean) as string[];
       const prodMap: Record<string, Product> = {};
       if (ids.length > 0) {
-        const { data: prods } = await supabase.from('products').select('*').in('id', ids);
+        // Restrict to the order's branch so cross-branch products never leak in
+        // and missing products are not silently dropped into the cart (L4).
+        const { data: prods } = await supabase.from('products').select('*').in('id', ids).eq('branch_id', order.branch_id);
         for (const p of (prods as Product[]) || []) prodMap[p.id] = p;
       }
       const cartItems: CartItem[] = itemRows
@@ -297,7 +311,7 @@ export function PosPage() {
     } finally {
       setOrderLoading(false);
     }
-  }, [t, show]);
+  }, [t, show, isAr]);
 
   // Live counters for the POS header strip (occupied tables + active orders).
   const loadSummary = useCallback(async (branchId: string) => {
@@ -546,26 +560,47 @@ export function PosPage() {
       show(isAr ? `لا يمكن تغيير نوع طلب نشط (${activeOrderNumber})` : `Cannot change order type of active order (${activeOrderNumber})`, 'error');
       return;
     }
+    // Dine-in requires a selected table (audit L1 / C1 trap).
+    if (ot === 'dine_in' && !tableId && !activeTable) {
+      show(isAr ? 'اختر طاولة أولاً لطلب داخل الصالة' : 'Select a table first for dine-in orders', 'error');
+      return;
+    }
     if (activeTable && ot !== 'dine_in') {
       const ok = window.confirm(isAr
         ? `التبديل إلى ${t(ORDER_TYPE_KEY[ot])} سيفصل الطاولة ${activeTable.name} ويحررها. متابعة؟`
         : `Switching to ${t(ORDER_TYPE_KEY[ot])} will detach and free table ${activeTable.name}. Continue?`);
       if (!ok) return;
-      await api.floorPlan.setTableStatus({ p_table_id: tableId || activeTable.id, p_status: 'vacant' }).catch(() => {});
+      const res = await api.floorPlan.setTableStatus({ p_table_id: tableId || activeTable.id, p_status: 'vacant' });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
       setTableId(null);
       setActiveTable(null);
     }
     setOrderType(ot);
   };
 
-  const detachTable = async () => {
-    if (!activeTable) return;
-    const ok = window.confirm(isAr
-      ? `فصل الطلب عن الطاولة ${activeTable.name}؟ سيتم تحرير الطاولة.`
-      : `Detach order from table ${activeTable.name}? The table will be freed.`);
-    if (!ok) return;
-    if (tableId) {
-      await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' }).catch(() => {});
+  // Detaches the current order from its table in the DB (audit H1). For a
+  // linked order the server nulls orders.table_id and frees the table; for a
+  // plain table (no order yet) it just frees the table. Failures are surfaced
+  // instead of being swallowed by .catch(() => {}).
+  const performDetach = async () => {
+    if (orderId) {
+      const res = await api.floorPlan.detachOrder({ p_order_id: orderId });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
+    } else if (tableId) {
+      const res = await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
     }
     setOrderId(null);
     setActiveOrderNumber(null);
@@ -574,13 +609,19 @@ export function PosPage() {
     setGuestCount(null);
   };
 
-  const detachOrder = () => {
+  const detachTable = async () => {
+    if (!activeTable) return;
+    const ok = window.confirm(isAr
+      ? `فصل الطلب عن الطاولة ${activeTable.name}؟ سيتم تحرير الطاولة.`
+      : `Detach order from table ${activeTable.name}? The table will be freed.`);
+    if (!ok) return;
+    await performDetach();
+  };
+
+  const detachOrder = async () => {
     const ok = window.confirm(isAr ? 'فصل الطلب الحالي؟' : 'Detach the current order?');
     if (!ok) return;
-    setOrderId(null);
-    setActiveOrderNumber(null);
-    setTableId(null);
-    setGuestCount(null);
+    await performDetach();
   };
 
   const setItemDiscount = (productId: string, discount: number) => {
@@ -597,7 +638,7 @@ export function PosPage() {
   const taxRate = effSettings?.tax_enabled ? (effSettings?.tax_rate || 0) : 0;
   const taxAmount = (taxableAmount * taxRate) / 100;
   const total = taxableAmount + taxAmount;
-  const change = Math.max(0, paidAmount - total);
+  const change = Math.max(0, (paymentMethod === 'credit' ? 0 : paidAmount || total) - total);
 
   const handleBarcodeScan = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -622,6 +663,11 @@ export function PosPage() {
   const holdOrder = async () => {
     if (cart.length === 0 || completing || orderLoading) return;
     if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
+    // A dine-in order must point at a table (audit L1 / C1 trap).
+    if (orderType === 'dine_in' && !tableId) {
+      show(isAr ? 'اختر طاولة لطلب داخل الصالة' : 'Select a table for dine-in orders', 'error');
+      return;
+    }
     setCompleting(true);
 
     const itemRows = buildItemsPayload();
@@ -707,6 +753,11 @@ export function PosPage() {
     if (cart.length === 0 || completing) return;
     if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
     if (isCashier && !activeShift) { show(t('shiftRequired'), 'error'); return; }
+    // A dine-in order must point at a table (audit L1 / C1 trap).
+    if (orderType === 'dine_in' && !tableId) {
+      show(isAr ? 'اختر طاولة لطلب داخل الصالة' : 'Select a table for dine-in orders', 'error');
+      return;
+    }
     setCompleting(true);
 
     const { data: branchWarehouses } = await supabase.from('warehouses').select('id').eq('branch_id', effectiveBranch).eq('is_active', true);
@@ -748,6 +799,7 @@ export function PosPage() {
       p_order_type: orderType,
       p_table_id: orderType === 'dine_in' ? tableId : null,
       p_order_id: orderId,
+      p_guest_count: guestCount,
     });
     if (error) { show(error.message, 'error'); setCompleting(false); return; }
     const result = data as RpcResult | null;
@@ -779,10 +831,9 @@ export function PosPage() {
     setDiscountAmount(0);
     setPaidAmount(0);
     setCustomerId('');
-    // A direct dine-in sale (no linked order) frees its table.
-    if (tableId && !orderId) {
-      await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' }).catch(() => {});
-    }
+    // Direct dine-in sales have their origin table freed by process_sale in the
+    // same transaction (audit H3); the linked-order path does the same for the
+    // order's table. No client-side call needed here.
     setOrderId(null);
     setTableId(null);
     setActiveTable(null);
@@ -1055,8 +1106,12 @@ export function PosPage() {
             disabled={!isAdminRole(user?.role)}
             onChange={(e) => {
               const v = e.target.value;
-              if (v !== effectiveBranch && cart.length > 0) {
-                const ok = window.confirm(isAr ? 'تبديل الفرع سيمسح السلة الحالية. متابعة؟' : 'Switching branch will clear the current cart. Continue?');
+              if (v !== effectiveBranch && (cart.length > 0 || orderId)) {
+                const msg = orderId
+                  ? (isAr ? 'تبديل الفرع سيبقي الطلب الحالي مفتوحاً على طاولته وسيمسح السلة المحلية. متابعة؟'
+                          : 'Switching branch will keep the current order open on its table and clear the local cart. Continue?')
+                  : (isAr ? 'تبديل الفرع سيمسح السلة الحالية. متابعة؟' : 'Switching branch will clear the current cart. Continue?');
+                const ok = window.confirm(msg);
                 if (!ok) { e.target.value = effectiveBranch; return; }
               }
               setSelectedBranch(v);

@@ -34,6 +34,7 @@ export const pos = {
     p_order_type?: OrderType;
     p_table_id?: string | null;
     p_order_id?: string | null;
+    p_guest_count?: number | null;
   }): ApiResult<RpcResult> {
     return rpc('process_sale', p);
   },
@@ -79,6 +80,9 @@ export const floorPlan = {
   },
   setTableStatus(p: { p_table_id: string; p_status: string }): ApiResult<RpcResult> {
     return rpc('set_table_status', p);
+  },
+  detachOrder(p: { p_order_id: string }): ApiResult<RpcResult> {
+    return rpc('detach_order', p);
   },
 };
 
