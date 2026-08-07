@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Grid3x3, Plus, Pencil, Trash2, Users, UtensilsCrossed, Clock,
-  CheckCircle2, XCircle, MapPin, Tag, RefreshCw,
+  XCircle, MapPin, Tag, RefreshCw, Banknote,
 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -64,6 +64,7 @@ export function FloorPlanPage() {
   const can = useCan();
   const { show } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [areas, setAreas] = useState<DiningArea[]>([]);
   const [tables, setTables] = useState<DiningTable[]>([]);
@@ -74,10 +75,10 @@ export function FloorPlanPage() {
   const [selectedBranch, setSelectedBranch] = useState(branchFilter || '');
   const [loading, setLoading] = useState(true);
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderType | ''>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'held'>('all');
   const [busy, setBusy] = useState(false);
 
   const [tableTarget, setTableTarget] = useState<DiningTable | null>(null);
-  const [orderTarget, setOrderTarget] = useState<Order | null>(null);
   const [editTarget, setEditTarget] = useState<DiningTable | null>(null);
   const [areaModal, setAreaModal] = useState(false);
   const [tableModal, setTableModal] = useState(false);
@@ -129,6 +130,15 @@ export function FloorPlanPage() {
   useEffect(() => { load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBranch]);
 
+  // Apply a filter passed from the POS header tiles (location.state.filter).
+  useEffect(() => {
+    const st = (location.state || {}) as { filter?: '' | 'held' | 'delivery' | 'takeaway' | null };
+    const filter = st.filter;
+    if (filter === 'delivery' || filter === 'takeaway') setOrderTypeFilter(filter);
+    if (filter === 'held') setStatusFilter('held');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const productName = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of products) map[p.id] = isAr ? p.name : (p.name_en || p.name);
@@ -175,12 +185,10 @@ export function FloorPlanPage() {
       const r = data as RpcResult | null;
       show(r?.detail || r?.error || t('error'), 'error');
     } else {
-      show(status === 'completed' ? t('completeOrder') : status === 'cancelled' ? t('cancelOrder') : t('saveSuccess'), 'success');
+      show(status === 'cancelled' ? t('cancelOrder') : t('saveSuccess'), 'success');
       await load();
     }
     setBusy(false);
-    setOrderTarget(null);
-    setTableTarget(null);
   };
 
   const createArea = async () => {
@@ -240,7 +248,12 @@ export function FloorPlanPage() {
 
   const orderItemsOf = (order: Order) => orderItems.filter((i) => i.order_id === order.id);
 
-  const filteredOrders = orderTypeFilter ? orders.filter((o) => o.order_type === orderTypeFilter) : orders;
+  const filteredOrders = useMemo(() => {
+    let list = orders;
+    if (orderTypeFilter) list = list.filter((o) => o.order_type === orderTypeFilter);
+    if (statusFilter !== 'all') list = list.filter((o) => o.status === statusFilter);
+    return list;
+  }, [orders, orderTypeFilter, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -438,6 +451,21 @@ export function FloorPlanPage() {
                   </button>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {(['all', 'open', 'held'] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      statusFilter === s
+                        ? 'bg-navy-700 text-gold-400'
+                        : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    {s === 'all' ? (isAr ? 'الكل' : 'All') : t(s)}
+                  </button>
+                ))}
+              </div>
               <div className="space-y-2 max-h-[480px] overflow-y-auto">
                 {filteredOrders.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
@@ -468,8 +496,8 @@ export function FloorPlanPage() {
                         <Button size="sm" onClick={() => resumeOrder(order)}>
                           <UtensilsCrossed className="w-3.5 h-3.5" /> {t('resumeOrder')}
                         </Button>
-                        <Button size="sm" variant="success" onClick={() => setOrderTarget(order)}>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> {t('completeOrder')}
+                        <Button size="sm" variant="success" onClick={() => resumeOrder(order)}>
+                          <Banknote className="w-3.5 h-3.5" /> {t('payOrder')}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setOrderStatus(order, 'cancelled')} disabled={busy}>
                           <XCircle className="w-3.5 h-3.5" /> {t('cancelOrder')}
@@ -521,8 +549,8 @@ export function FloorPlanPage() {
                     <Button size="sm" onClick={() => resumeOrder(order)}>
                       <UtensilsCrossed className="w-4 h-4" /> {t('resumeOrder')}
                     </Button>
-                    <Button size="sm" variant="success" onClick={() => setOrderTarget(order)} disabled={busy}>
-                      <CheckCircle2 className="w-4 h-4" /> {t('completeOrder')}
+                    <Button size="sm" variant="success" onClick={() => resumeOrder(order)}>
+                      <Banknote className="w-4 h-4" /> {t('payOrder')}
                     </Button>
                   </div>
                 </div>
@@ -567,27 +595,6 @@ export function FloorPlanPage() {
             </div>
           );
         })()}
-      </Modal>
-
-      {/* ===== CONFIRM ORDER COMPLETION ===== */}
-      <Modal open={!!orderTarget} onClose={() => setOrderTarget(null)} title={t('completeOrder')} size="sm">
-        {orderTarget && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              {isAr
-                ? `سيتم إنهاء الطلب ${orderTarget.order_number} وتحرير الطاولة.`
-                : `This completes order ${orderTarget.order_number} and frees the table.`}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="success" className="flex-1" onClick={() => setOrderStatus(orderTarget, 'completed')} disabled={busy}>
-                <CheckCircle2 className="w-4 h-4" /> {t('completeOrder')}
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => setOrderTarget(null)}>
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </Button>
-            </div>
-          </div>
-        )}
       </Modal>
 
       {/* ===== ADD AREA ===== */}

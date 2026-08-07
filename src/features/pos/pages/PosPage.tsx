@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer, Pause, UtensilsCrossed } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer, Pause, UtensilsCrossed, ChefHat, Truck, ShoppingBag, Activity } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -15,7 +15,7 @@ import { formatCurrency, escapeHtml } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { generateQRCodeDataURL } from '@/lib/barcode';
 import { mergeEffectiveSettings, useSettings } from '@/context/SettingsContext';
-import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language, OrderType, Order, OrderItem, DiningTable } from '@/lib/types';
+import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language, OrderType, Order, OrderItem, DiningTable, PosSummary } from '@/lib/types';
 
 interface ReceiptData {
   invoice: string;
@@ -121,6 +121,51 @@ async function buildReceiptHtml(receipt: ReceiptData, s: Settings, lang: Languag
     </html>`;
 }
 
+function buildKitchenTicketHtml(params: {
+  orderNumber: string | null;
+  tableName: string | null;
+  orderTypeLabel: string;
+  guestCount: number | null;
+  items: { name: string; qty: number; unit_name?: string | null }[];
+  s: Settings;
+  isAr: boolean;
+}): string {
+  const width = Math.max(50, Math.min(100, params.s.receipt_width_mm || 80));
+  const { orderNumber, tableName, orderTypeLabel, guestCount, items, isAr } = params;
+  const now = new Date().toLocaleString(isAr ? 'ar-SA' : 'en-US');
+  const rows = items
+    .map((i) => `<div class="item-name">${escapeHtml(i.name)}${i.unit_name && i.unit_name !== 'piece' ? ` (${escapeHtml(i.unit_name)})` : ''}</div><div class="row item-detail"><span>${isAr ? 'الكمية' : 'Qty'}</span><span>${i.qty}</span></div>`)
+    .join('');
+  return `<!DOCTYPE html>
+    <html dir="${isAr ? 'rtl' : 'ltr'}">
+    <head><title>${isAr ? 'تذكرة المطبخ' : 'Kitchen Ticket'}</title>
+    <style>
+      * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
+      body { width: ${width}mm; padding: 4mm; font-size: 13px; color: #000; }
+      .center { text-align: center; }
+      .header { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
+      .divider { border-top: 2px solid #000; margin: 6px 0; }
+      .row { display: flex; justify-content: space-between; margin: 2px 0; }
+      .item-name { font-size: 15px; font-weight: bold; margin-top: 8px; }
+      .item-detail { font-size: 13px; }
+    </style></head>
+    <body>
+      <div class="center header">${escapeHtml(params.s.store_name)}</div>
+      <div class="divider"></div>
+      <div class="row"><span>${isAr ? 'التاريخ' : 'Date'}: ${now}</span></div>
+      <div class="row"><span>${isAr ? 'النوع' : 'Type'}: ${escapeHtml(orderTypeLabel)}</span></div>
+      ${orderNumber ? `<div class="row"><span>${isAr ? 'الطلب' : 'Order'}: ${escapeHtml(orderNumber)}</span></div>` : ''}
+      ${tableName ? `<div class="row"><span>${isAr ? 'طاولة' : 'Table'}: ${escapeHtml(tableName)}</span></div>` : ''}
+      ${guestCount ? `<div class="row"><span>${isAr ? 'الضيوف' : 'Guests'}: ${guestCount}</span></div>` : ''}
+      <div class="divider"></div>
+      ${rows}
+      <div class="divider"></div>
+      <div class="center">${isAr ? 'شكراً' : 'Thank you'}</div>
+    </body>
+    <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
+    </html>`;
+}
+
 export function PosPage() {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
@@ -168,6 +213,7 @@ export function PosPage() {
   const [activeTable, setActiveTable] = useState<DiningTable | null>(null);
   const [guestCount, setGuestCount] = useState<number | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [summary, setSummary] = useState<PosSummary>({ occupiedTables: 0, heldOrders: 0, deliveryOrders: 0, takeawayOrders: 0, activeOrders: 0 });
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
   const effSettings: Settings | null = settings
@@ -252,6 +298,56 @@ export function PosPage() {
       setOrderLoading(false);
     }
   }, [t, show]);
+
+  // Live counters for the POS header strip (occupied tables + active orders).
+  const loadSummary = useCallback(async (branchId: string) => {
+    if (!branchId) {
+      setSummary({ occupiedTables: 0, heldOrders: 0, deliveryOrders: 0, takeawayOrders: 0, activeOrders: 0 });
+      return;
+    }
+    const [tRes, oRes] = await Promise.allSettled([
+      supabase.from('dining_tables').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'occupied'),
+      supabase.from('orders').select('status, order_type').eq('branch_id', branchId).in('status', ['open', 'held']),
+    ]);
+    const occupiedTables = tRes.status === 'fulfilled' ? (tRes.value.count ?? 0) : 0;
+    const active = ((oRes.status === 'fulfilled' ? (oRes.value.data || []) : []) as Pick<Order, 'status' | 'order_type'>[]);
+    setSummary({
+      occupiedTables,
+      heldOrders: active.filter((o) => o.status === 'held').length,
+      deliveryOrders: active.filter((o) => o.order_type === 'delivery').length,
+      takeawayOrders: active.filter((o) => o.order_type === 'takeaway').length,
+      activeOrders: active.length,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!effectiveBranch) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel('pos-live-summary')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${effectiveBranch}` },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => loadSummary(effectiveBranch), 300);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'dining_tables', filter: `branch_id=eq.${effectiveBranch}` },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => loadSummary(effectiveBranch), 300);
+        }
+      )
+      .subscribe();
+    loadSummary(effectiveBranch);
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveBranch, loadSummary]);
 
   // Picks up navigation state from the floor plan (resume / start at table).
   useEffect(() => {
@@ -562,6 +658,7 @@ export function PosPage() {
     setCustomerId('');
     setCompleting(false);
     loadStock(effectiveBranch);
+    loadSummary(effectiveBranch);
   };
 
   const completeSale = async () => {
@@ -651,6 +748,7 @@ export function PosPage() {
     setGuestCount(null);
     setCompleting(false);
     loadStock(effectiveBranch);
+    loadSummary(effectiveBranch);
     show(t('saleCompleted'), 'success');
 
     if (effSettings?.receipt_auto_print) {
@@ -663,6 +761,24 @@ export function PosPage() {
     if (!lastReceipt || !effSettings) return;
     const html = await buildReceiptHtml(lastReceipt, effSettings, lang, isAr);
     openPrintWindow(html, effSettings.receipt_width_mm || 80);
+  };
+
+  const printKitchenTicket = () => {
+    if (cart.length === 0 || !effSettings) return;
+    const html = buildKitchenTicketHtml({
+      orderNumber: activeOrderNumber,
+      tableName: activeTable?.name || null,
+      orderTypeLabel: t(ORDER_TYPE_KEY[orderType]),
+      guestCount,
+      items: cart.map((i) => ({ name: i.product.name, qty: i.quantity, unit_name: i.unit_name })),
+      s: effSettings,
+      isAr,
+    });
+    openPrintWindow(html, effSettings.receipt_width_mm || 80);
+  };
+
+  const goToFloorPlan = (filter: '' | 'held' | 'delivery' | 'takeaway') => {
+    navigate('/floor-plan', { state: { filter } });
   };
 
   const renderCartPanel = (opts: { onClose?: () => void }) => (
@@ -780,15 +896,25 @@ export function PosPage() {
             </div>
           </div>
 
-          {/* Hold Order */}
-          <button
-            onClick={holdOrder}
-            disabled={completing || orderLoading || cart.length === 0}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Pause className="w-4 h-4" />
-            {t('holdOrder')}
-          </button>
+          {/* Hold Order + Send to Kitchen */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={holdOrder}
+              disabled={completing || orderLoading || cart.length === 0}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Pause className="w-4 h-4" />
+              {t('holdOrder')}
+            </button>
+            <button
+              onClick={printKitchenTicket}
+              disabled={completing || orderLoading || cart.length === 0}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChefHat className="w-4 h-4" />
+              {t('sendToKitchen')}
+            </button>
+          </div>
 
           {/* Quick Payment Buttons */}
           <div className="grid grid-cols-2 gap-2">
@@ -966,6 +1092,30 @@ export function PosPage() {
             </button>
           </div>
         )}
+
+        {/* Live summary tiles (clickable -> floor plan) */}
+        <div className="ms-auto flex items-center gap-1.5 flex-shrink-0">
+          <button onClick={() => goToFloorPlan('')} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-brand-400 transition-all" title={t('activeOrders')}>
+            <Activity className="w-3.5 h-3.5 text-brand-500 dark:text-gold-400" />
+            <span className="text-xs font-bold text-slate-700 dark:text-white">{summary.activeOrders}</span>
+          </button>
+          <button onClick={() => goToFloorPlan('')} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-500 transition-all" title={t('occupiedTables')}>
+            <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{summary.occupiedTables}</span>
+          </button>
+          <button onClick={() => goToFloorPlan('held')} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:border-amber-500 transition-all" title={t('heldOrders')}>
+            <Pause className="w-3.5 h-3.5 text-amber-600 dark:text-amber-300" />
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{summary.heldOrders}</span>
+          </button>
+          <button onClick={() => goToFloorPlan('delivery')} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:border-blue-500 transition-all" title={t('deliveryOrders')}>
+            <Truck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+            <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{summary.deliveryOrders}</span>
+          </button>
+          <button onClick={() => goToFloorPlan('takeaway')} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 hover:border-purple-500 transition-all" title={t('takeawayOrders')}>
+            <ShoppingBag className="w-3.5 h-3.5 text-purple-600 dark:text-purple-300" />
+            <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{summary.takeawayOrders}</span>
+          </button>
+        </div>
       </div>
 
       {/* ===== SHIFT STATUS BANNER (cashier) ===== */}

@@ -308,6 +308,14 @@ export type OrderType = 'dine_in' | 'takeaway' | 'delivery' | 'drive_thru';
 export type DiningTableStatus = 'vacant' | 'occupied' | 'reserved' | 'closed';
 export type OrderStatus = 'open' | 'held' | 'completed' | 'cancelled';
 
+export interface PosSummary {
+  occupiedTables: number;
+  heldOrders: number;
+  deliveryOrders: number;
+  takeawayOrders: number;
+  activeOrders: number;
+}
+
 export interface DiningArea {
   id: string;
   branch_id: string;
