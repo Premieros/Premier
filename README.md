@@ -21,7 +21,7 @@ npm run build
 2. Go to **Settings > Pages > Build and deployment > Source** and select **GitHub Actions**.
 3. The workflow in `.github/workflows/deploy.yml` builds and deploys automatically.
 
-The app uses `HashRouter` and a relative base path so it works correctly under `https://<user>.github.io/<repo>/`.
+The app uses `HashRouter` and a relative base path (`vite.config.ts` → `base: './'`) so the same build works under `https://<user>.github.io/<repo>/` and on Netlify (see `netlify.toml`).
 
 ## Environment
 

@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
 // https://vitejs.dev/config/
+// Relative base: the same build serves both GitHub Pages and Netlify without
+// hard-coding a repo sub-path.
 export default defineConfig({
-  base: '/Premier/',
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

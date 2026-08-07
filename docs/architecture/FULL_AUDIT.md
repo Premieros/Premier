@@ -230,7 +230,7 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 |---|---|
 | `CODEMAP.md` | يقول migrations `001..032` (الواقع 001–044)؛ يقول 46 جدولًا/43 دالة (الواقع 51/46)؛ يقول 26 مسارًا (الواقع 31)؛ لا يذكر FloorPlanPage |
 | `DEPENDENCY_MAP.md` | لا يذكر realtime/042، لا يذكر floorplan RPCs (create_order...) |
-| `README.md` | يعد "relative base path" بينما `vite.config.ts` يثبت `base: '/Premier/'` مطلق؛ لا يذكر Netlify |
+| `README.md` | ✅ أُصلح في PHASE 4: `base: './'` أصبح مطابقًا + يذكر Netlify |
 | `supabase/README.md` | يقول 001–032 (الواقع 001–044) |
 | — | لا يوجد `KNOWN_ISSUES.md` ولا `FINAL_PROJECT_REPORT.md` |
 
