@@ -5,7 +5,7 @@ import {
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
   Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
-  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale,
+  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Grid3x3,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -25,6 +25,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
   { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', permission: 'pos.sell', group: 'main' },
+  { to: '/floor-plan', icon: <Grid3x3 className="w-5 h-5" />, labelKey: 'floorPlan', permission: 'floor_plan.view', group: 'operations' },
   { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', permission: 'components.view', group: 'catalog' },

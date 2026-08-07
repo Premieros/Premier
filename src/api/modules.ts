@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { RpcResult, Shift, TreasuryBalance } from '@/lib/types';
+import type { RpcResult, Shift, TreasuryBalance, OrderType } from '@/lib/types';
 import type { ApiError, ApiResult, SaleItemInput, PurchaseItemInput, JournalLineInput, RefundItemInput } from './types';
 
 const rpc = async <R>(name: string, args: object): ApiResult<R> => {
@@ -31,8 +31,37 @@ export const pos = {
     p_payment_method: string;
     p_status: string;
     p_items: SaleItemInput[];
+    p_order_type?: OrderType;
+    p_table_id?: string | null;
+    p_order_id?: string | null;
   }): ApiResult<RpcResult> {
     return rpc('process_sale', p);
+  },
+};
+
+export const floorPlan = {
+  createOrder(p: {
+    p_branch_id: string;
+    p_order_type?: OrderType;
+    p_table_id?: string | null;
+    p_customer_id?: string | null;
+    p_guest_count?: number | null;
+    p_notes?: string | null;
+    p_items: { product_id: string; unit_name: string; quantity: number; unit_price: number; discount_amount: number; bonus_quantity: number; total: number; notes?: string | null }[];
+    p_subtotal?: number;
+    p_discount_amount?: number;
+    p_discount_type?: 'percent' | 'amount';
+    p_tax_amount?: number;
+    p_total?: number;
+    p_cashier_id?: string | null;
+  }): ApiResult<RpcResult> {
+    return rpc('create_order', p);
+  },
+  setOrderStatus(p: { p_order_id: string; p_status: string; p_notes?: string | null }): ApiResult<RpcResult> {
+    return rpc('set_order_status', p);
+  },
+  setTableStatus(p: { p_table_id: string; p_status: string }): ApiResult<RpcResult> {
+    return rpc('set_table_status', p);
   },
 };
 

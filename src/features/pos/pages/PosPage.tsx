@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, Plus, Minus, ShoppingCart, X, Printer, Barcode as BarcodeIcon, ArrowRight, CreditCard, Banknote, Smartphone, FileText, LayoutDashboard, Tag, User, Percent, Package, Timer, Pause, UtensilsCrossed } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -15,7 +15,7 @@ import { formatCurrency, escapeHtml } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { generateQRCodeDataURL } from '@/lib/barcode';
 import { mergeEffectiveSettings, useSettings } from '@/context/SettingsContext';
-import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language } from '@/lib/types';
+import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language, OrderType, Order, OrderItem, DiningTable } from '@/lib/types';
 
 interface ReceiptData {
   invoice: string;
@@ -29,6 +29,13 @@ interface ReceiptData {
   date: string;
   customerName: string;
 }
+
+const ORDER_TYPE_KEY = {
+  dine_in: 'dineIn',
+  takeaway: 'takeaway',
+  delivery: 'delivery',
+  drive_thru: 'driveThru',
+} as const;
 
 function openPrintWindow(html: string, widthMm: number) {
   const win = window.open('', '_blank', `width=${Math.min(500, widthMm + 140)},height=600`);
@@ -114,6 +121,7 @@ export function PosPage() {
   const { show } = useToast();
   const { branchSettingsMap } = useSettings();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -144,6 +152,14 @@ export function PosPage() {
   const [activeShift, setActiveShift] = useState<{ id: string; expected: number; cash_sales: number; total_sales: number; opened_at: string; opening_amount: number } | null>(null);
   const [shiftChecked, setShiftChecked] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  const [orderType, setOrderType] = useState<OrderType>('dine_in');
+  const [tableId, setTableId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
+  const [activeTable, setActiveTable] = useState<DiningTable | null>(null);
+  const [guestCount, setGuestCount] = useState<number | null>(null);
+  const [orderLoading, setOrderLoading] = useState(false);
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
   const effSettings: Settings | null = settings
@@ -186,6 +202,71 @@ export function PosPage() {
     }
     setStockMap(map);
   }, []);
+
+  // Resumes a held/open order: fills the cart from order_items + products.
+  const loadOrder = useCallback(async (oId: string) => {
+    setOrderLoading(true);
+    try {
+      const { data: o } = await supabase.from('orders').select('*').eq('id', oId).maybeSingle();
+      const order = (o as Order | null);
+      if (!order) { setOrderLoading(false); return; }
+      setOrderType(order.order_type as OrderType);
+      setTableId(order.table_id);
+      setOrderId(order.id);
+      setActiveOrderNumber(order.order_number);
+      setGuestCount(order.guest_count);
+
+      const { data: items } = await supabase.from('order_items').select('*').eq('order_id', oId);
+      const itemRows = (items as OrderItem[]) || [];
+      const ids = itemRows.map((i) => i.product_id).filter(Boolean) as string[];
+      const prodMap: Record<string, Product> = {};
+      if (ids.length > 0) {
+        const { data: prods } = await supabase.from('products').select('*').in('id', ids);
+        for (const p of (prods as Product[]) || []) prodMap[p.id] = p;
+      }
+      const cartItems: CartItem[] = itemRows
+        .map((i) => ({
+          product: prodMap[i.product_id || ''],
+          unit_name: i.unit_name,
+          quantity: Number(i.quantity),
+          unit_price: Number(i.unit_price),
+          discount_amount: Number(i.discount_amount),
+          bonus_quantity: Number(i.bonus_quantity),
+        }))
+        .filter((i) => i.product)
+        .map((i) => ({ ...i, product: i.product as Product }));
+      if (cartItems.length > 0) setCart(cartItems);
+      show(t('orderResumed'), 'success');
+    } finally {
+      setOrderLoading(false);
+    }
+  }, [t, show]);
+
+  // Picks up navigation state from the floor plan (resume / start at table).
+  useEffect(() => {
+    const st = (location.state || {}) as {
+      orderId?: string | null;
+      tableId?: string | null;
+      orderType?: OrderType | null;
+      branchId?: string | null;
+    };
+    if (st.branchId) setSelectedBranch(st.branchId);
+    if (st.orderType) setOrderType(st.orderType);
+    if (st.tableId) setTableId(st.tableId);
+    if (st.orderId) {
+      loadOrder(st.orderId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!tableId) { setActiveTable(null); return; }
+    let cancelled = false;
+    supabase.from('dining_tables').select('*').eq('id', tableId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setActiveTable((data as DiningTable | null) || null);
+    });
+    return () => { cancelled = true; };
+  }, [tableId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -373,6 +454,60 @@ export function PosPage() {
     }
   };
 
+  const buildItemsPayload = () => cart.map((i) => ({
+    product_id: i.product.id,
+    unit_name: i.unit_name,
+    quantity: i.quantity,
+    unit_price: i.unit_price,
+    discount_amount: i.discount_amount,
+    bonus_quantity: i.bonus_quantity,
+    total: i.quantity * i.unit_price - i.discount_amount,
+  }));
+
+  // Saves the current cart as a held order (recoverable from the floor plan).
+  const holdOrder = async () => {
+    if (cart.length === 0 || completing || orderLoading) return;
+    if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
+    setCompleting(true);
+    const { data, error } = await api.floorPlan.createOrder({
+      p_branch_id: effectiveBranch,
+      p_order_type: orderType,
+      p_table_id: tableId,
+      p_customer_id: customerId || null,
+      p_guest_count: guestCount,
+      p_notes: null,
+      p_items: buildItemsPayload(),
+      p_subtotal: subtotal,
+      p_discount_amount: discountValue,
+      p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+      p_tax_amount: taxAmount,
+      p_total: total,
+      p_cashier_id: user?.id || null,
+    });
+    if (error) { show(error.message, 'error'); setCompleting(false); return; }
+    const result = data as RpcResult | null;
+    if (!result?.success) {
+      show(result?.detail || result?.error || t('error'), 'error');
+      setCompleting(false);
+      return;
+    }
+    if (result.order_id) {
+      await api.floorPlan.setOrderStatus({ p_order_id: result.order_id, p_status: 'held' });
+    }
+    show(t('orderHeld'), 'success');
+    setOrderId(null);
+    setTableId(null);
+    setActiveTable(null);
+    setActiveOrderNumber(null);
+    setGuestCount(null);
+    clearCart();
+    setDiscountAmount(0);
+    setPaidAmount(0);
+    setCustomerId('');
+    setCompleting(false);
+    loadStock(effectiveBranch);
+  };
+
   const completeSale = async () => {
     if (cart.length === 0 || completing) return;
     if (!effectiveBranch) { show(t('selectBranchFirst'), 'error'); return; }
@@ -394,15 +529,7 @@ export function PosPage() {
       return;
     }
     const invoiceNumber = (serialRes as { number?: string }).number || `INV-${Date.now()}`;
-    const itemsPayload = cart.map((i) => ({
-      product_id: i.product.id,
-      unit_name: i.unit_name,
-      quantity: i.quantity,
-      unit_price: i.unit_price,
-      discount_amount: i.discount_amount,
-      bonus_quantity: i.bonus_quantity,
-      total: i.quantity * i.unit_price - i.discount_amount,
-    }));
+    const itemsPayload = buildItemsPayload();
 
     const paidAmountToUse = paymentMethod === 'credit' ? 0 : paidAmount || total;
 
@@ -423,6 +550,9 @@ export function PosPage() {
       p_payment_method: paymentMethod,
       p_status: 'completed',
       p_items: itemsPayload,
+      p_order_type: orderType,
+      p_table_id: tableId,
+      p_order_id: orderId,
     });
     if (error) { show(error.message, 'error'); setCompleting(false); return; }
     const result = data as RpcResult | null;
@@ -450,6 +580,15 @@ export function PosPage() {
     setDiscountAmount(0);
     setPaidAmount(0);
     setCustomerId('');
+    // A direct dine-in sale (no linked order) frees its table.
+    if (tableId && !orderId) {
+      await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' }).catch(() => {});
+    }
+    setOrderId(null);
+    setTableId(null);
+    setActiveTable(null);
+    setActiveOrderNumber(null);
+    setGuestCount(null);
     setCompleting(false);
     loadStock(effectiveBranch);
     show(t('saleCompleted'), 'success');
@@ -581,6 +720,16 @@ export function PosPage() {
             </div>
           </div>
 
+          {/* Hold Order */}
+          <button
+            onClick={holdOrder}
+            disabled={completing || orderLoading || cart.length === 0}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Pause className="w-4 h-4" />
+            {t('holdOrder')}
+          </button>
+
           {/* Quick Payment Buttons */}
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -676,7 +825,7 @@ export function PosPage() {
           <select
             value={effectiveBranch}
             disabled={!isAdminRole(user?.role)}
-            onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); }}
+            onChange={(e) => { setSelectedBranch(e.target.value); loadStock(e.target.value); setCart([]); setTableId(null); setOrderId(null); setActiveOrderNumber(null); setActiveTable(null); setGuestCount(null); }}
             className="text-sm border-0 bg-slate-100 dark:bg-navy-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 max-w-[130px] sm:max-w-none truncate"
           >
             <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
@@ -687,6 +836,54 @@ export function PosPage() {
         {currentBranchName && (
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-50 dark:bg-gold-900/20 border border-gold-200 dark:border-gold-800">
             <span className="text-xs font-bold text-gold-700 dark:text-gold-300">{currentBranchName}</span>
+          </div>
+        )}
+
+        {/* Order type selector */}
+        <div className="hidden md:flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-navy-800 p-1">
+          {(['dine_in', 'takeaway', 'delivery', 'drive_thru'] as const).map((ot) => (
+            <button
+              key={ot}
+              onClick={() => setOrderType(ot)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                orderType === ot
+                  ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              {t(ORDER_TYPE_KEY[ot])}
+            </button>
+          ))}
+        </div>
+
+        {/* Active table chip */}
+        {activeTable && (
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+            <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{activeTable.name}</span>
+            {orderId && (
+              <button
+                onClick={() => { setOrderId(null); setActiveOrderNumber(null); setActiveTable(null); setTableId(null); setGuestCount(null); }}
+                className="ms-0.5 text-emerald-500 hover:text-emerald-700"
+                title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Resumed order chip */}
+        {activeOrderNumber && !activeTable && (
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{isAr ? 'طلب' : 'Order'}: {activeOrderNumber}</span>
+            <button
+              onClick={() => { setOrderId(null); setActiveOrderNumber(null); setTableId(null); setGuestCount(null); }}
+              className="text-amber-500 hover:text-amber-700"
+              title={isAr ? 'إلغاء ربط الطلب' : 'Detach order'}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -958,6 +1155,34 @@ export function PosPage() {
             <span className="text-slate-600 dark:text-slate-300">{isAr ? 'الفرع' : 'Branch'}: </span>
             <span className="font-bold text-slate-800 dark:text-white">{currentBranchName}</span>
           </div>
+
+          {(orderType !== 'takeaway' || activeTable || activeOrderNumber) && (
+            <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-navy-800/60 rounded-xl p-3 text-sm border border-slate-100 dark:border-navy-700">
+              <UtensilsCrossed className="w-4 h-4 text-brand-500 dark:text-gold-400" />
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                {t(ORDER_TYPE_KEY[orderType])}
+              </span>
+              {activeTable && (
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{activeTable.name}</span>
+              )}
+              {activeOrderNumber && (
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{isAr ? 'طلب' : 'Order'}: {activeOrderNumber}</span>
+              )}
+              {orderType === 'dine_in' && (
+                <span className="flex items-center gap-1 ms-auto">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('guestCount')}:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={guestCount || ''}
+                    placeholder="0"
+                    onChange={(e) => setGuestCount(parseInt(e.target.value) || null)}
+                    className="w-16 px-2 py-1 rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+                  />
+                </span>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('customer')}</label>

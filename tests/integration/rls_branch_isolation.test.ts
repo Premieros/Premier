@@ -177,11 +177,14 @@ describe.skipIf(skip)('RLS branch isolation', () => {
     { name: 'expenses', key: 'expenses', mode: 'full', ins: (c) => `INSERT INTO public.expenses (category, description, amount, branch_id, expense_date, payment_method) VALUES ('ops', 'x', 10, '${c.branch}', CURRENT_DATE, 'cash')`, upd: () => `SET amount = 11` },
     { name: 'production_orders', key: 'production_orders', mode: 'full', ins: (c) => `INSERT INTO public.production_orders (order_number, product_id, branch_id, warehouse_id, quantity) VALUES ('${uniq('PO')}', '${c.prod}', '${c.branch}', '${c.wh}', 1)`, upd: () => `SET notes = 'probe'` },
     { name: 'warehouse_transfers', key: 'warehouse_transfers', mode: 'full', ins: (c) => `INSERT INTO public.warehouse_transfers (transfer_number, from_warehouse_id, to_warehouse_id, branch_id, status) VALUES ('${uniq('WT')}', '${c.wh}', '${c.whOther}', '${c.branch}', 'pending')`, upd: () => `SET notes = 'probe'` },
+    { name: 'dining_tables', key: 'dining_tables', mode: 'full', ins: (c) => `INSERT INTO public.dining_tables (name, branch_id, capacity, status) VALUES ('Probe', '${c.branch}', 4, 'vacant')`, upd: () => `SET name = 'probe'` },
+    { name: 'orders', key: 'orders', mode: 'full', ins: (c) => `INSERT INTO public.orders (order_number, branch_id, order_type, status) VALUES ('${uniq('ORD')}', '${c.branch}', 'dine_in', 'open')`, upd: () => `SET notes = 'probe'` },
 
     // Admin-only writes.
     { name: 'inventory_batches', key: 'inventory_batches', mode: 'adminWrite', ins: (c) => `INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type) VALUES ('${c.prod}', '${c.wh}', '${c.branch}', 5, 10, 'opening')`, upd: () => `SET quantity = 6` },
     { name: 'inventory_ledger', key: 'inventory_ledger', mode: 'adminWrite', ins: (c) => `INSERT INTO public.inventory_ledger (product_id, branch_id, warehouse_id, quantity, unit_cost, total_cost, entry_type, reference_number) VALUES ('${c.prod}', '${c.branch}', '${c.wh}', 1, 10, 10, 'sale', '${uniq('IL')}')`, upd: () => `SET quantity = 2` },
     { name: 'production_waste', key: 'production_waste', mode: 'adminWrite', ins: (c) => `INSERT INTO public.production_waste (order_id, branch_id, raw_material_id, quantity) VALUES ('${c.order}', '${c.branch}', '${ids.rm}', 1)`, upd: () => `SET quantity = 2` },
+    { name: 'dining_areas', key: 'dining_areas', mode: 'adminWrite', ins: (c) => `INSERT INTO public.dining_areas (name, branch_id) VALUES ('Probe', '${c.branch}')`, upd: () => `SET name = 'probe'` },
 
     // Accounts.manage permission tables (branch_manager holds the permission).
     { name: 'chart_of_accounts', key: 'chart_of_accounts', mode: 'permAccounts', ins: (c) => `INSERT INTO public.chart_of_accounts (branch_id, code, name, account_type) VALUES ('${c.branch}', '${uniq('PC')}', 'Probe', 'asset')`, upd: () => `SET name = 'probe'` },
@@ -524,6 +527,10 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       {
         name: 'shift_operations', key: 'shift_operations', parent: 'shifts', fk: 'shift_id', mode: 'shiftOps',
         ins: () => ({ sql: `INSERT INTO public.shift_operations (shift_id, operation_type, amount, payment_method) VALUES ($1, 'opening', 0, 'cash')`, paramsA: [ids.shiftA], paramsB: [ids.shiftB] }),
+      },
+      {
+        name: 'order_items', key: 'order_items', parent: 'orders', fk: 'order_id', mode: 'parentWrite',
+        ins: () => ({ sql: `INSERT INTO public.order_items (order_id, product_id, unit_name, quantity, unit_price, total) VALUES ($1, $2, 'piece', 1, 10, 10)`, paramsA: [ids.rows.orders.own, ids.prodA], paramsB: [ids.rows.orders.other, ids.prodB] }),
       },
     ];
 

@@ -28,7 +28,8 @@ const EXPECTED_TABLES = [
   'inventory_ledger', 'warehouse_transfers', 'warehouse_transfer_items',
   'chart_of_accounts', 'journal_entries', 'journal_entry_lines', 'account_mappings',
   'customer_payments', 'supplier_payments', 'treasury_accounts', 'treasury_transactions',
-  'bank_reconciliations', 'bank_statement_lines', 'schema_migrations',
+  'bank_reconciliations', 'bank_statement_lines', 'dining_areas', 'dining_tables',
+  'orders', 'order_items', 'schema_migrations',
 ];
 
 const EXPECTED_FUNCTIONS = [
@@ -44,6 +45,7 @@ const EXPECTED_FUNCTIONS = [
   'get_journals', 'get_aging_summary', 'get_audit_trail', 'get_treasury_balances',
   'get_cash_flow', 'get_open_invoices', 'get_party_statement', 'resolve_account_key',
   'ensure_chart_of_accounts', 'guard_user_role_changes', 'protect_last_admin',
+  'create_order', 'set_order_status', 'set_table_status',
 ];
 
 function loadEnv(filePath) {

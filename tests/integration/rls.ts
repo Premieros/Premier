@@ -242,6 +242,12 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
       `INSERT INTO public.audit_log (user_id, user_email, action, entity, entity_id, branch_id) VALUES ('${ids.users.cashier_b}', 'cb@rls.test', 'test', 'sale', null, '${ids.branchB}')`);
   await row('journal_entries', `INSERT INTO public.journal_entries (entry_number, branch_id, entry_date, description) VALUES ('${uniq('JE')}', '${ids.branchA}', CURRENT_DATE, 'rls')`,
       `INSERT INTO public.journal_entries (entry_number, branch_id, entry_date, description) VALUES ('${uniq('JE')}', '${ids.branchB}', CURRENT_DATE, 'rls')`);
+  await row('dining_areas', `INSERT INTO public.dining_areas (name, branch_id) VALUES ('Area', '${ids.branchA}')`,
+      `INSERT INTO public.dining_areas (name, branch_id) VALUES ('Area', '${ids.branchB}')`);
+  await row('dining_tables', `INSERT INTO public.dining_tables (name, branch_id, capacity, status) VALUES ('T', '${ids.branchA}', 4, 'vacant')`,
+      `INSERT INTO public.dining_tables (name, branch_id, capacity, status) VALUES ('T', '${ids.branchB}', 4, 'vacant')`);
+  await row('orders', `INSERT INTO public.orders (order_number, branch_id, order_type, status) VALUES ('${uniq('ORD')}', '${ids.branchA}', 'dine_in', 'open')`,
+      `INSERT INTO public.orders (order_number, branch_id, order_type, status) VALUES ('${uniq('ORD')}', '${ids.branchB}', 'dine_in', 'open')`);
 
   // branch_settings keys on branch_id (no surrogate id), so it cannot use the
   // RETURNING id helper above; insert it explicitly.
@@ -277,6 +283,8 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
       `INSERT INTO public.journal_entry_lines (journal_entry_id, account_id, debit, credit) VALUES ('${ids.jeB}', '${ids.coaCashB}', 0, 10)`);
   await child('bank_statement_lines', `INSERT INTO public.bank_statement_lines (reconciliation_id, statement_date, amount) VALUES ('${R.bank_reconciliations.own}', CURRENT_DATE, 100)`,
       `INSERT INTO public.bank_statement_lines (reconciliation_id, statement_date, amount) VALUES ('${R.bank_reconciliations.other}', CURRENT_DATE, 100)`);
+  await child('order_items', `INSERT INTO public.order_items (order_id, product_id, unit_name, quantity, unit_price, total) VALUES ('${R.orders.own}', '${ids.prodA}', 'piece', 1, 10, 10)`,
+      `INSERT INTO public.order_items (order_id, product_id, unit_name, quantity, unit_price, total) VALUES ('${R.orders.other}', '${ids.prodB}', 'piece', 1, 10, 10)`);
 
   return ids;
 }

@@ -13,6 +13,7 @@ export type { Role };
 export type Permission =
   | 'dashboard.view'
   | 'pos.sell'
+  | 'floor_plan.view' | 'floor_plan.manage'
   | 'products.view' | 'products.manage'
   | 'categories.view' | 'categories.manage'
   | 'components.view' | 'components.manage'
@@ -41,6 +42,7 @@ export type Permission =
 export const ALL_PERMISSIONS: Permission[] = [
   'dashboard.view',
   'pos.sell',
+  'floor_plan.view', 'floor_plan.manage',
   'products.view', 'products.manage',
   'categories.view', 'categories.manage',
   'components.view', 'components.manage',
@@ -70,6 +72,8 @@ export const ALL_PERMISSIONS: Permission[] = [
 export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> = {
   'dashboard.view': { ar: 'عرض لوحة التحكم', en: 'View Dashboard' },
   'pos.sell': { ar: 'البيع من نقطة البيع', en: 'Sell from POS' },
+  'floor_plan.view': { ar: 'عرض مخطط الصالة', en: 'View Floor Plan' },
+  'floor_plan.manage': { ar: 'إدارة مخطط الصالة', en: 'Manage Floor Plan' },
   'products.view': { ar: 'عرض المنتجات', en: 'View Products' },
   'products.manage': { ar: 'إدارة المنتجات', en: 'Manage Products' },
   'categories.view': { ar: 'عرض الأصناف', en: 'View Categories' },
@@ -133,7 +137,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'pos',
     ar: 'نقطة البيع',
     en: 'POS',
-    permissions: ['pos.sell'],
+    permissions: ['pos.sell', 'floor_plan.view', 'floor_plan.manage'],
   },
   {
     key: 'products',
@@ -248,6 +252,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [...ALL_PERMISSIONS],
   branch_manager: [
     'dashboard.view', 'pos.sell',
+    'floor_plan.view', 'floor_plan.manage',
     'products.view', 'products.manage',
     'categories.view', 'categories.manage',
     'components.view', 'components.manage',
@@ -264,7 +269,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'users.view', 'users.manage',
   ],
   cashier: [
-    'dashboard.view', 'pos.sell',
+    'dashboard.view', 'pos.sell', 'floor_plan.view',
     'products.view',
     'customers.view', 'customers.manage',
     'inventory.view',
