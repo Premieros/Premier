@@ -39,6 +39,7 @@ export function LoginPage() {
       else if (code === 'email_not_confirmed') msg = t('emailNotConfirmed');
       else if (code === 'user_not_found') msg = mode === 'pin' ? t('usernameNotFound') : t('userNotFound');
       else if (code === 'user_inactive') msg = t('userInactive');
+      else if (code === 'user_locked') msg = t('userLocked');
       else if (code === 'over_request_rate_limit') msg = t('rateLimited');
       else if (code === 'email_address_invalid') msg = t('invalidCredentials');
       else msg = `${t('loginFailed')} ${result.error.message}`;

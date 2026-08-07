@@ -11,11 +11,13 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
+import { useCan } from '@/lib/permissions';
 import type { Category, Branch } from '@/lib/types';
 
 export function CategoriesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
+  const can = useCan();
   const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +94,12 @@ export function CategoriesPage() {
     { key: 'description', header: t('description'), render: (c) => c.description || '-' },
     { key: 'actions', header: t('actions'), render: (c) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        {can('categories.manage') && (
+          <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+        )}
+        {can('categories.manage') && (
+          <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        )}
       </div>
     )},
   ];
@@ -102,17 +108,19 @@ export function CategoriesPage() {
     <div>
       <PageHeader title={t('categories')} actions={
         <>
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && can('categories.manage') && (
             <Button variant="danger" size="sm" onClick={() => setDeleteSelectedConfirm(true)}>
               <Trash2 className="w-4 h-4" /> {t('deleteSelected')} ({selectedIds.size})
             </Button>
           )}
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          {can('categories.manage') && (
+            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          )}
         </>
       } />
       <Card className="p-4">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')}
-          onRowClick={openEdit} showCheckbox selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
+          onRowClick={can('categories.manage') ? openEdit : undefined} showCheckbox={can('categories.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

@@ -11,11 +11,13 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
+import { useCan } from '@/lib/permissions';
 import type { Warehouse, Branch } from '@/lib/types';
 
 export function WarehousesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
+  const can = useCan();
   const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Warehouse[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -81,18 +83,24 @@ export function WarehousesPage() {
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (w) => (
-      <div className="flex gap-1">
-        <button onClick={() => openEdit(w)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(w.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+        {can('warehouses.manage') && (
+          <button onClick={() => openEdit(w)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+        )}
+        {can('warehouses.manage') && (
+          <button onClick={() => setDeleteId(w.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        )}
       </div>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title={t('warehouses')} actions={<Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>} />
+      <PageHeader title={t('warehouses')} actions={
+        can('warehouses.manage') && <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+      } />
       <Card className="p-4">
-        <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
+        <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} onRowClick={can('warehouses.manage') ? openEdit : undefined} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

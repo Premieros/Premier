@@ -15,6 +15,7 @@ import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
+import { useCan } from '@/lib/permissions';
 import type { Product, Category, ProductUnit, Settings, Branch, ProductComponentInput } from '@/lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
@@ -22,6 +23,7 @@ const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'g
 export function ProductsPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const can = useCan();
   const branchFilter = useBranchFilter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -276,11 +278,15 @@ export function ProductsPage() {
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (p) => (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => showBarcode(p)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title={t('barcode')}><BarcodeIcon className="w-4 h-4" /></button>
         <button onClick={() => showQR(p)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title={t('generateQR')}><QrCode className="w-4 h-4" /></button>
-        <button onClick={() => openEdit(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}><Trash2 className="w-4 h-4" /></button>
+        {can('products.manage') && (
+          <button onClick={() => openEdit(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
+        )}
+        {can('products.manage') && (
+          <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}><Trash2 className="w-4 h-4" /></button>
+        )}
       </div>
     )},
   ];
@@ -291,10 +297,18 @@ export function ProductsPage() {
         title={t('products')}
         actions={
           <>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+            {can('products.import') && (
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+            )}
+            {can('products.import') && (
+              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
+            )}
+            {can('products.export') && (
+              <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+            )}
+            {can('products.manage') && (
+              <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+            )}
           </>
         }
       />
@@ -313,7 +327,7 @@ export function ProductsPage() {
       </Card>
 
       <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('products.manage') ? openEdit : undefined} />
       </Card>
 
       {/* Add/Edit Modal */}

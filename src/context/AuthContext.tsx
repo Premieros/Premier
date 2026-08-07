@@ -119,20 +119,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? { code: error.code ?? '', message: error.message } : null };
+    if (error) {
+      // Best-effort: the lockout counter is keyed by username; an email login
+      // may not match one, but it is harmless and covers username=email setups.
+      await api.admin.recordLoginFailure({ p_username: email }).catch(() => {});
+      return { error: { code: error.code ?? '', message: error.message } };
+    }
+    const s = (await supabase.auth.getSession()).data.session;
+    if (s?.user.id) await api.admin.recordLoginSuccess({ p_user_id: s.user.id }).catch(() => {});
+    return { error: null };
   };
 
   const signInWithUsername = async (username: string, pin: string) => {
-    const { data, error } = await api.admin.getLoginEmail( {
-      p_username: username.trim().toLowerCase(),
+    const normalized = username.trim().toLowerCase();
+    const { data, error } = await api.admin.getLoginEmail({
+      p_username: normalized,
     });
     if (error) return { error: { code: 'rpc_error', message: error.message } };
     const result = data as { success?: boolean; email?: string; error?: string } | null;
     if (!result?.success || !result.email) {
-      return { error: { code: result?.error === 'USER_INACTIVE' ? 'user_inactive' : 'user_not_found', message: '' } };
+      return { error: { code: result?.error === 'USER_INACTIVE' ? 'user_inactive' : result?.error === 'USER_LOCKED' ? 'user_locked' : 'user_not_found', message: '' } };
     }
     const { error: signError } = await supabase.auth.signInWithPassword({ email: result.email, password: pin });
-    return { error: signError ? { code: signError.code ?? '', message: signError.message } : null };
+    if (signError) {
+      await api.admin.recordLoginFailure({ p_username: normalized }).catch(() => {});
+      return { error: { code: signError.code ?? '', message: signError.message } };
+    }
+    const s = (await supabase.auth.getSession()).data.session;
+    if (s?.user.id) await api.admin.recordLoginSuccess({ p_user_id: s.user.id }).catch(() => {});
+    return { error: null };
   };
 
   const signOut = async () => {

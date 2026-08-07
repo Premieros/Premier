@@ -310,4 +310,10 @@ export const admin = {
   getLoginEmail(p: { p_username: string }): ApiResult<{ success?: boolean; email?: string; error?: string }> {
     return rpc('get_login_email', p);
   },
+  recordLoginFailure(p: { p_username: string }): ApiResult<{ success?: boolean }> {
+    return rpc('record_login_failure', p);
+  },
+  recordLoginSuccess(p: { p_user_id: string }): ApiResult<{ success?: boolean; error?: string }> {
+    return rpc('record_login_success', p);
+  },
 };

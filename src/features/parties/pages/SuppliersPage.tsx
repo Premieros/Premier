@@ -13,11 +13,13 @@ import { formatCurrency } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
+import { useCan } from '@/lib/permissions';
 import type { Supplier, Settings, Branch } from '@/lib/types';
 
 export function SuppliersPage() {
   const { t, lang } = useLanguage();
   const { show } = useToast();
+  const can = useCan();
   const branchFilter = useBranchFilter();
   const [items, setItems] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,9 +89,13 @@ export function SuppliersPage() {
     { key: 'address', header: t('address'), render: (s) => s.address || '-' },
     { key: 'balance', header: t('amount'), render: (s) => <span className={s.balance > 0 ? 'text-red-600 dark:text-red-400 font-medium' : ''}>{formatCurrency(s.balance, currency, lang)}</span> },
     { key: 'actions', header: t('actions'), render: (s) => (
-      <div className="flex gap-1">
-        <button onClick={() => openEdit(s)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+        {can('suppliers.manage') && (
+          <button onClick={() => openEdit(s)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+        )}
+        {can('suppliers.manage') && (
+          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        )}
       </div>
     )},
   ];
@@ -98,8 +104,12 @@ export function SuppliersPage() {
     <div>
       <PageHeader title={t('suppliers')} actions={
         <>
-          <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          {can('suppliers.manage') && (
+            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+          )}
+          {can('suppliers.manage') && (
+            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+          )}
         </>
       } />
       <Card className="mb-4 p-4">
@@ -110,7 +120,7 @@ export function SuppliersPage() {
         </div>
       </Card>
       <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('suppliers.manage') ? openEdit : undefined} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
