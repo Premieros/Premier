@@ -243,45 +243,45 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 - **C2** — `holdOrder` ينشئ طلبًا مكررًا عند إعادة الحفظ لطلب مستأنف (PosPage:620-662): طلبان أحياء على نفس الطاولة.
 
 ### HIGH
-- **H1** — `detachTable` يحرر الطاولة مع بقاء الطلب مفتوحًا مربوطًا (PosPage:561-575). `detachOrder` (577-584) بدون أي كتابة DB.
-- **H2** — لا حارس اشغال: `create_order`/`set_table_status` لا تتحقق من تناقض الحالات (037).
-- **H3** — تحرير الطاولة في البيع المباشر غير ذرّي + `.catch(()=>{})` (PosPage:741-743).
-- **H4** — `process_sale` يحرر الطاولة بأول طلب فقط ولا يفحص طلبات أخرى على نفس الطاولة (038:205-206).
-- **H5** — `xlsx@0.18.5` CVEs في رفع الملفات.
-- **H6** — `.env.production` متتبع في git.
+- **H1** — ✅ (PHASE 5) `detachTable` يحرر الطاولة مع بقاء الطلب مفتوحًا مربوطًا. `detachOrder` بدون أي كتابة DB. → أُصلح: RPC `detach_order` (047) يفرّغ `orders.table_id` ويحرر الطاولة فقط إن لم توجد طلبات أخرى؛ `PosPage.performDetach` يستخدمه ويُبرز الأخطاء.
+- **H2** — لا حارس اشغال: `create_order`/`set_table_status` لا تتحقق من تناقض الحالات (037). → أُصلح في PHASE 2b (046): `create_order` يرفض table مشغول، `set_table_status` يرفض تحرير طاولة عليها طلبات.
+- **H3** — تحرير الطاولة في البيع المباشر غير ذرّي + `.catch(()=>{})` (PosPage:741-743). → ✅ (PHASE 5) أُصلح: `process_sale` (047) يحرر الطاولة ذرّيًا (إنشاء/ربط/تحرير في نفس المعاملة مع إعادة فحص الطلبات)؛ أُزيل تحرير العميل؛ لا `.catch(()=>{})` صامت.
+- **H4** — `process_sale` يحرر الطاولة بأول طلب فقط ولا يفحص طلبات أخرى على نفس الطاولة (038:205-206). → ✅ (PHASE 5) أُصلح في 047: يتحرر فقط إن لم تبقَ طلبات open/held أخرى على الطاولة (اختبار تغطية H4).
+- **H5** — `xlsx@0.18.5` CVEs في رفع الملفات. (معلق — PHASE 5d)
+- **H6** — `.env.production` متتبع في git. → أُصلح في PHASE 3: `git rm --cached` + إزالة من المحفوظات.
 
 ### MEDIUM
-- **M1** — FloorPlanPage بلا realtime/refetch بين الأجهزة.
-- **M2** — `loadOrder` يستأنف طلبات منتهية ويعيد احتلال الطاولة.
-- **M3** — `holdOrder` يضبط held بلا فحص النتيجة.
-- **M4** — `deleteTable` يحذف طاولة عليها طلبات مفتوحة (ON DELETE SET NULL).
-- **M5** — `ordersByTable` يأخذ أول طلب فقط لكل طاولة (يخفي الثاني).
-- **M6** — `vite.config.ts` base مطلق يكسر Netlify + يناقض README.
-- **M7** — حد البيانات غير مفروض (30/31 صفحة تستدعي `from()` مباشرة).
-- **M8** — `change` يُحسب من `paidAmount` لا `paidAmountToUse` (آجل).
-- **M9** — `guestCount` لا يُخزَّن في sales.
-- **M10** — حزم غير مستخدمة (date-fns, user-event).
+- **M1** — FloorPlanPage بلا realtime/refetch بين الأجهزة. → ✅ (PHASE 5) أُصلح: اشتراك `postgres_changes` على orders/dining_tables (فرع) مع reload مجمَّع.
+- **M2** — `loadOrder` يستأنف طلبات منتهية ويعيد احتلال الطاولة. → ✅ (PHASE 5) أُصلح: يرفض غير `open/held`، ولا يعيد احتلال سوى `vacant`.
+- **M3** — `holdOrder` يضبط held بلا فحص النتيجة. → أُصلح في PHASE 2b (046): `update_order` + فحص النتيجة.
+- **M4** — `deleteTable` يحذف طاولة عليها طلبات مفتوحة (ON DELETE SET NULL). → أُصلح في PHASE 2b (046): trigger `BEFORE DELETE` يرفع خطأ.
+- **M5** — `ordersByTable` يأخذ أول طلب فقط لكل طاولة (يخفي الثاني). → ✅ (PHASE 5) أُصلح: يبني مصفوفة طلبات ويعرض الكل (+N على البطاقة).
+- **M6** — `vite.config.ts` base مطلق يكسر Netlify + يناقض README. → أُصلح في PHASE 4: `base: './'`.
+- **M7** — حد البيانات غير مفروض (30/31 صفحة تستدعي `from()` مباشرة). (معلق — PHASE 7)
+- **M8** — `change` يُحسب من `paidAmount` لا `paidAmountToUse` (آجل). → ✅ (PHASE 5) أُصلح: `change = max(0, (credit ? 0 : paidAmount || total) - total)`.
+- **M9** — `guestCount` لا يُخزَّن في sales. → ✅ (PHASE 5) أُصلح: عمود `sales.guest_count` + وسيط `p_guest_count` في `process_sale` (047) + تمريره من PosPage.
+- **M10** — حزم غير مستخدمة (date-fns, user-event). → أُصلح في PHASE 3: أُزيلتا من package.json.
 
 ### LOW
-- **L1** — `dine_in` قابل للاختيار بلا طاولة في الـ checkout → طلب بلا table → يقع في C1.
-- **L2** — لا CHECK constraints على `orders.status/order_type` و`dining_tables.status`.
-- **L3** — تغيير الفرع يمسح `orderId` محليًا بلا تسوية DB (PosPage:1020-1027).
-- **L4** — `loadOrder` جلب منتجات غير مقيد بفرع؛ الأصناف غير الموجودة تُسقط بصمت.
-- **L5** — `FloorPlanPage` لا يفلتر `is_active` للطاولات.
-- **L6** — حقول `cash_sales/total_sales` غير مستخدمة (PosPage:205).
-- **L7** — `switchOrderType`/`loadOrder` يكتبان `occupied` فوق `reserved`.
+- **L1** — `dine_in` قابل للاختيار بلا طاولة في الـ checkout → طلب بلا table → يقع في C1. → ✅ (PHASE 5) أُصلح: حارس في `switchOrderType`/`holdOrder`/`completeSale`.
+- **L2** — لا CHECK constraints على `orders.status/order_type` و`dining_tables.status`. → ✅ (PHASE 5) أُصلح في 047.
+- **L3** — تغيير الفرع يمسح `orderId` محليًا بلا تسوية DB (PosPage:1020-1027). → ✅ (PHASE 5) أُصلح: تحذير مؤكد عند وجود طلب نشط، دون تحرير خاطئ للطاولة.
+- **L4** — `loadOrder` جلب منتجات غير مقيد بفرع؛ الأصناف غير الموجودة تُسقط بصمت. → ✅ (PHASE 5) أُصلح: تقييد `branch_id` للطلب.
+- **L5** — `FloorPlanPage` لا يفلتر `is_active` للطاولات. → ✅ (PHASE 5) أُصلح: الاستعلامات تفلتر `is_active=true` (كانت سليمة عند المراجعة، تحقّق إضافي فقط).
+- **L6** — حقول `cash_sales/total_sales` غير مستخدمة (PosPage:205). → ✅ (PHASE 5) أُزيلت من نوع الحالة.
+- **L7** — `switchOrderType`/`loadOrder` يكتبان `occupied` فوق `reserved`. → ✅ (PHASE 5) أُصلح: الإصلاح فقط لصفوف `vacant`.
 - **L8** — انجراف توثيقي (CODEMAP/DEPENDENCY_MAP/README/supabase README).
 
 ---
 
 ## أهداف المراحل القادمة (ملخص)
 
-1. **Migration 045** — إصلاح C1: تحقق الطلب قبل الكتابة + `RAISE` بدل `RETURN` + regression test.
-2. **إصلاح C2** — `holdOrder` يحدّث الطلب الحالي.
-3. **Cleanup** — حزم/ملفات غير مستخدمة + `.env.production` من git.
-4. **Deployment** — `base: './'`.
-5. **Services** — تجميع استعلامات الطاولات/الطلبات المشتركة.
-6. **تقسيم PosPage** تدريجيًا.
-7. **دورة Tables/Orders** — حارس اشغال، detach سليم، deleteTable آمن، realtime للـ FloorPlan.
-8. **Testing** — تغطية FloorPlanPage + regression C1/C2 + تحسين smoke.
-9. **توثيق** — تحديث CODEMAP/DEPENDENCY_MAP/README + KNOWN_ISSUES + FINAL_REPORT.
+1. **Migration 045** — ✅ إصلاح C1: تحقق الطلب قبل الكتابة + `RAISE` بدل `RETURN` + regression test.
+2. **إصلاح C2** — ✅ `holdOrder` يحدّث الطلب الحالي (046).
+3. **Cleanup** — ✅ حزم/ملفات غير مستخدمة + `.env.production` من git.
+4. **Deployment** — ✅ `base: './'`.
+5. **Services** — تجميع استعلامات الطاولات/الطلبات المشتركة. (معلق)
+6. **تقسيم PosPage** تدريجيًا. (معلق)
+7. **دورة Tables/Orders** — ✅ حارس اشغال (H2)، detach سليم (H1)، deleteTable آمن (M4)، realtime للـ FloorPlan (M1)، guards الحالة (L2)، تفريغ ذرّي (H3/H4).
+8. **Testing** — تغطية FloorPlanPage + regression C1/C2 + تحسين smoke. (معلق)
+9. **توثيق** — تحديث CODEMAP/DEPENDENCY_MAP/README + KNOWN_ISSUES + FINAL_REPORT. (معلق — PHASE 9)
