@@ -15,6 +15,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatCurrency, formatDate, todayISO } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Expense, Branch, Settings } from '@/lib/types';
 
 const EXPENSE_CATEGORIES = ['rent', 'utilities', 'salaries', 'supplies', 'maintenance', 'marketing', 'transport', 'other'];
@@ -25,9 +27,13 @@ export function ExpensesPage() {
   const branchFilter = useBranchFilter();
   const { show } = useToast();
   const can = useCan();
-  const [items, setItems] = useState<Expense[]>([]);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadExpenses } = usePaginatedRows<Expense>({
+    table: 'expenses',
+    order: { column: 'expense_date', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -35,24 +41,15 @@ export function ExpensesPage() {
   const [form, setForm] = useState({ category: '', description: '', amount: 0, branch_id: '', payment_method: 'cash', expense_date: todayISO(), notes: '' });
   const [currency, setCurrency] = useState('EGP');
 
-  async function load() {
-    setLoading(true);
-    try {
-      let expenseQuery = supabase.from('expenses').select('*').order('expense_date', { ascending: false });
-      if (branchFilter) expenseQuery = expenseQuery.eq('branch_id', branchFilter);
-      const [e, b, s] = await Promise.all([
-        expenseQuery,
-        supabase.from('branches').select('*').order('name'),
-        supabase.from('settings').select('*').maybeSingle(),
-      ]);
-      setItems((e.data as Expense[]) || []);
-      setBranches((b.data as Branch[]) || []);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [b, s] = await Promise.all([
+      supabase.from('branches').select('*').order('name'),
+      supabase.from('settings').select('*').maybeSingle(),
+    ]);
+    setBranches((b.data as Branch[]) || []);
+    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()) || e.category?.toLowerCase().includes(search.toLowerCase()));
   const openAdd = () => { setEditing(null); setForm({ category: '', description: '', amount: 0, branch_id: branchFilter || '', payment_method: 'cash', expense_date: todayISO(), notes: '' }); setModalOpen(true); };
@@ -72,7 +69,7 @@ export function ExpensesPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadExpenses();
   };
 
   const remove = async () => {
@@ -81,7 +78,7 @@ export function ExpensesPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'expenses', deleteId); }
     setDeleteId(null);
-    load();
+    reloadExpenses();
   };
 
   const handleExport = () => exportToExcel(items.map((e) => ({ Date: e.expense_date, Category: e.category || '', Description: e.description || '', Amount: e.amount, PaymentMethod: e.payment_method })), 'expenses');
@@ -123,6 +120,7 @@ export function ExpensesPage() {
       </Card>
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">

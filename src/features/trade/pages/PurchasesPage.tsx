@@ -15,6 +15,8 @@ import { formatCurrency, formatDate, generateInvoiceNumber } from '@/lib/format'
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult, RawMaterial } from '@/lib/types';
 
 interface PurchaseFormItem {
@@ -34,13 +36,18 @@ export function PurchasesPage() {
   const branchFilter = useBranchFilter();
   const { show } = useToast();
   const can = useCan();
-  const [items, setItems] = useState<Purchase[]>([]);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadPurchases } = usePaginatedRows<Purchase>({
+    table: 'purchases',
+    select: '*, supplier:suppliers(*)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [viewModal, setViewModal] = useState<Purchase | null>(null);
@@ -56,32 +63,23 @@ export function PurchasesPage() {
   });
   const [lineItems, setLineItems] = useState<PurchaseFormItem[]>([{ ...EMPTY_LINE }]);
 
-  async function load() {
-    setLoading(true);
-    try {
-      let purchaseQuery = supabase.from('purchases').select('*, supplier:suppliers(*)').order('created_at', { ascending: false });
-      if (branchFilter) purchaseQuery = purchaseQuery.eq('branch_id', branchFilter);
-      const [p, s, pr, rm, w, b, st] = await Promise.all([
-        purchaseQuery,
-        supabase.from('suppliers').select('*').order('name'),
-        supabase.from('products').select('*').eq('is_active', true).order('name'),
-        supabase.from('raw_materials').select('*, unit:units(*)').eq('is_active', true).order('name'),
-        supabase.from('warehouses').select('*').order('name'),
-        supabase.from('branches').select('*').order('name'),
-        supabase.from('settings').select('*').maybeSingle(),
-      ]);
-      setItems((p.data as Purchase[]) || []);
-      setSuppliers((s.data as Supplier[]) || []);
-      setProducts((pr.data as Product[]) || []);
-      setRawMaterials((rm.data as RawMaterial[]) || []);
-      setWarehouses((w.data as Warehouse[]) || []);
-      setBranches((b.data as Branch[]) || []);
-      if (st.data) setCurrency((st.data as Settings).currency || 'EGP');
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [s, pr, rm, w, b, st] = await Promise.all([
+      supabase.from('suppliers').select('*').order('name'),
+      supabase.from('products').select('*').eq('is_active', true).order('name'),
+      supabase.from('raw_materials').select('*, unit:units(*)').eq('is_active', true).order('name'),
+      supabase.from('warehouses').select('*').order('name'),
+      supabase.from('branches').select('*').order('name'),
+      supabase.from('settings').select('*').maybeSingle(),
+    ]);
+    setSuppliers((s.data as Supplier[]) || []);
+    setProducts((pr.data as Product[]) || []);
+    setRawMaterials((rm.data as RawMaterial[]) || []);
+    setWarehouses((w.data as Warehouse[]) || []);
+    setBranches((b.data as Branch[]) || []);
+    if (st.data) setCurrency((st.data as Settings).currency || 'EGP');
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((p) => !search || p.invoice_number.toLowerCase().includes(search.toLowerCase()) || (p as Purchase & { supplier?: Supplier }).supplier?.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -144,7 +142,7 @@ export function PurchasesPage() {
     await logAudit('create', 'purchases', result.purchase_id || '', { invoice: invoiceNumber, total });
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadPurchases();
   };
 
   const viewPurchase = async (p: Purchase) => {
@@ -190,6 +188,7 @@ export function PurchasesPage() {
       </Card>
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={viewPurchase} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       {/* Add Purchase Modal */}

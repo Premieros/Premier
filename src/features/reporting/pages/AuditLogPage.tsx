@@ -1,28 +1,21 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useState } from 'react';
 import { Search, ScrollText } from 'lucide-react';
-import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
+import { PaginationBar } from '@/components/PaginationBar';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { formatDateTime } from '@/lib/format';
 import type { AuditLog } from '@/lib/types';
 
 export function AuditLogPage() {
   const { t, lang } = useLanguage();
-  const [items, setItems] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(200);
-        setItems((data as AuditLog[]) || []);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore } = usePaginatedRows<AuditLog>({
+    table: 'audit_log',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 200,
+  });
 
   const filtered = items.filter((a) => !search || a.action.toLowerCase().includes(search.toLowerCase()) || a.entity?.toLowerCase().includes(search.toLowerCase()) || a.user_email?.toLowerCase().includes(search.toLowerCase()));
 
@@ -62,6 +55,7 @@ export function AuditLogPage() {
         ) : (
           <DataTable columns={columns} data={filtered} emptyMessage={t('noData')} />
         )}
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
     </div>
   );

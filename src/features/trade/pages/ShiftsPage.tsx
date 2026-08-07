@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Timer, Play, Square, Printer, Search } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -9,6 +9,8 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
+import { PaginationBar } from '@/components/PaginationBar';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { Button } from '@/components/Button';
 import { Input, Textarea, Select } from '@/components/Input';
 import { Modal } from '@/components/Modal';
@@ -16,6 +18,8 @@ import { formatCurrency, formatDateTime, escapeHtml } from '@/lib/format';
 import { getBrandHex } from '@/lib/brandColor';
 import { logAudit } from '@/lib/audit';
 import type { Shift, Branch, Settings, RpcResult } from '@/lib/types';
+
+interface ShiftUserRow { id: string; full_name: string | null; email: string | null; }
 
 export function ShiftsPage() {
   const { t, lang } = useLanguage();
@@ -25,11 +29,17 @@ export function ShiftsPage() {
   const can = useCan();
   const isAr = lang === 'ar';
 
-  const [items, setItems] = useState<Shift[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [branchSel, setBranchSel] = useState<string>(branchFilter || '');
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadShifts } = usePaginatedRows<Shift>({
+    table: 'shifts',
+    select: 'id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at',
+    order: { column: 'opened_at', ascending: false },
+    branch_id: branchSel || branchFilter,
+    pageSize: 100,
+  });
   const [search, setSearch] = useState('');
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [branchSel, setBranchSel] = useState<string>(branchFilter || '');
+  const [users, setUsers] = useState<ShiftUserRow[]>([]);
   const [currency, setCurrency] = useState('EGP');
   const [storeName, setStoreName] = useState('');
 
@@ -41,47 +51,30 @@ export function ShiftsPage() {
 
   const isCashier = user?.role === 'cashier';
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [settingsRes, branchesRes] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      const settings = settingsRes.data as Settings | null;
-      if (settings) { setCurrency(settings.currency || 'EGP'); setStoreName(settings.store_name || ''); }
-      const branchList = (branchesRes.data as Branch[]) || [];
-      setBranches(branchList);
-
-      // No PostgREST relationship embeds here: fetching shifts, branches and
-      // users independently and joining client-side is immune to schema-cache
-      // relationship errors (e.g. PGRST200 on shifts_cashier_id_fkey).
-      let q = supabase
-        .from('shifts')
-        .select('id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at')
-        .order('opened_at', { ascending: false });
-      const effBranch = branchSel || branchFilter;
-      if (effBranch) q = q.eq('branch_id', effBranch);
-
-      const [shiftsRes, usersRes] = await Promise.all([
-        q,
-        supabase.from('users').select('id, full_name, email'),
-      ]);
-      if (shiftsRes.error) { show(shiftsRes.error.message, 'error'); }
-      const cashierById = new Map(
-        ((usersRes.data as { id: string; full_name: string | null; email: string | null }[]) || [])
-          .map((u) => [u.id, u])
-      );
-      setItems(((shiftsRes.data as unknown as Shift[]) || []).map((s) => ({
-        ...s,
-        branch: branchList.find((b) => b.id === s.branch_id),
-        cashier: cashierById.get(s.cashier_id) as unknown as Shift['cashier'],
-      })));
-    } catch { /* ignore */ } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [settingsRes, branchesRes, usersRes] = await Promise.all([
+      supabase.from('settings').select('*').maybeSingle(),
+      supabase.from('branches').select('*').order('name'),
+      supabase.from('users').select('id, full_name, email'),
+    ]);
+    const settings = settingsRes.data as Settings | null;
+    if (settings) { setCurrency(settings.currency || 'EGP'); setStoreName(settings.store_name || ''); }
+    setBranches((branchesRes.data as Branch[]) || []);
+    setUsers((usersRes.data as ShiftUserRow[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
+
+  // No PostgREST relationship embeds here: fetching shifts, branches and
+  // users independently and joining client-side is immune to schema-cache
+  // relationship errors (e.g. PGRST200 on shifts_cashier_id_fkey).
+  const joinedItems = useMemo(() => {
+    const cashierById = new Map(users.map((u) => [u.id, u]));
+    return items.map((s) => ({
+      ...s,
+      branch: branches.find((b) => b.id === s.branch_id),
+      cashier: cashierById.get(s.cashier_id) as unknown as Shift['cashier'],
+    }));
+  }, [items, users, branches]);
 
   const openShift = async () => {
     if (!user?.branch_id) { show(t('selectBranchFirst'), 'error'); return; }
@@ -94,14 +87,14 @@ export function ShiftsPage() {
     const res = data as RpcResult | null;
     if (!res?.success) {
       show(res?.detail || res?.error || t('error'), 'error');
-      if (res?.error === 'SHIFT_ALREADY_OPEN') { setOpenModal(false); load(); }
+      if (res?.error === 'SHIFT_ALREADY_OPEN') { setOpenModal(false); reloadShifts(); }
       return;
     }
     await logAudit('create', 'shifts', res.shift_id || '', { opening_amount: openForm.opening_amount });
     show(t('shiftOpened'), 'success');
     setOpenModal(false);
     setOpenForm({ opening_amount: 0, notes: '' });
-    load();
+    reloadShifts();
   };
 
   const closeShift = async () => {
@@ -118,7 +111,7 @@ export function ShiftsPage() {
     show(t('shiftClosed'), 'success');
     setCloseTarget(null);
     setCloseForm({ actual_amount: 0, notes: '' });
-    load();
+    reloadShifts();
   };
 
   const printReport = (shift: Shift) => {
@@ -180,7 +173,7 @@ export function ShiftsPage() {
     w.focus();
   };
 
-  const filtered = items.filter((i) => {
+  const filtered = joinedItems.filter((i) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return i.id?.toLowerCase().includes(s) || i.cashier?.full_name?.toLowerCase().includes(s) || i.branch?.name?.toLowerCase().includes(s);
@@ -270,6 +263,7 @@ export function ShiftsPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} title={t('openShift')}>

@@ -17,6 +17,8 @@ import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { TreasuryAccount, TreasuryBalance, TreasuryTransaction } from '@/lib/types';
 
 type ModalType = 'transfer' | 'deposit' | 'withdrawal' | null;
@@ -33,42 +35,42 @@ export function TreasuryPage() {
 
   const [balances, setBalances] = useState<TreasuryBalance[]>([]);
   const [accounts, setAccounts] = useState<TreasuryAccount[]>([]);
-  const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
+  const { rows: transactions, loading: txLoading, total: txTotal, hasMore: txHasMore, loadMore: loadMoreTx, loadingMore: loadingMoreTx, refresh: reloadTx } = usePaginatedRows<TreasuryTransaction>({
+    table: 'treasury_transactions',
+    select: '*, from_account:treasury_accounts!from_account_id(account_name), to_account:treasury_accounts!to_account_id(account_name)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: effectiveBranchFilter,
+    pageSize: 100,
+    enabled: !!effectiveBranchFilter,
+  });
 
   const [modal, setModal] = useState<ModalType>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ from_account_id: '', to_account_id: '', account_id: '', amount: '', notes: '' });
 
-  async function load() {
+  async function loadOverview() {
     setLoading(true);
     try {
       if (effectiveBranchFilter) {
-        const [{ data: bal }, { data: acc }, { data: tx }] = await Promise.all([
+        const [{ data: bal }, { data: acc }] = await Promise.all([
           api.accounting.getTreasuryBalances({ p_branch_id: effectiveBranchFilter }),
           supabase.from('treasury_accounts').select('*').eq('branch_id', effectiveBranchFilter).order('account_type'),
-          supabase.from('treasury_transactions')
-            .select('*, from_account:treasury_accounts!from_account_id(account_name), to_account:treasury_accounts!to_account_id(account_name)')
-            .eq('branch_id', effectiveBranchFilter)
-            .order('created_at', { ascending: false })
-            .limit(100),
         ]);
         setBalances((bal as TreasuryBalance[]) || []);
         setAccounts((acc as TreasuryAccount[]) || []);
-        setTransactions((tx as unknown as TreasuryTransaction[]) || []);
       } else {
         setBalances([]);
         setAccounts([]);
-        setTransactions([]);
       }
     } finally {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [effectiveBranchFilter]);
+  useEffect(() => { loadOverview(); }, [effectiveBranchFilter]);
 
   const openModal = (m: Exclude<ModalType, null>) => {
     setForm({ from_account_id: '', to_account_id: '', account_id: '', amount: '', notes: '' });
@@ -113,7 +115,8 @@ export function TreasuryPage() {
     show(`${formatCurrency(amount, currency, lang)} (${data.reference_number || ''})`, 'success');
     await logAudit('create', 'treasury_transactions', undefined, { type: modal, amount, reference: data.reference_number });
     setModal(null);
-    load();
+    loadOverview();
+    reloadTx();
   };
 
   const totalCash = balances.filter((b) => b.account_type === 'cash').reduce((s, b) => s + Number(b.balance), 0);
@@ -181,7 +184,8 @@ export function TreasuryPage() {
 
       <Card className="p-4">
         <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('treasuryTransactions')}</h2>
-        <DataTable columns={txColumns} data={transactions} loading={loading} emptyMessage={t('noData')} />
+        <DataTable columns={txColumns} data={transactions} loading={txLoading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={transactions.length} total={txTotal} hasMore={txHasMore} loadingMore={loadingMoreTx} onLoadMore={loadMoreTx} />
       </Card>
 
       <Modal open={modal === 'transfer'} onClose={() => setModal(null)} title={t('transfer')}>

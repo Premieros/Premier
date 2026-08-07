@@ -14,6 +14,8 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Settings, Customer } from '@/lib/types';
 
 interface SaleRow {
@@ -36,8 +38,13 @@ export function SalesPage() {
   const { show } = useToast();
   const branchFilter = useBranchFilter();
   const can = useCan();
-  const [items, setItems] = useState<SaleRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadSales } = usePaginatedRows<SaleRow>({
+    table: 'sales',
+    select: 'id, invoice_number, total, paid_amount, refunded_amount, payment_method, status, notes, created_at, customer_id, customer:customers(name), sale_items(id, product_id, unit_name, quantity, unit_price, discount_amount, refunded_quantity, refunded_amount, total, product:products(name))',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -52,28 +59,15 @@ export function SalesPage() {
   const [refunding, setRefunding] = useState(false);
   const isAr = lang === 'ar';
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [settingsRes, customersRes] = await Promise.all([
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('customers').select('*').order('name'),
-      ]);
-      if (settingsRes.data) setCurrency((settingsRes.data as Settings).currency || 'EGP');
-      setCustomers((customersRes.data as Customer[]) || []);
-
-      let q = supabase
-        .from('sales')
-        .select('id, invoice_number, total, paid_amount, refunded_amount, payment_method, status, notes, created_at, customer_id, customer:customers(name), sale_items(id, product_id, unit_name, quantity, unit_price, discount_amount, refunded_quantity, refunded_amount, total, product:products(name))')
-        .order('created_at', { ascending: false });
-      if (branchFilter) q = q.eq('branch_id', branchFilter);
-      const { data } = await q;
-      setItems((data as unknown as SaleRow[]) || []);
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    const [settingsRes, customersRes] = await Promise.all([
+      supabase.from('settings').select('*').maybeSingle(),
+      supabase.from('customers').select('*').order('name'),
+    ]);
+    if (settingsRes.data) setCurrency((settingsRes.data as Settings).currency || 'EGP');
+    setCustomers((customersRes.data as Customer[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((i) => {
     if (!search) return true;
@@ -140,7 +134,7 @@ export function SalesPage() {
     await logAudit('update', 'sales', refundSale.id, { refunded_amount: result.refunded_amount, reason: refundReason });
     show(`${isAr ? 'تمت المعاملة' : 'Refunded'} ${formatCurrency(result.refunded_amount || 0, currency, lang)}`, 'success');
     setRefundSale(null);
-    load();
+    reloadSales();
   };
 
   const saveSaleEdit = async () => {
@@ -155,7 +149,7 @@ export function SalesPage() {
     await logAudit('update', 'sales', viewSale.id);
     show(t('saveSuccess'), 'success');
     setViewSale(null);
-    load();
+    reloadSales();
   };
 
   const remove = async () => {
@@ -176,7 +170,7 @@ export function SalesPage() {
       show(err instanceof Error ? err.message : 'Error', 'error');
     }
     setDeleteId(null);
-    load();
+    reloadSales();
   };
 
   const removeSelected = async () => {
@@ -193,7 +187,7 @@ export function SalesPage() {
     else show(t('deleteSuccess'), 'success');
     setSelectedIds(new Set());
     setDeleteSelectedConfirm(false);
-    load();
+    reloadSales();
   };
 
   const PAYMENT_LABELS: Record<string, string> = { cash: t('cash'), card: t('card'), transfer: t('transfer'), credit: t('credit') };
@@ -274,6 +268,7 @@ export function SalesPage() {
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')}
           onRowClick={openViewSale} showCheckbox selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       {/* Sale Detail / Edit Modal */}

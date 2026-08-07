@@ -16,6 +16,8 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { ArAgingRow, ApAgingRow, CustomerPayment, SupplierPayment } from '@/lib/types';
 
 type Tab = 'ar' | 'ap';
@@ -29,15 +31,29 @@ export function PaymentsPage() {
   const { branches } = useBranches();
   const [tab, setTab] = useState<Tab>('ar');
   const [rows, setRows] = useState<ArAgingRow[]>([]);
-  const [payments, setPayments] = useState<CustomerPayment[]>([]);
   const [apRows, setApRows] = useState<ApAgingRow[]>([]);
-  const [supplierPayments, setSupplierPayments] = useState<SupplierPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
+  const { rows: payments, loading: paymentsLoading, total: paymentsTotal, hasMore: paymentsHasMore, loadMore: loadMorePayments, loadingMore: loadingMorePayments, refresh: reloadPayments } = usePaginatedRows<CustomerPayment>({
+    table: 'customer_payments',
+    select: 'id, amount, payment_method, reference_number, notes, created_at, customer:customers(name)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: effectiveBranchFilter,
+    pageSize: 100,
+    enabled: !!effectiveBranchFilter,
+  });
+  const { rows: supplierPayments, loading: supplierPaymentsLoading, total: supplierPaymentsTotal, hasMore: supplierPaymentsHasMore, loadMore: loadMoreSupplierPayments, loadingMore: loadingMoreSupplierPayments, refresh: reloadSupplierPayments } = usePaginatedRows<SupplierPayment>({
+    table: 'supplier_payments',
+    select: 'id, amount, payment_method, reference_number, notes, created_at, supplier:suppliers(name)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: effectiveBranchFilter,
+    pageSize: 100,
+    enabled: !!effectiveBranchFilter,
+  });
 
   const [collecting, setCollecting] = useState<ArAgingRow | null>(null);
   const [openInvoices, setOpenInvoices] = useState<{ id: string; invoice_number: string; open: number }[]>([]);
@@ -48,7 +64,7 @@ export function PaymentsPage() {
   const [openApInvoices, setOpenApInvoices] = useState<{ id: string; invoice_number: string; open: number }[]>([]);
   const [apForm, setApForm] = useState({ purchase_id: '', amount: '', payment_method: 'cash', notes: '' });
 
-  async function load() {
+  async function loadAging() {
     setLoading(true);
     try {
       if (effectiveBranchFilter) {
@@ -59,27 +75,15 @@ export function PaymentsPage() {
         ]);
         setRows(((aging as ArAgingRow[]) || []).map((r) => ({ ...r, id: r.customer_id })));
         setApRows(((apAging as ApAgingRow[]) || []).map((r) => ({ ...r, id: r.supplier_id })));
-
-        let q = supabase.from('customer_payments').select('id, amount, payment_method, reference_number, notes, created_at, customer:customers(name)').order('created_at', { ascending: false }).limit(50);
-        q = q.eq('branch_id', effectiveBranchFilter);
-        const { data: p } = await q;
-        setPayments((p as unknown as CustomerPayment[]) || []);
-
-        let q2 = supabase.from('supplier_payments').select('id, amount, payment_method, reference_number, notes, created_at, supplier:suppliers(name)').order('created_at', { ascending: false }).limit(50);
-        q2 = q2.eq('branch_id', effectiveBranchFilter);
-        const { data: sp } = await q2;
-        setSupplierPayments((sp as unknown as SupplierPayment[]) || []);
       } else {
         setRows([]);
-        setPayments([]);
         setApRows([]);
-        setSupplierPayments([]);
       }
     } finally {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, [effectiveBranchFilter]);
+  useEffect(() => { loadAging(); }, [effectiveBranchFilter]);
 
   const filtered = rows.filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || (r.phone || '').includes(search));
   const filteredAp = apRows.filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || (r.phone || '').includes(search));
@@ -136,7 +140,8 @@ export function PaymentsPage() {
     show(`${t('collect')} ${formatCurrency(amount, currency, lang)} (${r.reference_number || ''})`, 'success');
     await logAudit('create', 'customer_payments', undefined, { customer_id: collecting.customer_id, amount });
     setCollecting(null);
-    load();
+    loadAging();
+    reloadPayments();
   };
 
   const paySupplier = async () => {
@@ -159,7 +164,8 @@ export function PaymentsPage() {
     show(`${t('paySupplier')} ${formatCurrency(amount, currency, lang)} (${r.reference_number || ''})`, 'success');
     await logAudit('create', 'supplier_payments', undefined, { supplier_id: paying.supplier_id, amount });
     setPaying(null);
-    load();
+    loadAging();
+    reloadSupplierPayments();
   };
 
   const columns: Column<ArAgingRow>[] = [
@@ -262,7 +268,8 @@ export function PaymentsPage() {
 
           <Card className="p-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('customerPayments')}</h2>
-            <DataTable columns={paymentColumns} data={payments} loading={loading} emptyMessage={t('noData')} />
+            <DataTable columns={paymentColumns} data={payments} loading={paymentsLoading} emptyMessage={t('noData')} />
+            <PaginationBar loaded={payments.length} total={paymentsTotal} hasMore={paymentsHasMore} loadingMore={loadingMorePayments} onLoadMore={loadMorePayments} />
           </Card>
         </>
       ) : (
@@ -274,7 +281,8 @@ export function PaymentsPage() {
 
           <Card className="p-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('supplierPayments')}</h2>
-            <DataTable columns={supplierPaymentColumns} data={supplierPayments} loading={loading} emptyMessage={t('noData')} />
+            <DataTable columns={supplierPaymentColumns} data={supplierPayments} loading={supplierPaymentsLoading} emptyMessage={t('noData')} />
+            <PaginationBar loaded={supplierPayments.length} total={supplierPaymentsTotal} hasMore={supplierPaymentsHasMore} loadingMore={loadingMoreSupplierPayments} onLoadMore={loadMoreSupplierPayments} />
           </Card>
         </>
       )}

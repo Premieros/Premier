@@ -1,10 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Search, BookOpenText } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
+import { PaginationBar } from '@/components/PaginationBar';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { Select } from '@/components/Input';
 import { formatNumber, formatDateTime } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
@@ -19,8 +21,13 @@ export function InventoryLedgerPage() {
   const { t, lang } = useLanguage();
   const branchFilter = useBranchFilter();
 
-  const [rows, setRows] = useState<LedgerRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { rows: rawRows, loading, total, hasMore, loadMore, loadingMore } = usePaginatedRows<InventoryLedgerEntry>({
+    table: 'inventory_ledger',
+    select: '*, product:products(*), raw_material:raw_materials(*), warehouse:warehouses(*)',
+    order: { column: 'created_at', ascending: false },
+    pageSize: 100,
+  });
+  const rows = useMemo<LedgerRow[]>(() => rawRows.map((entry) => ({ id: String(entry.id), entry })), [rawRows]);
   const [entryType, setEntryType] = useState('all');
   const [branchId, setBranchId] = useState(branchFilter || '');
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
@@ -37,21 +44,11 @@ export function InventoryLedgerPage() {
     { key: 'adjustment', label: t('entryAdjustment') },
   ];
 
-  async function load() {
-    setLoading(true);
-    try {
-      const br = await supabase.from('branches').select('id, name').eq('is_active', true).order('name');
-      setBranches((br.data as { id: string; name: string }[]) || []);
-      const ledger = await supabase.from('inventory_ledger')
-        .select('*, product:products(*), raw_material:raw_materials(*), warehouse:warehouses(*)')
-        .order('created_at', { ascending: false })
-        .limit(500);
-      setRows(((ledger.data as InventoryLedgerEntry[]) || []).map((entry) => ({ id: String(entry.id), entry })));
-    } finally {
-      setLoading(false);
-    }
+  async function loadBranches() {
+    const br = await supabase.from('branches').select('id, name').eq('is_active', true).order('name');
+    setBranches((br.data as { id: string; name: string }[]) || []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadBranches(); }, []);
 
   const filtered = rows.filter((r) => {
     const e = r.entry;
@@ -156,6 +153,7 @@ export function InventoryLedgerPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={rows.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
     </div>
   );

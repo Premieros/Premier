@@ -16,6 +16,8 @@ import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type { Product, Category, ProductUnit, Settings, Branch, ProductComponentInput } from '@/lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
@@ -25,9 +27,14 @@ export function ProductsPage() {
   const { show } = useToast();
   const can = useCan();
   const branchFilter = useBranchFilter();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { rows: products, loading, total, hasMore, loadMore, loadingMore, refresh: reloadProducts } = usePaginatedRows<Product>({
+    table: 'products',
+    select: '*, category:categories(*)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: branchFilter,
+    pageSize: 100,
+  });
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -75,29 +82,21 @@ export function ProductsPage() {
     );
   }
 
-  async function load() {
-    setLoading(true);
-    try {
-      let pq = supabase.from('products').select('*, category:categories(*)');
-      let cq = supabase.from('categories').select('*');
-      if (branchFilter) { pq = pq.eq('branch_id', branchFilter); cq = cq.eq('branch_id', branchFilter); }
-      const [p, c, s, b] = await Promise.all([
-        pq.order('created_at', { ascending: false }),
-        cq.order('name'),
-        supabase.from('settings').select('*').maybeSingle(),
-        supabase.from('branches').select('*').order('name'),
-      ]);
-      setProducts((p.data as Product[]) || []);
-      setCategories((c.data as Category[]) || []);
-      if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-      setBranches((b.data as Branch[]) || []);
-      await loadStockComponents();
-    } finally {
-      setLoading(false);
-    }
+  async function loadMeta() {
+    let cq = supabase.from('categories').select('*');
+    if (branchFilter) cq = cq.eq('branch_id', branchFilter);
+    const [c, s, b] = await Promise.all([
+      cq.order('name'),
+      supabase.from('settings').select('*').maybeSingle(),
+      supabase.from('branches').select('*').order('name'),
+    ]);
+    setCategories((c.data as Category[]) || []);
+    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+    setBranches((b.data as Branch[]) || []);
+    await loadStockComponents();
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, []);
 
   const filtered = products.filter((p) =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search) || p.sku?.includes(search)
@@ -175,7 +174,7 @@ export function ProductsPage() {
     }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
-    load();
+    reloadProducts();
   };
 
   const addComponentRow = () => {
@@ -197,7 +196,7 @@ export function ProductsPage() {
     if (error) show(error.message, 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'products', deleteId); }
     setDeleteId(null);
-    load();
+    reloadProducts();
   };
 
   const handleExport = () => {
@@ -230,7 +229,7 @@ export function ProductsPage() {
       if (payload.length === 0) { show('No valid rows', 'error'); return; }
       const { error } = await supabase.from('products').insert(payload);
       if (error) show(error.message, 'error');
-      else { show(`${payload.length} ${t('import')} OK`, 'success'); load(); }
+      else { show(`${payload.length} ${t('import')} OK`, 'success'); reloadProducts(); }
     } catch (err) {
       show(String(err), 'error');
     }
@@ -328,6 +327,7 @@ export function ProductsPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('products.manage') ? openEdit : undefined} />
+        <PaginationBar loaded={products.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       {/* Add/Edit Modal */}

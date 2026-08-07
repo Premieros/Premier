@@ -17,6 +17,8 @@ import { useCan } from '@/lib/permissions';
 import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
+import { usePaginatedRows } from '@/hooks/usePaginatedRows';
+import { PaginationBar } from '@/components/PaginationBar';
 import type {
   BankReconciliation, ReconciliationDetail,
   TreasuryAccount,
@@ -32,12 +34,18 @@ export function ReconciliationPage() {
   const { branches } = useBranches();
   const isAr = lang === 'ar';
 
-  const [items, setItems] = useState<BankReconciliation[]>([]);
   const [accounts, setAccounts] = useState<TreasuryAccount[]>([]);
-  const [loading, setLoading] = useState(true);
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
+  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadRecon } = usePaginatedRows<BankReconciliation>({
+    table: 'bank_reconciliations',
+    select: '*, treasury_account:treasury_accounts(account_name, account_type)',
+    order: { column: 'created_at', ascending: false },
+    branch_id: effectiveBranchFilter,
+    pageSize: 100,
+    enabled: !!effectiveBranchFilter,
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,29 +57,17 @@ export function ReconciliationPage() {
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [matchSelections, setMatchSelections] = useState<Record<string, string>>({});
 
-  async function load() {
-    setLoading(true);
-    try {
-      if (effectiveBranchFilter) {
-        const [recon, acc] = await Promise.all([
-          supabase.from('bank_reconciliations')
-            .select('*, treasury_account:treasury_accounts(account_name, account_type)')
-            .eq('branch_id', effectiveBranchFilter)
-            .order('created_at', { ascending: false })
-            .limit(50),
-          supabase.from('treasury_accounts').select('*').eq('branch_id', effectiveBranchFilter).eq('is_active', true).order('account_type'),
-        ]);
-        setItems((recon.data as unknown as BankReconciliation[]) || []);
-        setAccounts((acc.data as TreasuryAccount[]) || []);
-      } else {
-        setItems([]);
-        setAccounts([]);
-      }
-    } finally {
-      setLoading(false);
-    }
+  async function loadAccounts() {
+    if (!effectiveBranchFilter) { setAccounts([]); return; }
+    const { data: acc } = await supabase
+      .from('treasury_accounts')
+      .select('*')
+      .eq('branch_id', effectiveBranchFilter)
+      .eq('is_active', true)
+      .order('account_type');
+    setAccounts((acc as TreasuryAccount[]) || []);
   }
-  useEffect(() => { load(); }, [effectiveBranchFilter]);
+  useEffect(() => { loadAccounts(); }, [effectiveBranchFilter]);
 
   const openDetail = async (id: string) => {
     setDetailLoading(true);
@@ -101,7 +97,7 @@ export function ReconciliationPage() {
     await logAudit('create', 'bank_reconciliations', r.reconciliation_id, { statement_balance: Number(createForm.statement_balance) });
     setCreateOpen(false);
     setCreateForm({ treasury_account_id: '', statement_date: todayISO(), statement_balance: '' });
-    load();
+    reloadRecon();
   };
 
   const addLine = async () => {
@@ -150,7 +146,7 @@ export function ReconciliationPage() {
     show(t('complete'), 'success');
     await logAudit('update', 'bank_reconciliations', detail.header.id, { status: 'completed' });
     setDetail(null);
-    load();
+    reloadRecon();
   };
 
   const statusLabel = (s: string) => ({ open: t('reconOpen'), completed: t('reconCompleted'), cancelled: t('reconCancelled') })[s] || s;
@@ -200,6 +196,7 @@ export function ReconciliationPage() {
 
       <Card className="p-4">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
+        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
       </Card>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('reconciliation')}>
