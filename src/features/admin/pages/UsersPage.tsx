@@ -17,7 +17,6 @@ import { useRoles } from '@/context/RolesContext';
 import { isAdminRole, ROLE_META } from '@/lib/permissions';
 import type { AppUser, Branch, Role } from '@/lib/types';
 
-const ROLES: Role[] = Object.keys(ROLE_META) as Role[];
 const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
 
 export function UsersPage() {
@@ -25,7 +24,7 @@ export function UsersPage() {
   const isAr = lang === 'ar';
   const { show } = useToast();
   const { user: me } = useAuth();
-  const { roleMeta } = useRoles();
+  const { roleMeta, rolesList } = useRoles();
   const isAdmin = isAdminRole(me?.role);
   const [items, setItems] = useState<AppUser[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -33,11 +32,11 @@ export function UsersPage() {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
-  const [form, setForm] = useState({ full_name: '', username: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [form, setForm] = useState({ full_name: '', username: '', role: 'cashier', branch_id: '', is_active: true });
   const [newPassword, setNewPassword] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addModal, setAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: '', is_active: true });
+  const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier', branch_id: '', is_active: true });
 
   async function load() {
     setLoading(true);
@@ -66,7 +65,7 @@ export function UsersPage() {
   };
 
   const openAdd = () => {
-    setAddForm({ full_name: '', username: '', email: '', password: '', role: 'cashier' as Role, branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
+    setAddForm({ full_name: '', username: '', email: '', password: '', role: 'cashier', branch_id: isAdmin ? '' : (me?.branch_id || ''), is_active: true });
     setAddModal(true);
   };
 
@@ -154,7 +153,14 @@ export function UsersPage() {
     load();
   };
 
-  const roleOptions = isAdmin ? ROLES : ROLES.filter((r) => !ADMIN_ROLES.includes(r));
+  const roleOptions = (() => {
+    const all = rolesList.length > 0 ? rolesList.filter((r) => r.is_active).map((r) => r.role) : Object.keys(ROLE_META);
+    return isAdmin ? all : all.filter((r) => {
+      if (ADMIN_ROLES.includes(r as Role)) return false;
+      const def = rolesList.find((x) => x.role === r);
+      return !def || def.scope === 'global' || def.branch_id === (me?.branch_id ?? null);
+    });
+  })();
 
   const columns: Column<AppUser>[] = [
     { key: 'username', header: t('username'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.username || '-'}</span> },
@@ -206,7 +212,7 @@ export function UsersPage() {
             </div>
             <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             <Input label={t('username')} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="off" />
-            <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
+            <Select label={t('role')} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
             </Select>
             <Select label={t('branch')} value={form.branch_id} onChange={(e) => setForm({ ...form, branch_id: e.target.value })} disabled={!isAdmin}>
@@ -233,7 +239,7 @@ export function UsersPage() {
           <Input label={t('username')} value={addForm.username} onChange={(e) => setAddForm({ ...addForm, username: e.target.value })} required autoComplete="off" placeholder={isAr ? 'اسم المستخدم' : 'username'} />
           <Input label={t('email')} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} required placeholder="email@example.com" />
           <Input label={t('pin')} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value.replace(/\D/g, '').slice(0, 4) })} required inputMode="numeric" maxLength={4} placeholder="1234" />
-          <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as Role })}>
+          <Select label={t('role')} value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}>
             {roleOptions.map((r) => <option key={r} value={r}>{roleMeta[r]?.[lang] || r}</option>)}
           </Select>
           <Select label={t('branch')} value={addForm.branch_id} onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })} disabled={!isAdmin}>
