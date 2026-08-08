@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import {
   ShoppingCart, Minus, Plus, X, Pause, ChefHat, Banknote, Printer,
-  Percent, UtensilsCrossed, Clock, PlusCircle, Check, Circle, Trash2,
+  Percent, UtensilsCrossed, Clock, PlusCircle, Check, Circle, Trash2, Pencil, Car, Bike,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/format';
-import type { CartItem, DiningTable, OrderItem, OrderType } from '@/lib/types';
+import type { CartItem, Customer, DiningTable, OrderItem, OrderType } from '@/lib/types';
 import type { KitchenSendItem } from '../../types';
-import { ORDER_TYPES } from '../../utils/orderTypes';
-import { orderTypeLabel } from '../../utils/format';
 import { computeSentState } from '../../utils/sentState';
 import { formatClockTime, timeAgo } from '../../utils/timeAgo';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import { deriveCartStage } from '../../utils/orderStage';
+import { parseCarNotes, parseDeliveryNotes } from '../../utils/orderLabels';
+import { OrderTypePill } from './OrderTypePill';
+import { OrderStageBadge } from './OrderStageBadge';
+import { TypeChangePicker } from './TypeChangePicker';
 
 interface CurrentOrderPanelProps {
   cart: CartItem[];
@@ -31,6 +33,9 @@ interface CurrentOrderPanelProps {
   activeOrderId: string | null;
   activeTable: DiningTable | null;
   guestCount: number | null;
+  customerId: string;
+  customerById: Record<string, Customer>;
+  orderNotes: string;
   activeOrderCreatedAt: string | null;
   orderItems: OrderItem[];
   sentOrderItemIds: Set<string>;
@@ -54,7 +59,7 @@ interface CurrentOrderPanelProps {
 export function CurrentOrderPanel({
   cart, currency, subtotal, discountValue, discountType, discountAmount, taxRate, taxAmount, total,
   completing, orderLoading, kitchenSending, orderType, activeOrderNumber, activeOrderId, activeTable,
-  guestCount, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent,
+  guestCount, customerId, customerById, orderNotes, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent,
   onSwitchOrderType, onGuestCountChange, onDiscountTypeChange, onDiscountAmountChange,
   onUpdateQty, onSetQty, onRemove, onClear, onSetItemDiscount,
   onHold, onSendKitchen, onPrint, onPay, onAddItem,
@@ -62,6 +67,7 @@ export function CurrentOrderPanel({
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const [showDiscount, setShowDiscount] = useState(false);
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
 
   const sentState = computeSentState(cart, orderItems, sentOrderItemIds, sessionSent);
   const newCount = cart.filter((i) => (sentState[i.product.id]?.newQty || 0) > 0).length;
@@ -69,7 +75,15 @@ export function CurrentOrderPanel({
   const hasSent = sentCount > 0;
   const allSent = cart.length > 0 && newCount === 0;
   const ago = activeOrderCreatedAt ? timeAgo(activeOrderCreatedAt) : null;
-  const orderState = hasSent ? 'sent' : 'open';
+  const stage = deriveCartStage(cart, sentState, false);
+
+  let contextText = '';
+  if (orderType === 'dine_in') contextText = activeTable?.name || '';
+  else if (orderType === 'delivery') {
+    contextText = customerId && customerById[customerId] ? customerById[customerId].name : parseDeliveryNotes(orderNotes).phone;
+  } else if (orderType === 'drive_thru') {
+    contextText = parseCarNotes(orderNotes).plate;
+  }
 
   const empty = cart.length === 0;
 
@@ -87,7 +101,7 @@ export function CurrentOrderPanel({
             </p>
             <p className="text-[11px] text-slate-400">{cart.length} {isAr ? 'صنف' : 'items'}</p>
           </div>
-          <OrderStatusBadge state={hasSent ? 'sent' : orderState} />
+          <OrderStageBadge stage={stage} />
           {activeOrderId && !empty && (
             <button onClick={onClear} className="text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded-lg transition-colors">
               <Trash2 className="w-3.5 h-3.5" />
@@ -96,26 +110,22 @@ export function CurrentOrderPanel({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 dark:bg-navy-800 p-0.5">
-            {ORDER_TYPES.map((ot) => (
-              <button
-                key={ot}
-                onClick={() => onSwitchOrderType(ot)}
-                className={`whitespace-nowrap px-2 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  orderType === ot
-                    ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-              >
-                {orderTypeLabel(t, ot)}
-              </button>
-            ))}
-          </div>
+          <OrderTypePill type={orderType} />
+          <button
+            onClick={() => setTypePickerOpen(true)}
+            disabled={!!activeOrderId}
+            title={activeOrderId ? t('noChangeAfterSend') : t('changeOrderType')}
+            className="flex items-center justify-center p-1.5 rounded-lg bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
 
-          {activeTable && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-              <UtensilsCrossed className="w-3 h-3" />
-              {activeTable.name}
+          {contextText && (
+            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-navy-800 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+              {orderType === 'dine_in' && <UtensilsCrossed className="w-3 h-3 text-emerald-500" />}
+              {orderType === 'drive_thru' && <Car className="w-3 h-3 text-sky-500" />}
+              {orderType === 'delivery' && <Bike className="w-3 h-3 text-blue-500" />}
+              <span className="truncate max-w-[110px]">{contextText}</span>
             </span>
           )}
 
@@ -142,6 +152,13 @@ export function CurrentOrderPanel({
           )}
         </div>
       </div>
+
+      <TypeChangePicker
+        open={typePickerOpen}
+        onClose={() => setTypePickerOpen(false)}
+        current={orderType}
+        onSelect={onSwitchOrderType}
+      />
 
       {/* ===== Items ===== */}
       <div className="flex-1 overflow-y-auto px-2.5 py-2">
