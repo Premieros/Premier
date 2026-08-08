@@ -16,9 +16,11 @@ import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Product, Category, ProductUnit, Settings, Branch, ProductComponentInput } from '@/lib/types';
+import type { Product, Category, ProductUnit, ProductComponentInput } from '@/lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
 
@@ -44,8 +46,9 @@ export function ProductsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const barcodeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
+  const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
 
   const [form, setForm] = useState({
     name: '', name_en: '', barcode: '', sku: '', category_id: '', description: '',
@@ -85,14 +88,8 @@ export function ProductsPage() {
   async function loadMeta() {
     let cq = supabase.from('categories').select('*');
     if (branchFilter) cq = cq.eq('branch_id', branchFilter);
-    const [c, s, b] = await Promise.all([
-      cq.order('name'),
-      supabase.from('settings').select('*').maybeSingle(),
-      supabase.from('branches').select('*').order('name'),
-    ]);
-    setCategories((c.data as Category[]) || []);
-    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-    setBranches((b.data as Branch[]) || []);
+    const { data: c } = await cq.order('name');
+    setCategories((c as Category[]) || []);
     await loadStockComponents();
   }
 

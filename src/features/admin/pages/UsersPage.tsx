@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Edit2, Plus, Search, Shield, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -15,9 +15,10 @@ import { logAudit } from '@/lib/audit';
 import { useAuth } from '@/context/AuthContext';
 import { useRoles } from '@/context/RolesContext';
 import { isAdminRole, ROLE_META } from '@/lib/permissions';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { AppUser, Branch, Role } from '@/lib/types';
+import type { AppUser, Role } from '@/lib/types';
 
 const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
 
@@ -35,7 +36,7 @@ export function UsersPage() {
     branch_id: !isAdmin && me?.branch_id ? me.branch_id : null,
     pageSize: 100,
   });
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { branches } = useBranches();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
@@ -44,12 +45,6 @@ export function UsersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier', branch_id: '', is_active: true });
-
-  async function loadBranches() {
-    const { data: b } = await supabase.from('branches').select('*').order('name');
-    setBranches((b as Branch[]) || []);
-  }
-  useEffect(() => { loadBranches(); }, []);
 
   const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
 

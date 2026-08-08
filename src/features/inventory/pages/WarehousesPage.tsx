@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
 import type { Warehouse, Branch } from '@/lib/types';
@@ -28,17 +29,11 @@ export function WarehousesPage() {
     branch_id: branchFilter,
     pageSize: 100,
   });
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { branches } = useBranches();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', branch_id: '', address: '', is_active: true });
-
-  async function loadMeta() {
-    const { data: b } = await supabase.from('branches').select('*').order('name');
-    setBranches((b as Branch[]) || []);
-  }
-  useEffect(() => { loadMeta(); }, []);
 
   const openAdd = () => { setEditing(null); setForm({ name: '', branch_id: branchFilter || '', address: '', is_active: true }); setModalOpen(true); };
   const openEdit = (w: Warehouse) => { setEditing(w); setForm({ name: w.name, branch_id: w.branch_id || '', address: w.address || '', is_active: w.is_active }); setModalOpen(true); };

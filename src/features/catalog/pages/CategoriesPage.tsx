@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -12,9 +12,10 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Category, Branch } from '@/lib/types';
+import type { Category } from '@/lib/types';
 
 export function CategoriesPage() {
   const { t } = useLanguage();
@@ -33,14 +34,8 @@ export function CategoriesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { branches } = useBranches();
   const [form, setForm] = useState({ name: '', name_en: '', description: '', branch_id: '' });
-
-  async function loadMeta() {
-    const { data: b } = await supabase.from('branches').select('*').order('name');
-    setBranches((b as Branch[]) || []);
-  }
-  useEffect(() => { loadMeta(); }, []);
 
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', description: '', branch_id: branchFilter || '' }); setModalOpen(true); };
   const openEdit = (c: Category) => { setEditing(c); setForm({ name: c.name, name_en: c.name_en || '', description: c.description || '', branch_id: c.branch_id || branchFilter || '' }); setModalOpen(true); };

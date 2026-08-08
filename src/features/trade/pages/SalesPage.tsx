@@ -14,9 +14,10 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Settings, Customer } from '@/lib/types';
+import type { Customer } from '@/lib/types';
 
 interface SaleRow {
   id: string;
@@ -49,7 +50,8 @@ export function SalesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
-  const [currency, setCurrency] = useState('EGP');
+  const { effectiveSettings } = useSettings();
+  const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
   const [viewSale, setViewSale] = useState<SaleRow | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editForm, setEditForm] = useState({ customer_id: '', payment_method: '', status: '', notes: '' });
@@ -60,12 +62,8 @@ export function SalesPage() {
   const isAr = lang === 'ar';
 
   async function loadMeta() {
-    const [settingsRes, customersRes] = await Promise.all([
-      supabase.from('settings').select('*').maybeSingle(),
-      supabase.from('customers').select('*').order('name'),
-    ]);
-    if (settingsRes.data) setCurrency((settingsRes.data as Settings).currency || 'EGP');
-    setCustomers((customersRes.data as Customer[]) || []);
+    const { data: customersRes } = await supabase.from('customers').select('*').order('name');
+    setCustomers((customersRes as Customer[]) || []);
   }
   useEffect(() => { loadMeta(); }, []);
 

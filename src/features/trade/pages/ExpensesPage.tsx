@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Download } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -15,9 +15,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatCurrency, formatDate, todayISO } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Expense, Branch, Settings } from '@/lib/types';
+import type { Expense } from '@/lib/types';
 
 const EXPENSE_CATEGORIES = ['rent', 'utilities', 'salaries', 'supplies', 'maintenance', 'marketing', 'transport', 'other'];
 
@@ -33,23 +35,14 @@ export function ExpensesPage() {
     branch_id: branchFilter,
     pageSize: 100,
   });
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
+  const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ category: '', description: '', amount: 0, branch_id: '', payment_method: 'cash', expense_date: todayISO(), notes: '' });
-  const [currency, setCurrency] = useState('EGP');
-
-  async function loadMeta() {
-    const [b, s] = await Promise.all([
-      supabase.from('branches').select('*').order('name'),
-      supabase.from('settings').select('*').maybeSingle(),
-    ]);
-    setBranches((b.data as Branch[]) || []);
-    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-  }
-  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()) || e.category?.toLowerCase().includes(search.toLowerCase()));
   const openAdd = () => { setEditing(null); setForm({ category: '', description: '', amount: 0, branch_id: branchFilter || '', payment_method: 'cash', expense_date: todayISO(), notes: '' }); setModalOpen(true); };

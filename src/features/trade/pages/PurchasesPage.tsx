@@ -15,9 +15,11 @@ import { formatCurrency, formatDate, generateInvoiceNumber } from '@/lib/format'
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Purchase, Supplier, Product, Warehouse, Branch, Settings, RpcResult, RawMaterial } from '@/lib/types';
+import type { Purchase, Supplier, Product, Warehouse, RpcResult, RawMaterial } from '@/lib/types';
 
 interface PurchaseFormItem {
   line_type: 'product' | 'raw';
@@ -43,16 +45,17 @@ export function PurchasesPage() {
     branch_id: branchFilter,
     pageSize: 100,
   });
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
+  const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [viewModal, setViewModal] = useState<Purchase | null>(null);
   const [viewItems, setViewItems] = useState<{ name: string; quantity: number; unit_cost: number; total: number }[]>([]);
-  const [currency, setCurrency] = useState('EGP');
 
   const [form, setForm] = useState({
     supplier_id: '',
@@ -64,20 +67,16 @@ export function PurchasesPage() {
   const [lineItems, setLineItems] = useState<PurchaseFormItem[]>([{ ...EMPTY_LINE }]);
 
   async function loadMeta() {
-    const [s, pr, rm, w, b, st] = await Promise.all([
+    const [s, pr, rm, w] = await Promise.all([
       supabase.from('suppliers').select('*').order('name'),
       supabase.from('products').select('*').eq('is_active', true).order('name'),
       supabase.from('raw_materials').select('*, unit:units(*)').eq('is_active', true).order('name'),
       supabase.from('warehouses').select('*').order('name'),
-      supabase.from('branches').select('*').order('name'),
-      supabase.from('settings').select('*').maybeSingle(),
     ]);
     setSuppliers((s.data as Supplier[]) || []);
     setProducts((pr.data as Product[]) || []);
     setRawMaterials((rm.data as RawMaterial[]) || []);
     setWarehouses((w.data as Warehouse[]) || []);
-    setBranches((b.data as Branch[]) || []);
-    if (st.data) setCurrency((st.data as Settings).currency || 'EGP');
   }
   useEffect(() => { loadMeta(); }, []);
 

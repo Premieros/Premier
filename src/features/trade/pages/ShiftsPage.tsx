@@ -7,6 +7,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
 import { PaginationBar } from '@/components/PaginationBar';
@@ -17,7 +19,7 @@ import { Modal } from '@/components/Modal';
 import { formatCurrency, formatDateTime, escapeHtml } from '@/lib/format';
 import { getBrandHex } from '@/lib/brandColor';
 import { logAudit } from '@/lib/audit';
-import type { Shift, Branch, Settings, RpcResult } from '@/lib/types';
+import type { Shift, RpcResult } from '@/lib/types';
 
 interface ShiftUserRow { id: string; full_name: string | null; email: string | null; }
 
@@ -38,10 +40,11 @@ export function ShiftsPage() {
     pageSize: 100,
   });
   const [search, setSearch] = useState('');
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const { branches } = useBranches();
+  const { effectiveSettings } = useSettings();
+  const currency = effectiveSettings(branchSel || branchFilter)?.currency || 'EGP';
+  const storeName = effectiveSettings(branchSel || branchFilter)?.store_name || '';
   const [users, setUsers] = useState<ShiftUserRow[]>([]);
-  const [currency, setCurrency] = useState('EGP');
-  const [storeName, setStoreName] = useState('');
 
   const [openModal, setOpenModal] = useState(false);
   const [openForm, setOpenForm] = useState({ opening_amount: 0, notes: '' });
@@ -52,15 +55,8 @@ export function ShiftsPage() {
   const isCashier = user?.role === 'cashier';
 
   async function loadMeta() {
-    const [settingsRes, branchesRes, usersRes] = await Promise.all([
-      supabase.from('settings').select('*').maybeSingle(),
-      supabase.from('branches').select('*').order('name'),
-      supabase.from('users').select('id, full_name, email'),
-    ]);
-    const settings = settingsRes.data as Settings | null;
-    if (settings) { setCurrency(settings.currency || 'EGP'); setStoreName(settings.store_name || ''); }
-    setBranches((branchesRes.data as Branch[]) || []);
-    setUsers((usersRes.data as ShiftUserRow[]) || []);
+    const { data } = await supabase.from('users').select('id, full_name, email');
+    setUsers((data as ShiftUserRow[]) || []);
   }
   useEffect(() => { loadMeta(); }, []);
 

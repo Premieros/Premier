@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,9 +14,11 @@ import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
+import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { PaginationBar } from '@/components/PaginationBar';
-import type { Customer, Settings, Branch } from '@/lib/types';
+import type { Customer } from '@/lib/types';
 
 export function CustomersPage() {
   const { t, lang } = useLanguage();
@@ -35,19 +37,10 @@ export function CustomersPage() {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const { effectiveSettings } = useSettings();
+  const { branches } = useBranches();
+  const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
   const [form, setForm] = useState({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: '' });
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
-
-  async function loadMeta() {
-    const [s, b] = await Promise.all([
-      supabase.from('settings').select('*').maybeSingle(),
-      supabase.from('branches').select('*').order('name'),
-    ]);
-    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
-    setBranches((b.data as Branch[]) || []);
-  }
-  useEffect(() => { loadMeta(); }, []);
 
   const filtered = items.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search));
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', phone: '', email: '', address: '', tax_number: '', balance: 0, notes: '', branch_id: branchFilter || '' }); setModalOpen(true); };

@@ -12,12 +12,13 @@ import { useAuth } from '@/context/AuthContext';
 import { formatCurrency, formatNumber, formatDateTime } from '@/lib/format';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole } from '@/lib/permissions';
+import { useBranches } from '@/hooks/useBranches';
+import { useSettings } from '@/context/SettingsContext';
 import { Modal } from '@/components/Modal';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar, PolarAngleAxis,
 } from 'recharts';
-import type { Settings, Branch } from '@/lib/types';
 import type { Language } from '@/lib/types';
 
 interface DashboardData {
@@ -129,8 +130,6 @@ export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currency, setCurrency] = useState('EGP');
-  const [defaultThreshold, setDefaultThreshold] = useState(5);
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
   const isSimple = user?.role === 'cashier';
@@ -141,9 +140,12 @@ export function DashboardPage() {
   const [detailModal, setDetailModal] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<DetailRow[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState<string>('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
+  const { branches } = useBranches();
+  const { effectiveSettings } = useSettings();
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
+  const defaultThreshold = Number(effectiveSettings(effectiveBranchFilter)?.low_stock_threshold ?? 5);
 
   const getDateRange = useCallback(() => {
     const now = new Date();
@@ -185,26 +187,6 @@ export function DashboardPage() {
     async function load() {
       if (data) setRefreshing(true); else setLoading(true);
       try {
-      const { data: settingsData } = await supabase.from('settings').select('*').maybeSingle();
-      if (settingsData) setCurrency((settingsData as Settings).currency || 'EGP');
-
-      let defThr = 5;
-      if (settingsData) defThr = Number((settingsData as Settings).low_stock_threshold || 5);
-      if (effectiveBranchFilter) {
-        const { data: bs } = await supabase
-          .from('branch_settings')
-          .select('low_stock_threshold')
-          .eq('branch_id', effectiveBranchFilter)
-          .maybeSingle();
-        if (bs?.low_stock_threshold != null) defThr = Number(bs.low_stock_threshold);
-      }
-      setDefaultThreshold(defThr);
-
-      if (isAdminRole(user?.role) && branches.length === 0) {
-        const { data: br } = await supabase.from('branches').select('*').order('name');
-        setBranches((br as Branch[]) || []);
-      }
-
       const { from, to } = getDateRange();
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);

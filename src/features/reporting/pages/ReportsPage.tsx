@@ -11,9 +11,9 @@ import { getBrandColor } from '@/lib/brandColor';
 import { exportToExcel } from '@/lib/excel';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole } from '@/lib/permissions';
+import { useBranches } from '@/hooks/useBranches';
+import { useSettings } from '@/context/SettingsContext';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
-
-import type { Settings, Branch } from '@/lib/types';
 
 type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock';
 
@@ -30,16 +30,11 @@ export function ReportsPage() {
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
   const [summary, setSummary] = useState({ total: 0, count: 0 });
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState('EGP');
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [adminBranchFilter, setAdminBranchFilter] = useState<string>('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
-
-  useEffect(() => {
-    if (isAdminRole(user?.role)) {
-      supabase.from('branches').select('*').order('name').then(({ data }) => setBranches((data as Branch[]) || []));
-    }
-  }, [user?.role]);
+  const { branches } = useBranches();
+  const { effectiveSettings } = useSettings();
+  const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
 
   useEffect(() => {
     loadReport();
@@ -51,9 +46,6 @@ export function ReportsPage() {
     try {
       const fromTs = `${from}T00:00:00`;
       const toTs = `${to}T23:59:59`;
-
-      const { data: settingsData } = await supabase.from('settings').select('*').maybeSingle();
-      if (settingsData) setCurrency((settingsData as Settings).currency || 'EGP');
 
       if (reportType === 'sales') {
         let q = supabase.from('sales').select('id, invoice_number, total, created_at, customer:customers(name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });

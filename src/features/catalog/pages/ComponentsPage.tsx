@@ -4,6 +4,7 @@ import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
+import { useSettings } from '@/context/SettingsContext';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -11,7 +12,7 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
-import type { Product, ProductComponent, Settings } from '@/lib/types';
+import type { Product, ProductComponent } from '@/lib/types';
 
 interface ComponentWithProduct extends ProductComponent {
   component_product?: Product;
@@ -22,7 +23,8 @@ export function ComponentsPage() {
   const isAr = lang === 'ar';
   const { show } = useToast();
   const can = useCan();
-  const [currency, setCurrency] = useState('EGP');
+  const { effectiveSettings } = useSettings();
+  const currency = effectiveSettings()?.currency || 'EGP';
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [components, setComponents] = useState<ComponentWithProduct[]>([]);
@@ -40,12 +42,8 @@ export function ComponentsPage() {
   );
 
   async function loadProducts() {
-    const [p, s] = await Promise.all([
-      supabase.from('products').select('*').eq('is_active', true).order('name'),
-      supabase.from('settings').select('*').maybeSingle(),
-    ]);
-    setProducts((p.data as Product[]) || []);
-    if (s.data) setCurrency((s.data as Settings).currency || 'EGP');
+    const { data: p } = await supabase.from('products').select('*').eq('is_active', true).order('name');
+    setProducts((p as Product[]) || []);
     const { data: inv } = await supabase.from('inventory').select('product_id, quantity');
     const map: Record<string, number> = {};
     for (const r of (inv || []) as { product_id: string; quantity: number }[]) {
