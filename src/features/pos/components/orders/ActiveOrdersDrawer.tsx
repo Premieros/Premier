@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Search, X, UtensilsCrossed, Banknote, Play, Trash2, ListOrdered } from 'lucide-react';
+import { Search, X, UtensilsCrossed, Banknote, Play, Trash2, ListOrdered, Car, Bike } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/format';
-import type { DiningTable, Order, OrderItem } from '@/lib/types';
+import type { Customer, DiningTable, Order, OrderItem } from '@/lib/types';
 import type { OrderKitchenSend } from '../../types';
-import { orderTypeLabel } from '../../utils/format';
-import { deriveOrderState } from '../../utils/orderState';
+import { stageOfOrder, type OrderStage } from '../../utils/orderStage';
+import { orderContextText } from '../../utils/orderLabels';
 import { timeAgo } from '../../utils/timeAgo';
-import { OrderStatusBadge } from '../order/OrderStatusBadge';
+import { OrderTypePill } from '../order/OrderTypePill';
+import { OrderStageBadge } from '../order/OrderStageBadge';
 
 interface ActiveOrdersDrawerProps {
   open: boolean;
@@ -16,46 +17,81 @@ interface ActiveOrdersDrawerProps {
   itemsByOrder: Record<string, OrderItem[]>;
   kitchenSendsByOrder: Record<string, OrderKitchenSend[]>;
   tableById: Record<string, DiningTable>;
+  customerById: Record<string, Customer>;
   currency: string;
   onResume: (order: Order) => void;
   onPay: (order: Order) => void;
   onCancel: (order: Order) => void;
 }
 
-type TypeFilter = 'all' | 'dine_in' | 'takeaway' | 'delivery' | 'drive_thru';
+type ActiveCategory = 'all' | 'tables' | 'cars' | 'delivery' | 'quick' | 'kitchen' | 'held' | 'ready';
 
 export function ActiveOrdersDrawer({
-  open, onClose, orders, itemsByOrder, kitchenSendsByOrder, tableById, currency,
+  open, onClose, orders, itemsByOrder, kitchenSendsByOrder, tableById, customerById, currency,
   onResume, onPay, onCancel,
 }: ActiveOrdersDrawerProps) {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [category, setCategory] = useState<ActiveCategory>('all');
   const [query, setQuery] = useState('');
+
+  const stageMap = useMemo(() => {
+    const map: Record<string, OrderStage> = {};
+    for (const o of orders) map[o.id] = stageOfOrder(o, itemsByOrder, kitchenSendsByOrder);
+    return map;
+  }, [orders, itemsByOrder, kitchenSendsByOrder]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return orders.filter((o) => {
-      if (typeFilter !== 'all' && o.order_type !== typeFilter) return false;
+      const stage = stageMap[o.id] || 'open';
+      switch (category) {
+        case 'tables': if (o.order_type !== 'dine_in') return false; break;
+        case 'cars': if (o.order_type !== 'drive_thru') return false; break;
+        case 'delivery': if (o.order_type !== 'delivery') return false; break;
+        case 'quick': if (o.order_type !== 'takeaway') return false; break;
+        case 'kitchen': if (stage !== 'kitchen') return false; break;
+        case 'held': if (o.status !== 'held') return false; break;
+        case 'ready': if (stage !== 'ready') return false; break;
+        default: break;
+      }
       if (!q) return true;
-      const tableName = o.table_id && tableById[o.table_id] ? tableById[o.table_id].name.toLowerCase() : '';
-      return o.order_number.toLowerCase().includes(q) || tableName.includes(q);
+      const ctx = orderContextText(o, tableById, customerById).toLowerCase();
+      return o.order_number.toLowerCase().includes(q) || ctx.includes(q);
     });
-  }, [orders, typeFilter, query, tableById]);
+  }, [orders, category, query, stageMap, tableById, customerById]);
 
-  const filterChips: Array<{ id: TypeFilter; label: string }> = [
+  const filterChips: Array<{ id: ActiveCategory; label: string; icon?: React.ReactNode }> = [
     { id: 'all', label: isAr ? 'الكل' : 'All' },
-    { id: 'dine_in', label: t('dineIn') },
-    { id: 'takeaway', label: t('takeaway') },
-    { id: 'delivery', label: t('delivery') },
-    { id: 'drive_thru', label: t('driveThru') },
+    { id: 'tables', label: t('tables') },
+    { id: 'cars', label: t('cars'), icon: <Car className="w-3 h-3" /> },
+    { id: 'delivery', label: t('delivery'), icon: <Bike className="w-3 h-3" /> },
+    { id: 'quick', label: t('quick') },
+    { id: 'kitchen', label: t('kitchen') },
+    { id: 'held', label: t('heldOrders') },
+    { id: 'ready', label: t('ready') },
   ];
+
+  const counts = useMemo(() => {
+    const c: Record<ActiveCategory, number> = { all: orders.length, tables: 0, cars: 0, delivery: 0, quick: 0, kitchen: 0, held: 0, ready: 0 };
+    for (const o of orders) {
+      const stage = stageMap[o.id] || 'open';
+      if (o.order_type === 'dine_in') c.tables += 1;
+      else if (o.order_type === 'drive_thru') c.cars += 1;
+      else if (o.order_type === 'delivery') c.delivery += 1;
+      else c.quick += 1;
+      if (stage === 'kitchen') c.kitchen += 1;
+      if (o.status === 'held') c.held += 1;
+      if (stage === 'ready') c.ready += 1;
+    }
+    return c;
+  }, [orders, stageMap]);
 
   return (
     <>
       {open && <div className="fixed inset-0 top-16 z-40 bg-navy-950/40 backdrop-blur-[1px]" onClick={onClose} />}
       <aside
-        className={`fixed top-16 bottom-0 z-50 w-[360px] max-w-[88vw] bg-white dark:bg-navy-900 border-s border-slate-200 dark:border-navy-800 shadow-2xl transition-transform duration-300 flex flex-col ${
+        className={`fixed top-16 bottom-0 z-50 w-[380px] max-w-[92vw] bg-white dark:bg-navy-900 border-s border-slate-200 dark:border-navy-800 shadow-2xl transition-transform duration-300 flex flex-col ${
           isAr ? 'left-0' : 'right-0'
         } ${open ? 'translate-x-0' : isAr ? '-translate-x-full' : 'translate-x-full'}`}
       >
@@ -71,18 +107,22 @@ export function ActiveOrdersDrawer({
         </div>
 
         <div className="px-3 py-2.5 space-y-2 border-b border-slate-100 dark:border-navy-800 flex-shrink-0">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {filterChips.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setTypeFilter(c.id)}
-                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
-                  typeFilter === c.id
+                onClick={() => setCategory(c.id)}
+                className={`whitespace-nowrap flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+                  category === c.id
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700'
                 }`}
               >
+                {c.icon}
                 {c.label}
+                {counts[c.id] > 0 && category !== c.id && (
+                  <span className={`px-1 rounded-full text-[9px] ${category === c.id ? 'bg-white/25' : 'bg-slate-200 dark:bg-navy-700'}`}>{counts[c.id]}</span>
+                )}
               </button>
             ))}
           </div>
@@ -91,7 +131,7 @@ export function ActiveOrdersDrawer({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={isAr ? 'بحث برقم الطلب أو الطاولة...' : 'Search order # or table...'}
+              placeholder={isAr ? 'بحث برقم الطلب أو السياق...' : 'Search order # or context...'}
               className="w-full ps-9 pe-3 py-2 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
             />
           </div>
@@ -105,20 +145,20 @@ export function ActiveOrdersDrawer({
             </div>
           ) : (
             filtered.map((order) => {
-              const sent = kitchenSendsByOrder[order.id]?.length || 0;
+              const stage = stageMap[order.id] || 'open';
               const itemCount = (itemsByOrder[order.id] || []).reduce((s, i) => s + Number(i.quantity), 0);
               const ago = timeAgo(order.created_at);
+              const ctx = orderContextText(order, tableById, customerById);
+              const ready = stage === 'ready';
               return (
                 <div key={order.id} className="p-3 rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 hover:border-brand-300 dark:hover:border-brand-700 transition-colors">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-black text-slate-800 dark:text-white">{order.order_number}</span>
-                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300">
-                        {orderTypeLabel(t, order.order_type)}
-                      </span>
-                      {order.table_id && tableById[order.table_id] && (
-                        <span className="shrink-0 text-[11px] font-semibold text-emerald-600 dark:text-emerald-300 truncate">
-                          {tableById[order.table_id].name}
+                      <span className="text-xs font-black text-slate-800 dark:text-white shrink-0">{order.order_number}</span>
+                      <OrderTypePill type={order.order_type} />
+                      {ctx && (
+                        <span className="shrink-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[110px]">
+                          {ctx}
                         </span>
                       )}
                     </div>
@@ -128,7 +168,7 @@ export function ActiveOrdersDrawer({
                   </div>
 
                   <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
-                    <OrderStatusBadge state={deriveOrderState(order, sent > 0)} />
+                    <OrderStageBadge stage={stage} />
                     <span>
                       {isAr
                         ? `${itemCount} صنف · ${ago.n != null ? `${ago.n} ${t(ago.key)}` : t(ago.key)}`
@@ -138,19 +178,25 @@ export function ActiveOrdersDrawer({
 
                   <div className="flex items-center gap-1.5 mt-2">
                     <button
-                      onClick={() => onPay(order)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all active:scale-95"
+                      onClick={() => (ready ? onPay(order) : onResume(order))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 ${
+                        ready
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          : 'bg-brand-600 hover:bg-brand-700 text-white'
+                      }`}
                     >
-                      <Banknote className="w-3.5 h-3.5" />
-                      {t('payOrder')}
+                      {ready ? <Banknote className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      {ready ? t('payOrder') : t('resumeOrder')}
                     </button>
-                    <button
-                      onClick={() => onResume(order)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-bold transition-all active:scale-95"
-                    >
-                      <Play className="w-3.5 h-3.5" />
-                      {t('resumeOrder')}
-                    </button>
+                    {!ready && (
+                      <button
+                        onClick={() => onPay(order)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all active:scale-95"
+                      >
+                        <Banknote className="w-3.5 h-3.5" />
+                        {t('payOrder')}
+                      </button>
+                    )}
                     {order.status === 'held' && (
                       <button
                         onClick={() => onCancel(order)}
