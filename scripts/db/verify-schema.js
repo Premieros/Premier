@@ -29,7 +29,7 @@ const EXPECTED_TABLES = [
   'chart_of_accounts', 'journal_entries', 'journal_entry_lines', 'account_mappings',
   'customer_payments', 'supplier_payments', 'treasury_accounts', 'treasury_transactions',
   'bank_reconciliations', 'bank_statement_lines', 'dining_areas', 'dining_tables',
-  'orders', 'order_items', 'schema_migrations', 'login_as_log',
+  'orders', 'order_items', 'order_kitchen_sends', 'schema_migrations', 'login_as_log',
 ];
 
 const EXPECTED_FUNCTIONS = [
@@ -46,6 +46,7 @@ const EXPECTED_FUNCTIONS = [
   'get_cash_flow', 'get_open_invoices', 'get_party_statement', 'resolve_account_key',
   'ensure_chart_of_accounts', 'guard_user_role_changes', 'protect_last_admin',
   'create_order', 'set_order_status', 'set_table_status',
+  'send_to_kitchen',
   'login_as_user', 'return_from_login_as', 'record_login_failure', 'record_login_success',
 ];
 
