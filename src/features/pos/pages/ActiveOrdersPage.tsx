@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Grid3x3, Plus, Pencil, Trash2, Users, UtensilsCrossed, Clock,
-  XCircle, MapPin, Tag, RefreshCw, Banknote,
+  Plus, Pencil, Trash2, Users, UtensilsCrossed, Clock,
+  XCircle, Tag, RefreshCw, Banknote, Activity, Pause,
+  Truck, ShoppingBag,
 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -10,53 +11,23 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { useCan } from '@/lib/permissions';
-import { isAdminRole } from '@/lib/permissions';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { useCan, isAdminRole } from '@/lib/permissions';
+import { PageHeader, Card, StatCard } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { formatCurrency, formatDateTime } from '@/lib/format';
-import type {
-  DiningArea, DiningTable, Order, OrderItem, OrderType,
-  DiningTableStatus, Branch, Product, RpcResult,
-} from '@/lib/types';
+import type { DiningArea, DiningTable, Order, OrderType, RpcResult } from '@/lib/types';
+import { useActiveOrders } from '../hooks/useActiveOrders';
+import { TableFloorPlan } from '../components/floor/TableFloorPlan';
+import { STATUS_STYLES } from '../utils/orderTypes';
+import { orderTypeLabel } from '../utils/format';
+import { filterOrdersByType, filterOrdersByStatus } from '../utils/orderFilters';
 
-const STATUS_STYLES: Record<DiningTableStatus, { label: 'vacant' | 'occupied' | 'reserved' | 'closed'; card: string; badge: string; dot: string }> = {
-  vacant: { label: 'vacant', card: 'border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/70 dark:bg-emerald-900/20', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', dot: 'bg-emerald-500' },
-  occupied: { label: 'occupied', card: 'border-amber-400 dark:border-amber-700/60 bg-amber-50/70 dark:bg-amber-900/20', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', dot: 'bg-amber-500' },
-  reserved: { label: 'reserved', card: 'border-blue-300 dark:border-blue-700/60 bg-blue-50/70 dark:bg-blue-900/20', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', dot: 'bg-blue-500' },
-  closed: { label: 'closed', card: 'border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-navy-800/60', badge: 'bg-slate-200 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300', dot: 'bg-slate-400' },
-};
-
-const ORDER_TYPE_KEY = {
-  dine_in: 'dineIn',
-  takeaway: 'takeaway',
-  delivery: 'delivery',
-  drive_thru: 'driveThru',
-} as const;
-
-interface TablePos { table: DiningTable; left: number; top: number; width: number; height: number; }
-
-function resolvePositions(tablesInArea: DiningTable[]): TablePos[] {
-  const used = new Set<string>();
-  return tablesInArea.map((tb) => {
-    const l = tb.layout || { x: 0, y: 0, w: 120, h: 80 };
-    let left = l.x || 0;
-    const top = l.y || 0;
-    let guard = 0;
-    while (used.has(`${left},${top}`) && guard < 200) { left += 160; guard += 1; }
-    used.add(`${left},${top}`);
-    return {
-      table: tb,
-      left,
-      top,
-      width: Math.max(70, l.w || 120),
-      height: Math.max(46, l.h || 80),
-    };
-  });
+interface FilterState {
+  filter?: '' | 'held' | 'delivery' | 'takeaway' | null;
 }
 
-export function FloorPlanPage() {
+export function ActiveOrdersPage() {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const { user } = useAuth();
@@ -67,13 +38,10 @@ export function FloorPlanPage() {
   const location = useLocation();
 
   const [areas, setAreas] = useState<DiningArea[]>([]);
-  const [tables, setTables] = useState<DiningTable[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; name_en: string | null }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; name_en: string | null }[]>([]);
   const [selectedBranch, setSelectedBranch] = useState(branchFilter || '');
-  const [loading, setLoading] = useState(true);
+  const [areasLoading, setAreasLoading] = useState(false);
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderType | ''>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'held'>('all');
   const [busy, setBusy] = useState(false);
@@ -82,12 +50,6 @@ export function FloorPlanPage() {
   const [editTarget, setEditTarget] = useState<DiningTable | null>(null);
   const [areaModal, setAreaModal] = useState(false);
   const [tableModal, setTableModal] = useState(false);
-
-  const reloadTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const scheduleReload = () => {
-    if (reloadTimer.current) clearTimeout(reloadTimer.current);
-    reloadTimer.current = setTimeout(() => { load(); }, 400);
-  };
 
   const [areaName, setAreaName] = useState('');
   const [tableForm, setTableForm] = useState({
@@ -98,63 +60,42 @@ export function FloorPlanPage() {
   const isAdmin = isAdminRole(user?.role);
   const canManage = can('floor_plan.manage');
 
-  async function load() {
-    setLoading(true);
+  const { orders, tables, counts, ordersByTable, itemsByOrder, loading, error } = useActiveOrders(effectiveBranch);
+
+  // Areas and product names are not part of the realtime snapshot; load them
+  // separately (reloaded after area/table CRUD via loadAreas).
+  const loadAreas = async () => {
+    if (!effectiveBranch) { setAreas([]); return; }
+    setAreasLoading(true);
     try {
-      const [br] = await Promise.all([
-        supabase.from('branches').select('*').eq('is_active', true).order('name'),
-      ]);
-      setBranches((br.data as Branch[]) || []);
-      if (!effectiveBranch) { setAreas([]); setTables([]); setOrders([]); setOrderItems([]); return; }
-
-      const [aRes, tRes, oRes, pRes] = await Promise.all([
-        supabase.from('dining_areas').select('*').eq('branch_id', effectiveBranch).order('sort_order'),
-        supabase.from('dining_tables').select('*').eq('branch_id', effectiveBranch).order('name'),
-        supabase.from('orders')
-          .select('*, table:dining_tables(*)')
-          .eq('branch_id', effectiveBranch)
-          .in('status', ['open', 'held'])
-          .order('created_at', { ascending: false }),
-        supabase.from('products').select('*').eq('is_active', true).order('name'),
-      ]);
-      setAreas((aRes.data as DiningArea[]) || []);
-      setTables((tRes.data as DiningTable[]) || []);
-      const orderRows = (oRes.data as Order[]) || [];
-      setOrders(orderRows);
-      setProducts((pRes.data as Product[]) || []);
-      const ids = orderRows.map((o) => o.id);
-      if (ids.length > 0) {
-        const { data: items } = await supabase.from('order_items').select('*').in('order_id', ids);
-        setOrderItems((items as OrderItem[]) || []);
-      } else {
-        setOrderItems([]);
-      }
+      const { data } = await supabase.from('dining_areas').select('*').eq('branch_id', effectiveBranch).order('sort_order');
+      setAreas((data as DiningArea[]) || []);
     } finally {
-      setLoading(false);
+      setAreasLoading(false);
     }
-  }
-  useEffect(() => { load(); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveBranch]);
+  };
 
-  // Live updates: keep the floor plan in sync with POS actions from any
-  // tab/device (audit M1). Deferred so burst edits coalesce into one reload.
   useEffect(() => {
-    if (!effectiveBranch) return;
-    const channel = supabase
-      .channel(`floorplan-${effectiveBranch}-${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${effectiveBranch}` }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dining_tables', filter: `branch_id=eq.${effectiveBranch}` }, scheduleReload)
-      .subscribe();
-    return () => {
-      if (reloadTimer.current) clearTimeout(reloadTimer.current);
-      supabase.removeChannel(channel);
-    };
+    let cancelled = false;
+    Promise.all([
+      supabase.from('branches').select('id, name, name_en').eq('is_active', true).order('name'),
+      supabase.from('products').select('id, name, name_en').eq('is_active', true),
+    ]).then(([bRes, pRes]) => {
+      if (cancelled) return;
+      setBranches((bRes.data as { id: string; name: string; name_en: string | null }[]) || []);
+      setProducts((pRes.data as { id: string; name: string; name_en: string | null }[]) || []);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    void loadAreas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBranch]);
 
-  // Apply a filter passed from the POS header tiles (location.state.filter).
+  // Apply a filter passed from the POS workspace summary tiles.
   useEffect(() => {
-    const st = (location.state || {}) as { filter?: '' | 'held' | 'delivery' | 'takeaway' | null };
+    const st = (location.state || {}) as FilterState;
     const filter = st.filter;
     if (filter === 'delivery' || filter === 'takeaway') setOrderTypeFilter(filter);
     if (filter === 'held') setStatusFilter('held');
@@ -167,20 +108,12 @@ export function FloorPlanPage() {
     return map;
   }, [products, isAr]);
 
-  // One table may legitimately carry several open/held orders (a detached
-  // order + a new one, or legacy data), so keep every order per table.
-  const ordersByTable = useMemo(() => {
-    const map: Record<string, Order[]> = {};
-    for (const o of orders) {
-      if (o.table_id) (map[o.table_id] ||= []).push(o);
+  const goToPos = (opts: { orderId?: string; tableId?: string; orderType?: OrderType; branchId?: string }) => {
+    if (opts.orderId) {
+      navigate(`/pos/${opts.orderId}`, { state: { branchId: opts.branchId || effectiveBranch } });
+    } else {
+      navigate('/pos', { state: { tableId: opts.tableId || null, orderType: opts.orderType || 'dine_in', branchId: opts.branchId || effectiveBranch } });
     }
-    return map;
-  }, [orders]);
-
-  const openOrderCount = orders.length;
-
-  const goToPos = (state: { orderId?: string; tableId?: string; orderType?: OrderType; branchId?: string }) => {
-    navigate('/pos', { state: { orderId: state.orderId || null, tableId: state.tableId || null, orderType: state.orderType || 'dine_in', branchId: state.branchId || effectiveBranch } });
   };
 
   const startOrder = (table: DiningTable) => goToPos({ tableId: table.id, orderType: 'dine_in', branchId: table.branch_id });
@@ -196,7 +129,6 @@ export function FloorPlanPage() {
       show(r?.detail || r?.error || t('error'), 'error');
     } else {
       show(t('saveSuccess'), 'success');
-      await load();
     }
     setBusy(false);
   };
@@ -210,7 +142,6 @@ export function FloorPlanPage() {
       show(r?.detail || r?.error || t('error'), 'error');
     } else {
       show(status === 'cancelled' ? t('cancelOrder') : t('saveSuccess'), 'success');
-      await load();
     }
     setBusy(false);
   };
@@ -222,7 +153,7 @@ export function FloorPlanPage() {
     show(t('saveSuccess'), 'success');
     setAreaName('');
     setAreaModal(false);
-    await load();
+    await loadAreas();
   };
 
   const openAddTable = (areaId = '') => {
@@ -251,7 +182,6 @@ export function FloorPlanPage() {
     show(t('saveSuccess'), 'success');
     setTableModal(false);
     setEditTarget(null);
-    await load();
   };
 
   const deleteTable = async (table: DiningTable) => {
@@ -259,7 +189,6 @@ export function FloorPlanPage() {
     const { error } = await supabase.from('dining_tables').delete().eq('id', table.id);
     if (error) { show(error.message, 'error'); return; }
     show(isAr ? 'تم الحذف' : 'Deleted', 'success');
-    await load();
   };
 
   const deleteArea = async (area: DiningArea) => {
@@ -267,23 +196,30 @@ export function FloorPlanPage() {
     const { error } = await supabase.from('dining_areas').delete().eq('id', area.id);
     if (error) { show(error.message, 'error'); return; }
     show(isAr ? 'تم الحذف' : 'Deleted', 'success');
-    await load();
+    await loadAreas();
   };
 
-  const orderItemsOf = (order: Order) => orderItems.filter((i) => i.order_id === order.id);
+  const orderItemsOf = (order: Order) => itemsByOrder[order.id] || [];
 
   const filteredOrders = useMemo(() => {
-    let list = orders;
-    if (orderTypeFilter) list = list.filter((o) => o.order_type === orderTypeFilter);
-    if (statusFilter !== 'all') list = list.filter((o) => o.status === statusFilter);
+    let list = filterOrdersByType(orders, orderTypeFilter);
+    list = filterOrdersByStatus(list, statusFilter);
     return list;
   }, [orders, orderTypeFilter, statusFilter]);
+
+  const statCards = [
+    { key: 'active', title: t('activeOrders'), value: String(counts.active), icon: <Activity className="w-6 h-6" />, color: 'brand' },
+    { key: 'occupied', title: t('occupiedTables'), value: String(tables.filter((tb) => tb.status === 'occupied').length), icon: <UtensilsCrossed className="w-6 h-6" />, color: 'green' },
+    { key: 'held', title: t('heldOrders'), value: String(counts.held), icon: <Pause className="w-6 h-6" />, color: 'amber' },
+    { key: 'delivery', title: t('deliveryOrders'), value: String(counts.delivery), icon: <Truck className="w-6 h-6" />, color: 'blue' },
+    { key: 'takeaway', title: t('takeawayOrders'), value: String(counts.takeaway), icon: <ShoppingBag className="w-6 h-6" />, color: 'purple' },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('floorPlan')}
-        subtitle={isAr ? 'إدارة الطاولات والطلبات المفتوحة' : 'Manage tables and open orders'}
+        title={t('activeOrders')}
+        subtitle={isAr ? 'مركز الطلبات النشطة والطاولات' : 'Active orders and table center'}
         actions={
           <>
             {canManage && (
@@ -296,7 +232,7 @@ export function FloorPlanPage() {
                 </Button>
               </>
             )}
-            <Button variant="ghost" onClick={load} disabled={loading}>
+            <Button variant="ghost" onClick={loadAreas} disabled={areasLoading}>
               <RefreshCw className="w-4 h-4" /> {isAr ? 'تحديث' : 'Refresh'}
             </Button>
           </>
@@ -317,16 +253,23 @@ export function FloorPlanPage() {
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              {isAr ? `${openOrderCount} طلب مفتوح` : `${openOrderCount} open orders`}
+              {isAr ? `${counts.active} طلب نشط` : `${counts.active} active orders`}
             </span>
           </div>
         </Card>
       )}
 
+      {/* Live summary tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+        {statCards.map((s) => (
+          <StatCard key={s.key} title={s.title} value={s.value} icon={s.icon} color={s.color} />
+        ))}
+      </div>
+
       {!effectiveBranch ? (
         <Card className="p-16 text-center text-slate-400">
           <UtensilsCrossed className="w-16 h-16 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">{isAr ? 'اختر الفرع لعرض مخطط الصالة' : 'Select a branch to view the floor plan'}</p>
+          <p className="text-lg font-medium">{isAr ? 'اختر الفرع لعرض مركز الطلبات' : 'Select a branch to view the active orders'}</p>
         </Card>
       ) : loading ? (
         <div className="flex justify-center py-16">
@@ -336,118 +279,21 @@ export function FloorPlanPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* ===== FLOOR CANVAS ===== */}
           <div className="xl:col-span-2 space-y-5">
-            {areas.length === 0 && tables.length === 0 ? (
-              <Card className="p-16 text-center text-slate-400">
-                <Grid3x3 className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                <p className="text-lg font-medium">{isAr ? 'لا توجد مناطق أو طاولات بعد' : 'No areas or tables yet'}</p>
-                {canManage && (
-                  <Button className="mt-4" onClick={() => setAreaModal(true)}>
-                    <Plus className="w-4 h-4" /> {t('addArea')}
-                  </Button>
-                )}
+            {error && (
+              <Card className="p-3 text-sm text-red-500 border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10">
+                {error}
               </Card>
-            ) : (
-              <>
-                {areas.map((area) => {
-                  const areaTables = tables.filter((tb) => tb.area_id === area.id);
-                  if (areaTables.length === 0) return null;
-                  const positions = resolvePositions(areaTables);
-                  const maxW = positions.reduce((m, p) => Math.max(m, p.left + p.width), 0) + 20;
-                  const maxH = positions.reduce((m, p) => Math.max(m, p.top + p.height), 0) + 20;
-                  return (
-                    <Card key={area.id} className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-brand-500 dark:text-gold-400" />
-                          {area.name}
-                          <span className="text-xs font-normal text-slate-400">({areaTables.length})</span>
-                        </h3>
-                        {canManage && (
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => openAddTable(area.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-navy-800" title={t('addTable')}>
-                              <Plus className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => deleteArea(area)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" title={isAr ? 'حذف المنطقة' : 'Delete area'}>
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="overflow-auto rounded-xl bg-slate-50 dark:bg-navy-950/60 border border-slate-100 dark:border-navy-800">
-                        <div className="relative" style={{ width: Math.max(maxW, 900), height: Math.max(maxH, 380) }}>
-                          {positions.map(({ table, left, top, width, height }) => {
-                            const st = STATUS_STYLES[table.status] || STATUS_STYLES.vacant;
-                            const tableOrders = ordersByTable[table.id] || [];
-                            const order = tableOrders[0];
-                            return (
-                              <button
-                                key={table.id}
-                                onClick={() => setTableTarget(table)}
-                                className={`absolute rounded-xl border-2 shadow-sm p-2 flex flex-col items-center justify-center transition-all hover:shadow-card-hover hover:-translate-y-0.5 active:scale-[0.98] ${st.card}`}
-                                style={{ left, top, width, height }}
-                              >
-                                <span className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-full">{table.name}</span>
-                                <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <Users className="w-3 h-3" /> {table.capacity}
-                                </span>
-                                {order && (
-                                  <span className={`mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold truncate max-w-full ${st.badge}`}>
-                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}{tableOrders.length > 1 ? ` +${tableOrders.length - 1}` : ''}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-                {/* Tables without an area */}
-                {(() => {
-                  const loose = tables.filter((tb) => !tb.area_id);
-                  if (loose.length === 0) return null;
-                  const positions = resolvePositions(loose);
-                  const maxW = positions.reduce((m, p) => Math.max(m, p.left + p.width), 0) + 20;
-                  const maxH = positions.reduce((m, p) => Math.max(m, p.top + p.height), 0) + 20;
-                  return (
-                    <Card key="loose" className="p-4">
-                      <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        {isAr ? 'طاولات بدون منطقة' : 'Tables without area'}
-                      </h3>
-                      <div className="overflow-auto rounded-xl bg-slate-50 dark:bg-navy-950/60 border border-slate-100 dark:border-navy-800">
-                        <div className="relative" style={{ width: Math.max(maxW, 900), height: Math.max(maxH, 380) }}>
-                          {positions.map(({ table, left, top, width, height }) => {
-                            const st = STATUS_STYLES[table.status] || STATUS_STYLES.vacant;
-                            const tableOrders = ordersByTable[table.id] || [];
-                            const order = tableOrders[0];
-                            return (
-                              <button
-                                key={table.id}
-                                onClick={() => setTableTarget(table)}
-                                className={`absolute rounded-xl border-2 shadow-sm p-2 flex flex-col items-center justify-center transition-all hover:shadow-card-hover hover:-translate-y-0.5 active:scale-[0.98] ${st.card}`}
-                                style={{ left, top, width, height }}
-                              >
-                                <span className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-full">{table.name}</span>
-                                <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <Users className="w-3 h-3" /> {table.capacity}
-                                </span>
-                                {order && (
-                                  <span className={`mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold truncate max-w-full ${st.badge}`}>
-                                    {order.order_number} · {formatCurrency(order.total, 'EGP', lang)}{tableOrders.length > 1 ? ` +${tableOrders.length - 1}` : ''}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })()}
-              </>
             )}
+            <TableFloorPlan
+              areas={areas}
+              tables={tables}
+              ordersByTable={ordersByTable}
+              canManage={canManage}
+              currency="EGP"
+              onSelectTable={setTableTarget}
+              onAddTable={openAddTable}
+              onDeleteArea={deleteArea}
+            />
           </div>
 
           {/* ===== OPEN ORDERS PANEL ===== */}
@@ -459,7 +305,7 @@ export function FloorPlanPage() {
                   {t('openOrders')}
                 </h3>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold">
-                  {openOrderCount}
+                  {orders.length}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5 mb-3">
@@ -473,7 +319,7 @@ export function FloorPlanPage() {
                         : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
                     }`}
                   >
-                    {ot === '' ? (isAr ? 'الكل' : 'All') : t(ORDER_TYPE_KEY[ot])}
+                    {ot === '' ? (isAr ? 'الكل' : 'All') : orderTypeLabel(t, ot)}
                   </button>
                 ))}
               </div>
@@ -492,7 +338,7 @@ export function FloorPlanPage() {
                   </button>
                 ))}
               </div>
-              <div className="space-y-2 max-h-[480px] overflow-y-auto">
+              <div className="space-y-2 max-h-[520px] overflow-y-auto">
                 {filteredOrders.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
                     <UtensilsCrossed className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -505,7 +351,7 @@ export function FloorPlanPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-xs font-bold text-slate-700 dark:text-white truncate">{order.order_number}</span>
                           <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300">
-                            {t(ORDER_TYPE_KEY[order.order_type])}
+                            {orderTypeLabel(t, order.order_type)}
                           </span>
                           <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                             {t(order.status === 'held' ? 'holdOrder' : 'open')}
@@ -562,7 +408,7 @@ export function FloorPlanPage() {
                         <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(order.total, 'EGP', lang)}</span>
                       </div>
                       <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 font-bold">{t(ORDER_TYPE_KEY[order.order_type])}</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 font-bold">{orderTypeLabel(t, order.order_type)}</span>
                         <span>{formatDateTime(order.created_at, lang)}</span>
                       </div>
                       <div className="space-y-1">

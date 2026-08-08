@@ -6,8 +6,8 @@ import { useCan, type Permission } from '../lib/permissions';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const PosPage = lazy(() => import('../features/pos/pages/PosPage').then(m => ({ default: m.PosPage })));
-const FloorPlanPage = lazy(() => import('../features/pos/pages/FloorPlanPage').then(m => ({ default: m.FloorPlanPage })));
+const PosWorkspacePage = lazy(() => import('../features/pos/pages/PosWorkspacePage').then(m => ({ default: m.PosWorkspacePage })));
+const ActiveOrdersPage = lazy(() => import('../features/pos/pages/ActiveOrdersPage').then(m => ({ default: m.ActiveOrdersPage })));
 const ProductsPage = lazy(() => import('../features/catalog/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
 const CategoriesPage = lazy(() => import('../features/catalog/pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })));
 const ComponentsPage = lazy(() => import('../features/catalog/pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
@@ -73,8 +73,9 @@ export function AppRoutes() {
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} />
-        <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosPage /></ProtectedRoute>} />
-        <Route path="/floor-plan" element={<ProtectedRoute permission="floor_plan.view"><FloorPlanPage /></ProtectedRoute>} />
+        <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
+        <Route path="/pos/:orderId" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
+        <Route path="/floor-plan" element={<ProtectedRoute permission="floor_plan.view"><ActiveOrdersPage /></ProtectedRoute>} />
         <Route path="/products" element={<ProtectedRoute permission="products.view"><ProductsPage /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute permission="categories.view"><CategoriesPage /></ProtectedRoute>} />
         <Route path="/components" element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />

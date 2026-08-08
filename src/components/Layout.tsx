@@ -5,12 +5,14 @@ import {
   Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
   Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
-  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Grid3x3,
+  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Activity,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useCan, type Permission } from '../lib/permissions';
+import { useBranchFilter } from '../lib/useBranchFilter';
+import { useActiveOrders } from '../features/pos/hooks/useActiveOrders';
 import type { TranslationKey } from '../lib/i18n';
 import { Logo } from './Logo';
 
@@ -25,7 +27,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
   { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', permission: 'pos.sell', group: 'main' },
-  { to: '/floor-plan', icon: <Grid3x3 className="w-5 h-5" />, labelKey: 'floorPlan', permission: 'floor_plan.view', group: 'operations' },
   { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', permission: 'components.view', group: 'catalog' },
@@ -74,6 +75,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isAr = lang === 'ar';
+
+  // Live Active Orders count for the Top Bar badge (branch-scoped).
+  const branchFilter = useBranchFilter();
+  const { counts } = useActiveOrders(branchFilter || user?.branch_id || '');
 
   const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
   const currentTitle = visibleNavItems.find((n) => n.to === location.pathname)?.labelKey || 'dashboard';
@@ -172,6 +177,23 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Active Orders Center */}
+            {can('floor_plan.view') && (
+              <button
+                onClick={() => navigate('/floor-plan')}
+                className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all active:scale-95"
+                title={t('activeOrders')}
+              >
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('activeOrders')}</span>
+                {counts.active > 0 && (
+                  <span className="absolute -top-1.5 -end-1.5 min-w-5 h-5 px-1 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-navy-950">
+                    {counts.active}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* POS Quick Access */}
             {can('pos.sell') && (
               <button

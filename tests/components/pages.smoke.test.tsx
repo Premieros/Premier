@@ -40,9 +40,10 @@ const appMocks = vi.hoisted(() => {
       signOut: async () => ({ error: null }),
       updateUser: async () => ({ data: {}, error: null }),
     },
-    channel: () => ({
-      on: () => ({ on: () => ({ subscribe: async () => 'SUBSCRIBED' }) }),
-    }),
+    channel: () => {
+      const self = { on: () => self, subscribe: async () => 'SUBSCRIBED' };
+      return self;
+    },
     removeChannel: () => {},
   };
 
@@ -111,8 +112,8 @@ vi.mock('@/components/Toast', () => ({ useToast: () => ({ show: () => {} }) }));
 
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
-import { PosPage } from '@/features/pos/pages/PosPage';
-import { FloorPlanPage } from '@/features/pos/pages/FloorPlanPage';
+import { PosWorkspacePage } from '@/features/pos/pages/PosWorkspacePage';
+import { ActiveOrdersPage } from '@/features/pos/pages/ActiveOrdersPage';
 import { ProductsPage } from '@/features/catalog/pages/ProductsPage';
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage';
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage';
@@ -144,8 +145,8 @@ import { ReconciliationPage } from '@/features/accounting/pages/ReconciliationPa
 const pages: Array<[string, React.ComponentType]> = [
   ['LoginPage', LoginPage],
   ['DashboardPage', DashboardPage],
-  ['PosPage', PosPage],
-  ['FloorPlanPage', FloorPlanPage],
+  ['PosWorkspacePage', PosWorkspacePage],
+  ['ActiveOrdersPage', ActiveOrdersPage],
   ['ProductsPage', ProductsPage],
   ['CategoriesPage', CategoriesPage],
   ['InventoryPage', InventoryPage],

@@ -91,6 +91,8 @@ export function usePosOrder(input: UsePosOrderInput) {
         if (!order) { setOrderLoading(false); return; }
         if (order.status !== 'open' && order.status !== 'held') {
           show(isAr ? 'لا يمكن استئناف طلب منتهي' : 'Cannot resume a completed order', 'error');
+          setActiveOrderId(null);
+          setActiveOrderNumber(null);
           setOrderLoading(false);
           return;
         }
@@ -499,6 +501,22 @@ export function usePosOrder(input: UsePosOrderInput) {
 
   const closeReceipt = useCallback(() => setReceiptSaleId(null), []);
 
+  // Full workspace reset: used when switching branches so no order/cart state
+  // from the previous branch leaks into the new one.
+  const resetWorkspace = useCallback(() => {
+    setCart(EMPTY_CART);
+    setCustomerId('');
+    setDiscountAmount(0);
+    setPaidAmount(0);
+    setOrderType('dine_in');
+    setTableId(null);
+    setGuestCount(null);
+    setActiveOrderId(null);
+    setActiveOrderNumber(null);
+    setActiveTable(null);
+    setCheckoutOpen(false);
+  }, []);
+
   return {
     cart,
     customerId, setCustomerId,
@@ -517,7 +535,7 @@ export function usePosOrder(input: UsePosOrderInput) {
     effCurrency,
     addToCart, updateQty, setQty, removeFromCart, clearCart, setItemDiscount,
     switchOrderType, holdOrder, sendToKitchen, printKitchenTicket, completeSale, printReceipt,
-    detachTable, detachOrder,
+    detachTable, detachOrder, resetWorkspace,
   };
 }
 
