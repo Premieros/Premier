@@ -58,6 +58,7 @@ e260023 perf(data): migrate key list pages to usePaginatedRows with load-more (M
 e7ff2e2 perf(data): migrate remaining list pages to usePaginatedRows (M7 batch B)
 8f01b1a refactor(data): consolidate settings/branches into useSettings/useBranches shared hooks (PHASE 6b)
 349f9b6 test: expand unit coverage (POS math, useBranches) + FloorPlanPage smoke + fix useBranches error recovery (PHASE 8)
+647ef46 docs: finalize PHASE 9 documentation (CODEMAP, DEPENDENCY_MAP, FULL_AUDIT, KNOWN_ISSUES, FINAL_PROJECT_REPORT, TESTING guide)
 ```
 
 ## 5. ملفات متغيّرة (ملخص)
