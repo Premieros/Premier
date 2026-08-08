@@ -52,6 +52,7 @@ export function usePosOrder(input: UsePosOrderInput) {
 
   const [cart, setCart] = useState<CartItem[]>(EMPTY_CART);
   const [customerId, setCustomerId] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('cash');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
@@ -81,6 +82,7 @@ export function usePosOrder(input: UsePosOrderInput) {
       setGuestCount(null);
       setOrderType('dine_in');
       setCart(EMPTY_CART);
+      setOrderNotes('');
       return;
     }
     let cancelled = false;
@@ -101,6 +103,7 @@ export function usePosOrder(input: UsePosOrderInput) {
         setActiveOrderId(order.id);
         setActiveOrderNumber(order.order_number);
         setGuestCount(order.guest_count);
+        setOrderNotes(order.notes || '');
         // Repair a legacy 'vacant' row left under an open order, but never
         // overwrite a manager's 'reserved'/'closed' status.
         if (order.table_id) {
@@ -271,7 +274,7 @@ export function usePosOrder(input: UsePosOrderInput) {
         p_table_id: targetTable,
         p_customer_id: customerId || null,
         p_guest_count: guestCount,
-        p_notes: null,
+        p_notes: orderNotes || null,
         p_items: itemRows,
         p_subtotal: subtotal,
         p_discount_amount: discountValue,
@@ -292,7 +295,7 @@ export function usePosOrder(input: UsePosOrderInput) {
       p_table_id: targetTable,
       p_customer_id: customerId || null,
       p_guest_count: guestCount,
-      p_notes: null,
+      p_notes: orderNotes || null,
       p_items: itemRows,
       p_subtotal: subtotal,
       p_discount_amount: discountValue,
@@ -305,7 +308,7 @@ export function usePosOrder(input: UsePosOrderInput) {
     const r = data as RpcResult | null;
     if (!r?.success) { show(r?.detail || r?.error || t('error'), 'error'); return { ok: false, orderId: null, orderNumber: null }; }
     return { ok: true, orderId: r.order_id || null, orderNumber: (r as RpcResult & { order_number?: string }).order_number || null };
-  }, [branchId, activeOrderId, activeOrderNumber, orderType, tableId, customerId, guestCount, cart, subtotal, discountValue, discountType, taxAmount, total, user?.id, show, t]);
+  }, [branchId, activeOrderId, activeOrderNumber, orderType, tableId, customerId, guestCount, orderNotes, cart, subtotal, discountValue, discountType, taxAmount, total, user?.id, show, t]);
 
   // Holds the current cart: updates the SAME order when resuming (audit C2),
   // never creating a duplicate.
@@ -476,6 +479,7 @@ export function usePosOrder(input: UsePosOrderInput) {
       setDiscountAmount(0);
       setPaidAmount(0);
       setCustomerId('');
+      setOrderNotes('');
       setActiveOrderId(null);
       setActiveOrderNumber(null);
       setTableId(null);
@@ -506,6 +510,7 @@ export function usePosOrder(input: UsePosOrderInput) {
   const resetWorkspace = useCallback(() => {
     setCart(EMPTY_CART);
     setCustomerId('');
+    setOrderNotes('');
     setDiscountAmount(0);
     setPaidAmount(0);
     setOrderType('dine_in');
@@ -520,6 +525,7 @@ export function usePosOrder(input: UsePosOrderInput) {
   return {
     cart,
     customerId, setCustomerId,
+    orderNotes, setOrderNotes,
     paymentMethod, setPaymentMethod,
     discountAmount, setDiscountAmount,
     discountType, setDiscountType,

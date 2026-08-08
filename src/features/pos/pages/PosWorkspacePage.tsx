@@ -12,9 +12,10 @@ import { Logo } from '@/components/Logo';
 import { formatCurrency } from '@/lib/format';
 import { mergeEffectiveSettings, useSettings } from '@/context/SettingsContext';
 import { useToast } from '@/components/Toast';
-import type { Product, Customer, Settings, Branch, Category, ProductComponent, OrderType, RpcResult } from '@/lib/types';
+import type { Product, Customer, Settings, Branch, Category, ProductComponent, OrderType, RpcResult, Order } from '@/lib/types';
 import { usePosOrder } from '../hooks/usePosOrder';
 import { useActiveOrders } from '../hooks/useActiveOrders';
+import { OrderStartWizard, type StartStep, type StartOrderOptions } from '../components/start/OrderStartWizard';
 import { ProductBrowser } from '../components/catalog/ProductBrowser';
 import { PosTopBar, type PosPanelId } from '../components/topbar/PosTopBar';
 import { ActiveOrdersDrawer } from '../components/orders/ActiveOrdersDrawer';
@@ -61,8 +62,9 @@ export function PosWorkspacePage() {
   const [shiftChecked, setShiftChecked] = useState(false);
   const [panel, setPanel] = useState<PosPanelId>(null);
   const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
+  const [startStep, setStartStep] = useState<StartStep | null>(null);
+  const [preselectedTableId, setPreselectedTableId] = useState<string | null>(initState.tableId || null);
   const barcodeRef = useRef<HTMLInputElement>(null);
-  const stateApplied = useRef(false);
   const payConsumed = useRef(false);
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
@@ -143,6 +145,12 @@ export function PosWorkspacePage() {
   const live = useActiveOrders(effectiveBranch);
   const { orders, tables, counts, ordersByTable, itemsByOrder, kitchenSendsByOrder, sentOrderItemIds, tableById } = live;
 
+  const customerById = useMemo(() => {
+    const map: Record<string, Customer> = {};
+    for (const c of customers) map[c.id] = c;
+    return map;
+  }, [customers]);
+
   const productNames = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of products) map[p.id] = isAr ? p.name : (p.name_en || p.name);
@@ -159,15 +167,17 @@ export function PosWorkspacePage() {
     [orders, pos.activeOrderId]
   );
 
-  // Applies navigation state from the Active Orders Center / Tables panel:
-  // starting a new order at a table, or auto-opening payment for a resumed one.
+  // Fresh /pos (no resume id) opens the order-type wizard; a table handoff from
+  // the Active Orders center / Tables panel lands directly on the table step.
   useEffect(() => {
-    if (stateApplied.current) return;
-    stateApplied.current = true;
-    if (!orderIdParam && initState.tableId) pos.setTableId(initState.tableId);
-    if (initState.guestCount) pos.setGuestCount(initState.guestCount);
-    if (initState.orderType) pos.setOrderType(initState.orderType);
-  }, [orderIdParam, initState.tableId, initState.guestCount, initState.orderType, pos]);
+    if (orderIdParam) { setStartStep(null); return; }
+    if (initState.tableId) {
+      setPreselectedTableId(initState.tableId);
+      setStartStep('table');
+    } else {
+      setStartStep('type');
+    }
+  }, [orderIdParam, initState.tableId]);
 
   // Auto-open the payment panel when resumed with { pay: 1 }.
   useEffect(() => {
@@ -272,7 +282,7 @@ export function PosWorkspacePage() {
     navigate(`/pos/${orderId}`, { state: { branchId: effectiveBranch, ...(opts.pay ? { pay: 1 } : {}) } });
   };
 
-  const startOrderAtTable = (tableId: string, orderType: OrderType, guestCount: number) => {
+  const startOrderAtTable = (tableId: string) => {
     if (pos.activeOrderId || pos.cart.length > 0) {
       const ok = window.confirm(isAr
         ? 'سيتم إغلاق الطلب الحالي محلياً وبدء طلب جديد على الطاولة. متابعة؟'
@@ -280,10 +290,31 @@ export function PosWorkspacePage() {
       if (!ok) return;
       pos.resetWorkspace();
     }
-    pos.setTableId(tableId);
-    pos.setOrderType(orderType);
-    pos.setGuestCount(guestCount);
+    setStartStep('table');
+    setPreselectedTableId(tableId);
     setPanel(null);
+    setMobileOrderOpen(false);
+  };
+
+  const handleStartOrder = (opts: StartOrderOptions) => {
+    pos.resetWorkspace();
+    pos.setOrderType(opts.orderType);
+    if (opts.tableId) pos.setTableId(opts.tableId);
+    pos.setGuestCount(opts.guestCount ?? null);
+    if (opts.customerId) pos.setCustomerId(opts.customerId);
+    pos.setOrderNotes(opts.notes || '');
+    setStartStep(null);
+    setPreselectedTableId(null);
+    setPanel(null);
+    setMobileOrderOpen(false);
+  };
+
+  const handleWizardResume = (order: Order, pay = false) => {
+    setStartStep(null);
+    setPreselectedTableId(null);
+    setPanel(null);
+    setMobileOrderOpen(false);
+    openOrderWorkspace(order.id, pay ? { pay: true } : {});
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -398,6 +429,9 @@ export function PosWorkspacePage() {
       activeOrderId={pos.activeOrderId}
       activeTable={pos.activeTable}
       guestCount={pos.guestCount}
+      customerId={pos.customerId}
+      customerById={customerById}
+      orderNotes={pos.orderNotes}
       activeOrderCreatedAt={activeOrderCreatedAt}
       orderItems={orderItemsForActive}
       sentOrderItemIds={sentOrderItemIds}
@@ -423,7 +457,7 @@ export function PosWorkspacePage() {
     <div className="h-screen flex flex-col bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 overflow-hidden">
       <PosTopBar
         panel={panel}
-        onPanel={setPanel}
+        onPanel={(p) => { setStartStep(null); setPanel(p); }}
         counts={{
           activeOrders: counts.active,
           occupiedTables: tables.filter((tb) => tb.status === 'occupied').length,
@@ -439,7 +473,7 @@ export function PosWorkspacePage() {
         isCashier={isCashier}
         shiftChecked={shiftChecked}
         activeShift={activeShift}
-        onNewOrder={() => { pos.resetWorkspace(); if (!orderIdParam) setPanel(null); navigate('/pos'); }}
+        onNewOrder={() => { pos.resetWorkspace(); setStartStep('type'); setPreselectedTableId(null); setPanel(null); setMobileOrderOpen(false); if (orderIdParam) navigate('/pos'); }}
         onExit={() => navigate('/dashboard')}
       />
 
@@ -507,6 +541,7 @@ export function PosWorkspacePage() {
         itemsByOrder={itemsByOrder}
         kitchenSendsByOrder={kitchenSendsByOrder}
         tableById={tableById}
+        customerById={customerById}
         currency={pos.effCurrency}
         onResume={(o) => openOrderWorkspace(o.id)}
         onPay={(o) => openOrderWorkspace(o.id, { pay: true })}
@@ -521,7 +556,7 @@ export function PosWorkspacePage() {
         currency={pos.effCurrency}
         onResume={(o) => openOrderWorkspace(o.id)}
         onPay={(o) => openOrderWorkspace(o.id, { pay: true })}
-        onStart={(tb, guests) => startOrderAtTable(tb.id, 'dine_in', guests)}
+        onStart={(tb) => startOrderAtTable(tb.id)}
       />
 
       <KitchenPanel
@@ -533,6 +568,25 @@ export function PosWorkspacePage() {
         tableById={tableById}
         productNames={productNames}
       />
+
+      {/* ===== ORDER START WIZARD ===== */}
+      {startStep && (
+        <OrderStartWizard
+          step={startStep}
+          tables={tables}
+          ordersByTable={ordersByTable}
+          itemsByOrder={itemsByOrder}
+          kitchenSendsByOrder={kitchenSendsByOrder}
+          customers={customers}
+          preselectedTableId={preselectedTableId}
+          currency={pos.effCurrency}
+          onStepChange={setStartStep}
+          onBack={() => setStartStep('type')}
+          onStart={handleStartOrder}
+          onResume={handleWizardResume}
+          onActiveOrders={() => { setStartStep(null); setPreselectedTableId(null); setPanel('orders'); }}
+        />
+      )}
 
       {/* ===== RECEIPT MODAL ===== */}
       <Modal open={!!pos.receiptSaleId} onClose={pos.closeReceipt} title={t('printReceipt')} size="sm">
