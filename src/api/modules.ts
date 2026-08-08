@@ -345,4 +345,10 @@ export const admin = {
   recordLoginSuccess(p: { p_user_id: string }): ApiResult<{ success?: boolean; error?: string }> {
     return rpc('record_login_success', p);
   },
+  seedDemoData(p: { p_branch_id: string }): ApiResult<RpcResult & { seeded?: number; existing?: boolean; products?: number; customers?: number; tables?: number }> {
+    return rpc('seed_demo_data', p);
+  },
+  deleteDemoData(p: { p_branch_id: string }): ApiResult<RpcResult & { orders?: number; sales?: number; customers?: number; products?: number; tables?: number }> {
+    return rpc('delete_demo_data', p);
+  },
 };

@@ -1,9 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Save, Store, Receipt, Palette, ShoppingCart, FileText, Boxes, ShieldCheck,
-  Building2, Trash2, Plus,
+  Building2, Trash2, Plus, FlaskConical,
 } from 'lucide-react';
-import { supabase } from '@/api';
+import { supabase, admin } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -44,6 +44,8 @@ export function SettingsPage() {
   const [branchForm, setBranchForm] = useState<Partial<BranchSettings>>({});
   const [brandHex, setBrandHex] = useState('');
   const [customBrand, setCustomBrand] = useState('');
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoConfirmOpen, setDemoConfirmOpen] = useState(false);
 
   useEffect(() => {
     supabase.from('branches').select('*').order('name').then(({ data }) => {
@@ -166,6 +168,31 @@ export function SettingsPage() {
     if (!error) show(isAr ? 'تمت إعادة تعيين إعدادات الفرع إلى الإعدادات العامة' : 'Branch settings reset to global', 'success');
     else show(error.message, 'error');
     setSaving(false);
+  };
+
+  const handleSeedDemo = async () => {
+    if (!branchId) return;
+    setDemoBusy(true);
+    const { data, error } = await admin.seedDemoData({ p_branch_id: branchId });
+    setDemoBusy(false);
+    if (error) { show(error.message, 'error'); return; }
+    const res = data as { success?: boolean; seeded?: number; existing?: boolean } | null;
+    if (!res?.success) { show(isAr ? 'تعذر إضافة البيانات التجريبية' : 'Failed to add demo data', 'error'); return; }
+    if (res.existing) { show(t('demoAlreadyExists'), 'info'); return; }
+    await logAudit('create', 'demo_data', branchId, { action: 'seed' });
+    show(t('demoSeeded'), 'success');
+  };
+
+  const handleDeleteDemo = async () => {
+    if (!branchId) return;
+    setDemoBusy(true);
+    const { data, error } = await admin.deleteDemoData({ p_branch_id: branchId });
+    setDemoBusy(false);
+    if (error) { show(error.message, 'error'); return; }
+    const res = data as { success?: boolean } | null;
+    if (!res?.success) { show(isAr ? 'تعذر حذف البيانات التجريبية' : 'Failed to delete demo data', 'error'); return; }
+    await logAudit('delete', 'demo_data', branchId, { action: 'delete' });
+    show(t('demoDeleted'), 'success');
   };
 
   if (!form) {
@@ -426,12 +453,37 @@ export function SettingsPage() {
                   </Button>
                 )}
               </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-5">
+                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <FlaskConical className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('demoActions')}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('demoDataHint')}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="outline" onClick={handleSeedDemo} disabled={demoBusy}>
+                    <Plus className="w-4 h-4" /> {t('seedDemo')}
+                  </Button>
+                  <Button variant="danger" onClick={() => setDemoConfirmOpen(true)} disabled={demoBusy}>
+                    <Trash2 className="w-4 h-4" /> {t('deleteDemo')}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </Card>
       )}
 
       {tab === 'roles' && <RolesTab />}
+
+      <ConfirmDialog
+        open={demoConfirmOpen}
+        onClose={() => setDemoConfirmOpen(false)}
+        onConfirm={handleDeleteDemo}
+        title={t('deleteDemo')}
+        message={t('deleteDemoConfirm')}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+      />
     </div>
   );
 }
