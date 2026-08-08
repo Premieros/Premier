@@ -11,6 +11,14 @@ export const pos = {
   getActiveShift(p: { p_branch_id: string }): ApiResult<Shift> {
     return rpc('get_active_shift', p);
   },
+  sendToKitchen(p: { p_order_id: string; p_sent_by?: string | null }): ApiResult<RpcResult & {
+    order_id?: string;
+    sent?: { send_id: string; order_item_id: string; product_id: string | null; product_name: string | null; unit_name: string | null; quantity: number; unit_price: number; discount_amount: number; bonus_quantity: number; total: number; notes: string | null }[];
+    items_sent_count?: number;
+    all_sent?: boolean;
+  }> {
+    return rpc('send_to_kitchen', p);
+  },
   nextDocumentNumber(p: { p_type: string }): ApiResult<RpcResult> {
     return rpc('next_document_number', p);
   },

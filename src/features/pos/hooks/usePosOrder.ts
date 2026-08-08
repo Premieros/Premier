@@ -1,0 +1,524 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/api';
+import * as api from '@/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/Toast';
+import { computePosTotals, computeLineDiscount, type PosPaymentMethod } from '@/lib/posMath';
+import { logAudit } from '@/lib/audit';
+import type { CartItem, Customer, DiningTable, OrderType, Product, ProductComponent, RpcResult, Settings } from '@/lib/types';
+import { ORDER_TYPE_KEY } from '../utils/orderTypes';
+import { cartToItems, orderItemsToCart } from '../utils/cart';
+import { buildReceiptHtml, buildKitchenTicketHtml, openPrintWindow, type ReceiptData } from '../utils/printing';
+import { fetchOrderForWorkspace } from '../services/posOrders';
+import { sendOrderToKitchen } from '../services/kitchen';
+import { processSaleForOrder, nextInvoiceNumber, fetchBranchWarehouseId } from '../services/payment';
+import type { KitchenSendItem } from '../types';
+
+export interface ActiveShiftInfo {
+  id: string;
+  expected: number;
+  opened_at: string;
+  opening_amount: number;
+}
+
+export interface UsePosOrderInput {
+  branchId: string;
+  orderId: string | null;
+  customers: Customer[];
+  effSettings: Settings | null;
+  isCashier: boolean;
+  activeShift: ActiveShiftInfo | null;
+  products: Product[];
+  stockMap: Record<string, number>;
+  sellableStock: Record<string, number>;
+  recipeMap: Record<string, ProductComponent[]>;
+}
+
+interface PersistResult {
+  ok: boolean;
+  orderId: string | null;
+  orderNumber: string | null;
+}
+
+const EMPTY_CART: CartItem[] = [];
+
+export function usePosOrder(input: UsePosOrderInput) {
+  const { branchId, orderId, customers, effSettings, isCashier, activeShift, products, stockMap, sellableStock, recipeMap } = input;
+  const { t, lang } = useLanguage();
+  const isAr = lang === 'ar';
+  const { user } = useAuth();
+  const { show } = useToast();
+
+  const [cart, setCart] = useState<CartItem[]>(EMPTY_CART);
+  const [customerId, setCustomerId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('cash');
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
+  const [paidAmount, setPaidAmount] = useState(0);
+
+  const [orderType, setOrderType] = useState<OrderType>('dine_in');
+  const [tableId, setTableId] = useState<string | null>(null);
+  const [guestCount, setGuestCount] = useState<number | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(orderId);
+  const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
+  const [activeTable, setActiveTable] = useState<DiningTable | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [kitchenSending, setKitchenSending] = useState(false);
+  const [kitchenSentItems, setKitchenSentItems] = useState<KitchenSendItem[]>([]);
+  const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
+  const [receiptSaleId, setReceiptSaleId] = useState<string | null>(null);
+
+  const effCurrency = effSettings?.currency || 'EGP';
+
+  useEffect(() => {
+    setActiveOrderId(orderId);
+    if (!orderId) {
+      setActiveOrderNumber(null);
+      setTableId(null);
+      setGuestCount(null);
+      setOrderType('dine_in');
+      setCart(EMPTY_CART);
+      return;
+    }
+    let cancelled = false;
+    setOrderLoading(true);
+    fetchOrderForWorkspace(orderId)
+      .then(({ order, items, products: orderProducts }) => {
+        if (cancelled) return;
+        if (!order) { setOrderLoading(false); return; }
+        if (order.status !== 'open' && order.status !== 'held') {
+          show(isAr ? 'لا يمكن استئناف طلب منتهي' : 'Cannot resume a completed order', 'error');
+          setOrderLoading(false);
+          return;
+        }
+        setOrderType(order.order_type as OrderType);
+        setTableId(order.table_id);
+        setActiveOrderId(order.id);
+        setActiveOrderNumber(order.order_number);
+        setGuestCount(order.guest_count);
+        // Repair a legacy 'vacant' row left under an open order, but never
+        // overwrite a manager's 'reserved'/'closed' status.
+        if (order.table_id) {
+          supabase.from('dining_tables').select('status').eq('id', order.table_id).maybeSingle().then(({ data: tbl }) => {
+            if (!cancelled && tbl && (tbl as { status: string }).status === 'vacant') {
+              api.floorPlan.setTableStatus({ p_table_id: order.table_id as string, p_status: 'occupied' }).catch(() => {});
+            }
+          });
+        }
+        const cartItems = orderItemsToCart(items, orderProducts);
+        if (cartItems.length > 0) setCart(cartItems);
+        show(t('orderResumed'), 'success');
+        setOrderLoading(false);
+      })
+      .catch(() => { if (!cancelled) setOrderLoading(false); });
+    return () => { cancelled = true; };
+  }, [orderId, t, show, isAr]);
+
+  useEffect(() => {
+    if (!tableId) { setActiveTable(null); return; }
+    let cancelled = false;
+    supabase.from('dining_tables').select('*').eq('id', tableId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setActiveTable((data as DiningTable | null) || null);
+    });
+    return () => { cancelled = true; };
+  }, [tableId]);
+
+  const getStock = useCallback((productId: string) => {
+    const prod = products.find((x) => x.id === productId);
+    if (prod?.product_type === 'manufactured') return sellableStock[productId] || 0;
+    return stockMap[productId] || 0;
+  }, [products, sellableStock, stockMap]);
+
+  const addToCart = useCallback((product: Product) => {
+    const stock = getStock(product.id);
+    if (product.product_type === 'manufactured' && (recipeMap[product.id]?.length || 0) === 0) {
+      show(`${product.name}: ${t('noRecipe')}`, 'error');
+      return;
+    }
+    const inCart = cart.find((i) => i.product.id === product.id)?.quantity || 0;
+    if (inCart >= stock && stock > 0) {
+      show(`${product.name}: ${t('insufficientStock')} (${stock})`, 'error');
+      return;
+    }
+    setCart((prev) => {
+      const existing = prev.find((i) => i.product.id === product.id);
+      if (existing) return prev.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i));
+      return [...prev, { product, unit_name: 'piece', quantity: 1, unit_price: product.sale_price, discount_amount: 0, bonus_quantity: 0 }];
+    });
+  }, [getStock, recipeMap, cart, show, t]);
+
+  const updateQty = useCallback((productId: string, delta: number) => {
+    const stock = getStock(productId);
+    if (delta > 0 && stock > 0) {
+      const inCart = cart.find((i) => i.product.id === productId)?.quantity || 0;
+      if (inCart + delta > stock) { show(`${t('insufficientStock')} (${stock})`, 'error'); return; }
+    }
+    setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i)).filter((i) => i.quantity > 0));
+  }, [getStock, cart, show, t]);
+
+  const setQty = useCallback((productId: string, qty: number) => {
+    const stock = getStock(productId);
+    if (stock > 0 && qty > stock) { show(`${t('insufficientStock')} (${stock})`, 'error'); qty = stock; }
+    setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, quantity: Math.max(1, qty) } : i)));
+  }, [getStock, show, t]);
+
+  const removeFromCart = useCallback((productId: string) => setCart((prev) => prev.filter((i) => i.product.id !== productId)), []);
+  const clearCart = useCallback(() => setCart(EMPTY_CART), []);
+
+  const setItemDiscount = useCallback((productId: string, discount: number) => {
+    const item = cart.find((i) => i.product.id === productId);
+    if (!item) return;
+    const lineTotal = item.quantity * item.unit_price;
+    const d = computeLineDiscount(lineTotal, discount || 0);
+    setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, discount_amount: d } : i)));
+  }, [cart]);
+
+  const taxRate = effSettings?.tax_enabled ? (effSettings?.tax_rate || 0) : 0;
+  const totals = useMemo(
+    () => computePosTotals({
+      items: cart,
+      discountType,
+      discountAmount,
+      taxRate,
+      taxEnabled: !!effSettings?.tax_enabled,
+      paidAmount,
+      paymentMethod,
+    }),
+    [cart, discountType, discountAmount, taxRate, effSettings?.tax_enabled, paidAmount, paymentMethod]
+  );
+  const { subtotal, discountValue, taxAmount, total, change } = totals;
+
+  const switchOrderType = useCallback(async (ot: OrderType) => {
+    if (ot === orderType) return;
+    if (activeOrderNumber) {
+      show(isAr ? `لا يمكن تغيير نوع طلب نشط (${activeOrderNumber})` : `Cannot change order type of active order (${activeOrderNumber})`, 'error');
+      return;
+    }
+    if (ot === 'dine_in' && !tableId && !activeTable) {
+      show(isAr ? 'اختر طاولة أولاً لطلب داخل الصالة' : 'Select a table first for dine-in orders', 'error');
+      return;
+    }
+    if (activeTable && ot !== 'dine_in') {
+      const ok = window.confirm(isAr
+        ? `التبديل إلى ${t(ORDER_TYPE_KEY[ot])} سيفصل الطاولة ${activeTable.name} ويحررها. متابعة؟`
+        : `Switching to ${t(ORDER_TYPE_KEY[ot])} will detach and free table ${activeTable.name}. Continue?`);
+      if (!ok) return;
+      const res = await api.floorPlan.setTableStatus({ p_table_id: tableId || activeTable.id, p_status: 'vacant' });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
+      setTableId(null);
+      setActiveTable(null);
+    }
+    setOrderType(ot);
+  }, [orderType, activeOrderNumber, tableId, activeTable, show, t, isAr]);
+
+  const performDetach = useCallback(async () => {
+    if (activeOrderId) {
+      const res = await api.floorPlan.detachOrder({ p_order_id: activeOrderId });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
+    } else if (tableId) {
+      const res = await api.floorPlan.setTableStatus({ p_table_id: tableId, p_status: 'vacant' });
+      if (res.error || !(res.data as RpcResult | null)?.success) {
+        const r = res.data as RpcResult | null;
+        show(r?.detail || r?.error || res.error?.message || t('error'), 'error');
+        return;
+      }
+    }
+    setActiveOrderId(null);
+    setActiveOrderNumber(null);
+    setTableId(null);
+    setActiveTable(null);
+    setGuestCount(null);
+  }, [activeOrderId, tableId, show, t]);
+
+  const detachTable = useCallback(async () => {
+    if (!activeTable) return;
+    const ok = window.confirm(isAr
+      ? `فصل الطلب عن الطاولة ${activeTable.name}؟ سيتم تحرير الطاولة.`
+      : `Detach order from table ${activeTable.name}? The table will be freed.`);
+    if (!ok) return;
+    await performDetach();
+  }, [activeTable, isAr, performDetach]);
+
+  const detachOrder = useCallback(async () => {
+    const ok = window.confirm(isAr ? 'فصل الطلب الحالي؟' : 'Detach the current order?');
+    if (!ok) return;
+    await performDetach();
+  }, [isAr, performDetach]);
+
+  // Creates or updates the persisted order from the current cart.
+  const persistCart = useCallback(async (status: 'open' | 'held'): Promise<PersistResult> => {
+    if (!branchId) { show(t('selectBranchFirst'), 'error'); return { ok: false, orderId: null, orderNumber: null }; }
+    const itemRows = cartToItems(cart);
+    const targetTable = orderType === 'dine_in' ? tableId : null;
+
+    if (activeOrderId) {
+      const { data, error } = await api.floorPlan.updateOrder({
+        p_order_id: activeOrderId,
+        p_order_type: orderType,
+        p_table_id: targetTable,
+        p_customer_id: customerId || null,
+        p_guest_count: guestCount,
+        p_notes: null,
+        p_items: itemRows,
+        p_subtotal: subtotal,
+        p_discount_amount: discountValue,
+        p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+        p_tax_amount: taxAmount,
+        p_total: total,
+        p_status: status,
+      });
+      if (error) { show(error.message, 'error'); return { ok: false, orderId: null, orderNumber: null }; }
+      const r = data as RpcResult | null;
+      if (!r?.success) { show(r?.detail || r?.error || t('error'), 'error'); return { ok: false, orderId: null, orderNumber: null }; }
+      return { ok: true, orderId: activeOrderId, orderNumber: activeOrderNumber };
+    }
+
+    const { data, error } = await api.floorPlan.createOrder({
+      p_branch_id: branchId,
+      p_order_type: orderType,
+      p_table_id: targetTable,
+      p_customer_id: customerId || null,
+      p_guest_count: guestCount,
+      p_notes: null,
+      p_items: itemRows,
+      p_subtotal: subtotal,
+      p_discount_amount: discountValue,
+      p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+      p_tax_amount: taxAmount,
+      p_total: total,
+      p_cashier_id: user?.id || null,
+    });
+    if (error) { show(error.message, 'error'); return { ok: false, orderId: null, orderNumber: null }; }
+    const r = data as RpcResult | null;
+    if (!r?.success) { show(r?.detail || r?.error || t('error'), 'error'); return { ok: false, orderId: null, orderNumber: null }; }
+    return { ok: true, orderId: r.order_id || null, orderNumber: (r as RpcResult & { order_number?: string }).order_number || null };
+  }, [branchId, activeOrderId, activeOrderNumber, orderType, tableId, customerId, guestCount, cart, subtotal, discountValue, discountType, taxAmount, total, user?.id, show, t]);
+
+  // Holds the current cart: updates the SAME order when resuming (audit C2),
+  // never creating a duplicate.
+  const holdOrder = useCallback(async (): Promise<boolean> => {
+    if (cart.length === 0 || completing || orderLoading) return false;
+    if (!branchId) { show(t('selectBranchFirst'), 'error'); return false; }
+    if (orderType === 'dine_in' && !tableId) {
+      show(isAr ? 'اختر طاولة لطلب داخل الصالة' : 'Select a table for dine-in orders', 'error');
+      return false;
+    }
+    setCompleting(true);
+    try {
+      if (activeOrderId) {
+        const { ok } = await persistCart('held');
+        if (!ok) return false;
+      } else {
+        const { ok, orderId: newId, orderNumber: newNum } = await persistCart('open');
+        if (!ok) return false;
+        if (newId) {
+          // New orders are created 'open'; flip to 'held' and verify the flip so a
+          // failure does not silently leave an open order (audit M3). On failure
+          // keep the id so a retry updates it instead of duplicating (audit C2).
+          const heldRes = await api.floorPlan.setOrderStatus({ p_order_id: newId, p_status: 'held' });
+          if (heldRes.error || !(heldRes.data as RpcResult | null)?.success) {
+            show(t('orderHeld') + ': ' + (heldRes.error?.message || (heldRes.data as RpcResult | null)?.detail || (heldRes.data as RpcResult | null)?.error || ''), 'error');
+            setActiveOrderId(newId);
+            setActiveOrderNumber(newNum);
+            return false;
+          }
+        }
+      }
+      show(t('orderHeld'), 'success');
+      return true;
+    } finally {
+      setCompleting(false);
+    }
+  }, [cart.length, completing, orderLoading, branchId, orderType, tableId, activeOrderId, persistCart, show, t, isAr]);
+
+  // Sends unsent cart lines to the kitchen. The first send persists the cart as
+  // an open order so kitchen-send state has an order to attach to; later sends
+  // only snapshot the new lines (idempotent server-side).
+  const sendToKitchen = useCallback(async (): Promise<boolean> => {
+    if (cart.length === 0 || completing || orderLoading || kitchenSending) return false;
+    if (!branchId) { show(t('selectBranchFirst'), 'error'); return false; }
+    if (orderType === 'dine_in' && !tableId) {
+      show(isAr ? 'اختر طاولة لطلب داخل الصالة' : 'Select a table for dine-in orders', 'error');
+      return false;
+    }
+    setKitchenSending(true);
+    try {
+      let targetOrderId = activeOrderId;
+      let targetOrderNumber = activeOrderNumber;
+      if (!targetOrderId) {
+        const { ok, orderId: newId, orderNumber: newNum } = await persistCart('open');
+        if (!ok || !newId) return false;
+        targetOrderId = newId;
+        targetOrderNumber = newNum;
+      }
+      const res = await sendOrderToKitchen({ p_order_id: targetOrderId, p_sent_by: null });
+      if (!res.success) {
+        show(res.detail || res.error || t('error'), 'error');
+        return false;
+      }
+      setActiveOrderId(targetOrderId);
+      setActiveOrderNumber(targetOrderNumber);
+      setKitchenSentItems(res.sent || []);
+      const sentCount = res.items_sent_count || 0;
+      if (sentCount > 0) {
+        show(`${t('sendToKitchen')} (${sentCount})`, 'success');
+        if (effSettings) {
+          const html = buildKitchenTicketHtml({
+            orderNumber: targetOrderNumber,
+            tableName: activeTable?.name || null,
+            orderTypeLabel: t(ORDER_TYPE_KEY[orderType]),
+            guestCount,
+            items: (res.sent || []).map((i) => ({ name: i.product_name || '—', qty: Number(i.quantity), unit_name: i.unit_name })),
+            s: effSettings,
+            isAr,
+          });
+          openPrintWindow(html, effSettings.receipt_width_mm || 80);
+        }
+      } else {
+        show(isAr ? 'تم إرسال جميع الأصناف مسبقاً' : 'All items already sent to kitchen', 'success');
+      }
+      return true;
+    } finally {
+      setKitchenSending(false);
+    }
+  }, [cart.length, completing, orderLoading, kitchenSending, branchId, orderType, tableId, activeOrderId, activeOrderNumber, persistCart, effSettings, activeTable, guestCount, t, isAr, show]);
+
+  const printKitchenTicket = useCallback(() => {
+    if (cart.length === 0 || !effSettings) return;
+    const html = buildKitchenTicketHtml({
+      orderNumber: activeOrderNumber,
+      tableName: activeTable?.name || null,
+      orderTypeLabel: t(ORDER_TYPE_KEY[orderType]),
+      guestCount,
+      items: cart.map((i) => ({ name: i.product.name, qty: i.quantity, unit_name: i.unit_name })),
+      s: effSettings,
+      isAr,
+    });
+    openPrintWindow(html, effSettings.receipt_width_mm || 80);
+  }, [cart, effSettings, activeOrderNumber, activeTable, orderType, guestCount, t, isAr]);
+
+  const completeSale = useCallback(async (): Promise<boolean> => {
+    if (cart.length === 0 || completing) return false;
+    if (!branchId) { show(t('selectBranchFirst'), 'error'); return false; }
+    if (isCashier && !activeShift) { show(t('shiftRequired'), 'error'); return false; }
+    if (orderType === 'dine_in' && !tableId) {
+      show(isAr ? 'اختر طاولة لطلب داخل الصالة' : 'Select a table for dine-in orders', 'error');
+      return false;
+    }
+    setCompleting(true);
+    try {
+      for (const item of cart) {
+        const stock = getStock(item.product.id);
+        if (stock < item.quantity) { show(`${item.product.name}: ${t('insufficientStock')} (${stock})`, 'error'); return false; }
+      }
+
+      const warehouseId = await fetchBranchWarehouseId(branchId);
+      const invoiceNumber = (await nextInvoiceNumber()) || `INV-${Date.now()}`;
+      const itemsPayload = cartToItems(cart);
+      const paidAmountToUse = paymentMethod === 'credit' ? 0 : paidAmount || total;
+
+      const { result, error: saleError } = await processSaleForOrder({
+        p_invoice_number: invoiceNumber,
+        p_branch_id: branchId,
+        p_shift_id: activeShift?.id || null,
+        p_warehouse_id: warehouseId,
+        p_customer_id: customerId || null,
+        p_salesperson_id: null,
+        p_subtotal: subtotal,
+        p_discount_amount: discountValue,
+        p_discount_type: discountType === 'percent' ? 'percent' : 'amount',
+        p_tax_amount: taxAmount,
+        p_bonus_amount: 0,
+        p_total: total,
+        p_paid_amount: paidAmountToUse,
+        p_payment_method: paymentMethod,
+        p_status: 'completed',
+        p_items: itemsPayload,
+        p_order_type: orderType,
+        p_table_id: orderType === 'dine_in' ? tableId : null,
+        p_order_id: activeOrderId,
+        p_guest_count: guestCount,
+      });
+      if (saleError) { show(saleError, 'error'); return false; }
+      if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return false; }
+      const saleId = result.sale_id || '';
+
+      await logAudit('create', 'sales', saleId, { invoice: invoiceNumber, total });
+
+      const receiptPayload: ReceiptData = {
+        invoice: invoiceNumber,
+        items: cart.map((i) => ({ name: i.product.name, qty: i.quantity, price: i.unit_price, total: i.quantity * i.unit_price - i.discount_amount })),
+        subtotal, discount: discountValue, tax: taxAmount, total,
+        paid: paidAmountToUse, change, date: new Date().toISOString(),
+        customerName: customers.find((c) => c.id === customerId)?.name || '',
+        orderNumber: activeOrderNumber || undefined,
+        tableName: activeTable?.name || undefined,
+        orderTypeLabel: t(ORDER_TYPE_KEY[orderType]),
+        guestCount: guestCount || undefined,
+      };
+      setLastReceipt(receiptPayload);
+      setReceiptSaleId(saleId);
+      setCheckoutOpen(false);
+      setCart(EMPTY_CART);
+      setDiscountAmount(0);
+      setPaidAmount(0);
+      setCustomerId('');
+      setActiveOrderId(null);
+      setActiveOrderNumber(null);
+      setTableId(null);
+      setActiveTable(null);
+      setGuestCount(null);
+      show(t('saleCompleted'), 'success');
+
+      if (effSettings?.receipt_auto_print) {
+        const html = await buildReceiptHtml(receiptPayload, effSettings, lang, isAr);
+        openPrintWindow(html, effSettings.receipt_width_mm || 80);
+      }
+      return true;
+    } finally {
+      setCompleting(false);
+    }
+  }, [cart, completing, branchId, isCashier, activeShift, orderType, tableId, getStock, paymentMethod, total, paidAmount, customerId, subtotal, discountValue, discountType, taxAmount, change, activeOrderId, activeOrderNumber, guestCount, customers, activeTable, effSettings, lang, isAr, show, t]);
+
+  const printReceipt = useCallback(async () => {
+    if (!lastReceipt || !effSettings) return;
+    const html = await buildReceiptHtml(lastReceipt, effSettings, lang, isAr);
+    openPrintWindow(html, effSettings.receipt_width_mm || 80);
+  }, [lastReceipt, effSettings, lang, isAr]);
+
+  const closeReceipt = useCallback(() => setReceiptSaleId(null), []);
+
+  return {
+    cart,
+    customerId, setCustomerId,
+    paymentMethod, setPaymentMethod,
+    discountAmount, setDiscountAmount,
+    discountType, setDiscountType,
+    paidAmount, setPaidAmount,
+    orderType, setOrderType,
+    tableId, setTableId,
+    guestCount, setGuestCount,
+    activeOrderId, activeOrderNumber, activeTable,
+    checkoutOpen, setCheckoutOpen,
+    completing, orderLoading, kitchenSending, kitchenSentItems,
+    lastReceipt, receiptSaleId, closeReceipt,
+    subtotal, discountValue, taxAmount, total, change,
+    effCurrency,
+    addToCart, updateQty, setQty, removeFromCart, clearCart, setItemDiscount,
+    switchOrderType, holdOrder, sendToKitchen, printKitchenTicket, completeSale, printReceipt,
+    detachTable, detachOrder,
+  };
+}
+
+export type UsePosOrder = ReturnType<typeof usePosOrder>;
