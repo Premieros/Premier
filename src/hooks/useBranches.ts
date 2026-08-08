@@ -18,6 +18,7 @@ export function useBranches() {
     }
     cache = (data as Branch[]) || [];
     setBranches(cache);
+    setError(null);
     setLoading(false);
   }, []);
 

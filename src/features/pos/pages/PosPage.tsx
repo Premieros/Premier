@@ -14,6 +14,7 @@ import { Logo } from '@/components/Logo';
 import { formatCurrency, escapeHtml } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { generateQRCodeDataURL } from '@/lib/barcode';
+import { computePosTotals, computeLineDiscount, type PosPaymentMethod } from '@/lib/posMath';
 import { mergeEffectiveSettings, useSettings } from '@/context/SettingsContext';
 import type { Product, Customer, CartItem, Settings, Branch, Category, ProductComponent, RpcResult, Language, OrderType, Order, OrderItem, DiningTable, PosSummary } from '@/lib/types';
 
@@ -188,7 +189,7 @@ export function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('cash');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
   const [paidAmount, setPaidAmount] = useState(0);
@@ -628,17 +629,24 @@ export function PosPage() {
     const item = cart.find((i) => i.product.id === productId);
     if (!item) return;
     const lineTotal = item.quantity * item.unit_price;
-    const d = Math.round(Math.min(Math.max(discount || 0, 0), lineTotal) * 100) / 100;
+    const d = computeLineDiscount(lineTotal, discount || 0);
     setCart((prev) => prev.map((i) => (i.product.id === productId ? { ...i, discount_amount: d } : i)));
   };
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.quantity * i.unit_price - i.discount_amount, 0), [cart]);
-  const discountValue = discountType === 'percent' ? (subtotal * discountAmount) / 100 : discountAmount;
-  const taxableAmount = subtotal - discountValue;
   const taxRate = effSettings?.tax_enabled ? (effSettings?.tax_rate || 0) : 0;
-  const taxAmount = (taxableAmount * taxRate) / 100;
-  const total = taxableAmount + taxAmount;
-  const change = Math.max(0, (paymentMethod === 'credit' ? 0 : paidAmount || total) - total);
+  const { discountValue, taxAmount, total, change } = useMemo(
+    () => computePosTotals({
+      items: cart,
+      discountType,
+      discountAmount,
+      taxRate,
+      taxEnabled: !!effSettings?.tax_enabled,
+      paidAmount,
+      paymentMethod,
+    }),
+    [cart, discountType, discountAmount, taxRate, effSettings?.tax_enabled, paidAmount, paymentMethod]
+  );
 
   const handleBarcodeScan = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {

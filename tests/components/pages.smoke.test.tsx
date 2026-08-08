@@ -112,6 +112,7 @@ vi.mock('@/components/Toast', () => ({ useToast: () => ({ show: () => {} }) }));
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { PosPage } from '@/features/pos/pages/PosPage';
+import { FloorPlanPage } from '@/features/pos/pages/FloorPlanPage';
 import { ProductsPage } from '@/features/catalog/pages/ProductsPage';
 import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage';
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage';
@@ -144,6 +145,7 @@ const pages: Array<[string, React.ComponentType]> = [
   ['LoginPage', LoginPage],
   ['DashboardPage', DashboardPage],
   ['PosPage', PosPage],
+  ['FloorPlanPage', FloorPlanPage],
   ['ProductsPage', ProductsPage],
   ['CategoriesPage', CategoriesPage],
   ['InventoryPage', InventoryPage],
