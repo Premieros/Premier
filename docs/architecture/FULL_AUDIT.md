@@ -3,7 +3,7 @@
 > **Baseline:** branch `main` @ `107a9ae` (`feat(rbac): gate CRUD UI by *.manage + wire login lockout RPCs`) — clean working tree.
 > **Branch for work:** `stabilization/refactor`.
 > **Date:** 2026-08-08
-> **Method:** full read of `src/` (70 files), all migrations 001–044, scripts, tests, configs; cross-device flow tracing for POS Tables/Orders.
+> **Method:** full read of `src/` (70 files), all migrations 001–047, scripts, tests, configs; cross-device flow tracing for POS Tables/Orders.
 
 ---
 
@@ -14,23 +14,24 @@ D:\pos3\project\
 ├── .github\workflows\deploy.yml        # CI/CD: lint + typecheck + unit + build + db(postgres:18) + pages deploy
 ├── .env / .env.production              # (NOTA: .env.production مُتتبَّع في git — مشكلة)
 ├── netlify.toml / public\              # نشر بديل + static assets
-├── scripts\db\                         # apply-migration.js + verify-schema.js (51 جدولًا / 46 دالة)
+├── scripts\db\                         # apply-migration.js + verify-schema.js (51 جدولًا / 50 دالة)
 ├── supabase\
-│   ├── migrations\001..044             # السلسلة الكاملة (44 migration) — مصدر الحقيقة
+│   ├── migrations\001..047             # السلسلة الكاملة (47 migration) — مصدر الحقيقة
 │   ├── legacy\                         # مرجعي فقط (لا يُطبَّق)
 │   └── ci\stub_auth.sql                # محاكاة Auth للـ CI
 ├── tests\
-│   ├── unit\lib\                       # format / brandColor / permissionDefs
-│   ├── components\pages.smoke.test.tsx # 30 صفحة (FloorPlanPage غير مشمولة)
+│   ├── unit\lib\                       # format / brandColor / permissionDefs / posMath
+│   ├── unit\hooks\                     # usePaginatedRows / useBranches
+│   ├── components\pages.smoke.test.tsx # 31 صفحة (بما فيها FloorPlanPage)
 │   └── integration\                    # RLS matrix + floorplan orders + process_sale pricing
 ├── src\
 │   ├── main.tsx / index.css
-│   ├── api\        (client.ts, modules.ts, types.ts, index.ts)   # RPC wrappers (~44 دالة)
+│   ├── api\        (client.ts, modules.ts, types.ts, index.ts)   # RPC wrappers
 │   ├── app\        (App.tsx, providers.tsx, routes.tsx — 31 مسار Lazy)
-│   ├── components\ (10 مكوّنات مشتركة)
+│   ├── components\ (11 مكوّنات مشتركة + PaginationBar)
 │   ├── context\    (Auth, Roles, Settings, Language, Theme)
-│   ├── hooks\      (useBranches.ts — الوحيد)
-│   ├── lib\        (types.ts 1003 سطرًا، i18n.ts 1210، permissionDefs.ts 391، + أدوات)
+│   ├── hooks\      (useBranches, usePaginatedRows)
+│   ├── lib\        (types.ts 1003 سطرًا، i18n.ts 1210، permissionDefs.ts 391، posMath.ts، + أدوات)
 │   └── features\   (31 صفحة عبر 11 وحدة)
 ```
 
@@ -214,13 +215,13 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 
 ## 20. Testing gaps
 
-- **Smoke test يغطي 30 صفحة فقط** — `FloorPlanPage` (راوتينغ `/floor-plan`) مستبعدة.
-- **Smoke test لا يتحقق من شكل البيانات:** mock يعيد `{data:[],error:null}` ثابتًا → تغيير شكل الاستعلام لا يُكتشف. الادعاء في تعليقه مبالغ فيه.
-- **لا يوجد اختبار وظيفي لـ PosPage** (cart/checkout/discount/payment flows) — فقط smoke mount.
-- **C1 بدون اختبار:** لا يوجد اختبار يثبت أن فشل تسوية الطلب لا يكتب sale.
-- **لا يوجد اختبار لـ C2** (إعادة hold مكررة).
-- **لا يوجد اختبار لـ detachTable** (تحرير الطاولة مع طلب مفتوح).
-- **Integration قوي:** RLS matrix (92+ حالة)، floorplan orders، pricing — لكن لا يغطي حالات C1/C2.
+- **Smoke test يغطي 30 صفحة فقط** — `FloorPlanPage` (راوتينغ `/floor-plan`) مستبعدة. → ✅ (PHASE 8) أُضيفت FloorPlanPage إلى smoke (31 صفحة الآن).
+- **Smoke test لا يتحقق من شكل البيانات:** mock يعيد `{data:[],error:null}` ثابتًا → تغيير شكل الاستعلام لا يُكتشف. الادعاء في تعليقه مبالغ فيه. (ملاحظة مستمرة)
+- **لا يوجد اختبار وظيفي لـ PosPage** (cart/checkout/discount/payment flows) — فقط smoke mount. → جزئيًا (PHASE 8): استُخرج منطق الإجماليات إلى `src/lib/posMath.ts` مع 14 اختبار unit (خصم/ضريبة/باقي/آجل)؛ التدفق الكامل للواجهة يبقى خارج نطاق unit.
+- **C1 بدون اختبار:** لا يوجد اختبار يثبت أن فشل تسوية الطلب لا يكتب sale. (مستمر — يتطلب harness أعمق)
+- **لا يوجد اختبار لـ C2** (إعادة hold مكررة). (مستمر)
+- **لا يوجد اختبار لـ detachTable** (تحرير الطاولة مع طلب مفتوح). (مستمر)
+- **Integration قوي:** RLS matrix (92+ حالة)، floorplan orders، pricing — لكن لا يغطي حالات C1/C2. (مستمر)
 
 ---
 
@@ -228,11 +229,11 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 
 | الملف | المشكلة |
 |---|---|
-| `CODEMAP.md` | يقول migrations `001..032` (الواقع 001–044)؛ يقول 46 جدولًا/43 دالة (الواقع 51/46)؛ يقول 26 مسارًا (الواقع 31)؛ لا يذكر FloorPlanPage |
-| `DEPENDENCY_MAP.md` | لا يذكر realtime/042، لا يذكر floorplan RPCs (create_order...) |
+| `CODEMAP.md` | ✅ (PHASE 9) حُدّث: migrations `001..047`، 51 جدولًا/50 دالة، 31 مسارًا، FloorPlanPage، hooks الجديدة، أقسام 62 إذنًا/طبقة البيانات. |
+| `DEPENDENCY_MAP.md` | ✅ (PHASE 9) حُدّث: realtime/042، floorplan RPCs، usePaginatedRows/posMath، قاعدة الترقيم. |
 | `README.md` | ✅ أُصلح في PHASE 4: `base: './'` أصبح مطابقًا + يذكر Netlify |
-| `supabase/README.md` | يقول 001–032 (الواقع 001–044) |
-| — | لا يوجد `KNOWN_ISSUES.md` ولا `FINAL_PROJECT_REPORT.md` |
+| `supabase/README.md` | ✅ (PHASE 9) حُدّث: 001–047 |
+| — | ✅ (PHASE 9) أُنشئ `KNOWN_ISSUES.md` و`FINAL_PROJECT_REPORT.md` |
 
 ---
 
@@ -257,7 +258,7 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 - **M4** — `deleteTable` يحذف طاولة عليها طلبات مفتوحة (ON DELETE SET NULL). → أُصلح في PHASE 2b (046): trigger `BEFORE DELETE` يرفع خطأ.
 - **M5** — `ordersByTable` يأخذ أول طلب فقط لكل طاولة (يخفي الثاني). → ✅ (PHASE 5) أُصلح: يبني مصفوفة طلبات ويعرض الكل (+N على البطاقة).
 - **M6** — `vite.config.ts` base مطلق يكسر Netlify + يناقض README. → أُصلح في PHASE 4: `base: './'`.
-- **M7** — حد البيانات غير مفروض (30/31 صفحة تستدعي `from()` مباشرة). (معلق — PHASE 7)
+- **M7** — حد البيانات غير مفروض (30/31 صفحة تستدعي `from()` مباشرة). → ✅ (PHASE 6) أُصلح: طبقة `usePaginatedRows` موحّدة (range + count) لكل قوائم الصفحات (~30 صفحة) + `PaginationBar`؛ أُزيلت السقوف الصامتة الخمسة (AuditLog/Payments/Reconciliation/Treasury/InventoryLedger). الجداول المنتهية المتبقية للقراءات المباشرة كلها مقيدة بالتاريخ (تقارير) أو lookups (لا قوائم مفتوحة).
 - **M8** — `change` يُحسب من `paidAmount` لا `paidAmountToUse` (آجل). → ✅ (PHASE 5) أُصلح: `change = max(0, (credit ? 0 : paidAmount || total) - total)`.
 - **M9** — `guestCount` لا يُخزَّن في sales. → ✅ (PHASE 5) أُصلح: عمود `sales.guest_count` + وسيط `p_guest_count` في `process_sale` (047) + تمريره من PosPage.
 - **M10** — حزم غير مستخدمة (date-fns, user-event). → أُصلح في PHASE 3: أُزيلتا من package.json.
@@ -280,8 +281,8 @@ ACTION REQUIRED: git rm --cached .env.production + remove from git history + add
 2. **إصلاح C2** — ✅ `holdOrder` يحدّث الطلب الحالي (046).
 3. **Cleanup** — ✅ حزم/ملفات غير مستخدمة + `.env.production` من git.
 4. **Deployment** — ✅ `base: './'`.
-5. **Services** — تجميع استعلامات الطاولات/الطلبات المشتركة. (معلق)
-6. **تقسيم PosPage** تدريجيًا. (معلق)
+5. **Services** — ✅ (PHASE 6) طبقة بيانات موحّدة: `usePaginatedRows` للقوائم + `useSettings`/`useBranches` للميتاداتا المشتركة. استعلامات الطاولات/الطلبات المشتركة بين PosPage/FloorPlan تبقى متاحة كخطوة مستقبلية.
+6. **تقسيم PosPage** تدريجيًا. → جزئيًا (PHASE 8): استُخرج منطق الإجماليات إلى `posMath.ts`؛ التقسيم الكامل يبقى خارج النطاق.
 7. **دورة Tables/Orders** — ✅ حارس اشغال (H2)، detach سليم (H1)، deleteTable آمن (M4)، realtime للـ FloorPlan (M1)، guards الحالة (L2)، تفريغ ذرّي (H3/H4).
-8. **Testing** — تغطية FloorPlanPage + regression C1/C2 + تحسين smoke. (معلق)
-9. **توثيق** — تحديث CODEMAP/DEPENDENCY_MAP/README + KNOWN_ISSUES + FINAL_REPORT. (معلق — PHASE 9)
+8. **Testing** — ✅ (PHASE 8): FloorPlanPage في smoke، 14 اختبار posMath، 4 اختبار useBranches (أصلح اختبارها خطأً حقيقيًا في استرداد الخطأ). C1/C2 regression تبقى مقترحة.
+9. **توثيق** — ✅ (PHASE 9): تحديث CODEMAP/DEPENDENCY_MAP/README/supabase README + KNOWN_ISSUES + FINAL_PROJECT_REPORT.

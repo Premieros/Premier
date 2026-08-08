@@ -17,13 +17,13 @@ main.tsx
              ├─ SettingsProvider ── يعتمد على Theme, Language, Auth
              ├─ RolesProvider    ── يعتمد على Auth
              ├─ ToastProvider
-             └─ HashRouter → AppRoutes
-                 └─ 26 مسار Lazy → pages (كل صفحة داخل Layout أو fullscreen)
+                 └─ HashRouter → AppRoutes
+                 └─ 31 مسار Lazy → pages (كل صفحة داخل Layout أو fullscreen)
                      └─ كل صفحة تعتمد على:
                          ├─ context hooks: useAuth, useLanguage, useSettings, useRoles, useToast
-                         ├─ hooks: useBranches, useCan, useBranchFilter
+                         ├─ hooks: useBranches, usePaginatedRows, useCan, useBranchFilter
                          ├─ api/* (RPCs) و/أو supabase.from('table')
-                         └─ components: DataTable, Button, Input, Modal, Toast, PageHeader...
+                         └─ components: DataTable, Button, Input, Modal, Toast, PageHeader, PaginationBar
 ```
 
 **ترتيب الـ Providers (من `app/providers.tsx`):** `Theme > Language > Auth > Settings > Roles > Toast > Router`. لا تعتمد `Theme`/`Language` على أي Provider آخر. `Settings` يعتمد على الثلاثة الأولى. `Roles` يعتمد على `Auth`.
@@ -61,30 +61,38 @@ PosPage
                                              stock_transactions, inventory_ledger, journal_entries,
                                              journal_entry_lines, shifts, shift_operations, document_sequences)
 ```
+```
+FloorPlanPage
+ ├─ from: dining_tables, orders, products, branches (is_active), categories
+ ├─ realtime: postgres_changes على orders/dining_tables (نطاق فرع)
+ └─ rpc: create_order, set_order_status, set_table_status, update_order, detach_order (api.floorplan.*)
+```
+> إجماليات POS (subtotal/خصم/ضريبة/باقي) تُحسب عبر `src/lib/posMath.ts` (خالص، مُختبَر).
 
 ```
 SalesPage
- ├─ from: sales, sale_items, customers, settings
+ ├─ from: sales, sale_items, customers (settings عبر useSettings)
  └─ rpc: process_refund → api.trade.processRefund
 ```
 
 ### 3.3 الشراء والمصروفات
 ```
 PurchasesPage
- ├─ from: purchases, purchase_items, products, raw_materials, suppliers, warehouses, branches, settings
+ ├─ from: purchases, purchase_items, products, raw_materials, suppliers, warehouses
+ │        (settings/branches عبر useSettings + useBranches)
  └─ rpc: process_purchase → api.trade.processPurchase
         next_document_number → api.trade.nextDocumentNumber
 ```
 
 ```
 ExpensesPage
- └─ from: expenses, branches, settings        (لا RPCs)
+ └─ from: expenses (settings/branches عبر hooks)        (لا RPCs)
 ```
 
 ### 3.4 الشيفتات
 ```
 ShiftsPage
- ├─ from: shifts, users, branches, settings
+ ├─ from: shifts, users (settings/branches عبر hooks)
  └─ rpc: open_shift → api.shifts.open
         close_shift → api.shifts.close
 ```
@@ -92,30 +100,30 @@ ShiftsPage
 ### 3.5 المخزون
 ```
 InventoryPage     from: inventory, product_components, warehouses | rpc: adjust_stock
-WarehousesPage    from: warehouses, branches
-TransfersPage     from: warehouse_transfers, products, inventory_batches, warehouses, branches
+WarehousesPage    from: warehouses (branches عبر useBranches)
+TransfersPage     from: warehouse_transfers, products, inventory_batches, warehouses, branches (is_active)
                   | rpc: create_warehouse_transfer, approve_warehouse_transfer, reject_warehouse_transfer
-InventoryLedgerPage  from: inventory_ledger, branches
+InventoryLedgerPage  from: inventory_ledger, branches (is_active)
 ```
 
 ### 3.6 التصنيع
 ```
-RawMaterialsPage     from: raw_materials, raw_material_inventory, raw_material_batches, units, branches
+RawMaterialsPage     from: raw_materials, raw_material_inventory, raw_material_batches, units, branches (is_active)
                      | rpc: adjust_raw_stock
-RecipesPage          from: recipes, recipe_items, products, raw_materials, branches
-ProductionOrdersPage from: production_orders, recipes, recipe_items, products, warehouses, branches
+RecipesPage          from: recipes, recipe_items, products, raw_materials, branches (is_active)
+ProductionOrdersPage from: production_orders, recipes, recipe_items, products, warehouses, branches (is_active)
                      | rpc: create_production_order, start_production_order,
                             complete_production_order (مع هالك), cancel_production_order
 ```
 
 ### 3.7 الكتالوج والأطراف
 ```
-ProductsPage   from: products, categories, product_units, product_components, inventory, warehouses, branches, settings
-               | rpc: replace_product_units
-CategoriesPage from: categories, branches
-ComponentsPage from: product_components, products, inventory, settings
-CustomersPage  from: customers, branches, settings
-SuppliersPage  from: suppliers, branches, settings
+ProductsPage   from: products, categories, product_units, product_components, inventory, warehouses
+               | settings/branches عبر hooks | rpc: replace_product_units
+CategoriesPage from: categories (branches عبر useBranches)
+ComponentsPage from: product_components, products, inventory (settings عبر useSettings)
+CustomersPage  from: customers (settings/branches عبر hooks)
+SuppliersPage  from: suppliers (settings/branches عبر hooks)
 ```
 
 ### 3.8 المحاسبة (تعتمد بالكامل على RPCs للكتابة والقراءات المالية)
@@ -140,15 +148,16 @@ FinancialReportsPage from: chart_of_accounts, customers, suppliers
 ### 3.9 التقارير والإدارة
 ```
 ReportsPage   from: sales, sale_items, purchases, expenses, inventory, product_components,
-                    products, stock_transactions, branches, settings     (لا RPCs)
-AuditLogPage  from: audit_log
+                    products, stock_transactions (settings/branches عبر hooks)     (لا RPCs)
+AuditLogPage  from: audit_log (مرقّم عبر usePaginatedRows)
 BranchesPage  from: branches
-UsersPage     from: users, branches | rpc: create_user, update_user_password, delete_user, get_login_email
+UsersPage     from: users (branches عبر useBranches) | rpc: create_user, update_user_password, delete_user, get_login_email
 SettingsPage  from: settings, branch_settings, branches  | يعتمد على RolesContext (مصفوفة الأدوار)
 LoginPage     يعتمد على: supabase.auth.* | rpc: get_login_email
-DashboardPage from: sales, sale_items, products, purchases, expenses, customers, inventory,
-                    branches, settings, branch_settings                    (لا RPCs)
+DashboardPage from: sales, sale_items, products, purchases, expenses, customers, inventory
+                    (settings/branches عبر hooks)                    (لا RPCs)
 ```
+> **قاعدة الترقيم (PHASE 6):** أي قائمة صفوف تُعرض في صفحة تمر عبر `usePaginatedRows` (range + count موحّد) — لا `limit()`/`range()` يدوية. فقط استعلامات التقارير المقيدة بالتاريخ والـ lookups البسيطة تبقى بدون ترقيم.
 
 ---
 
@@ -163,6 +172,7 @@ DashboardPage from: sales, sale_items, products, purchases, expenses, customers,
 | `process_refund` | sale_items (كميات), inventory, inventory_batches, stock_transactions, inventory_ledger, journal_entries, journal_entry_lines |
 | `create/start/complete/cancel_production_order` | production_orders, production_waste, raw_material_inventory, raw_material_batches, inventory, inventory_batches, stock_transactions, inventory_ledger, journal_entries, journal_entry_lines |
 | `create/approve/reject_warehouse_transfer` | warehouse_transfers, warehouse_transfer_items, inventory, inventory_batches, stock_transactions, inventory_ledger |
+| `create_order / set_order_status / set_table_status / update_order / detach_order` | orders, dining_tables (حالة الاحتلال، guards) |
 | `receive_payment` / `pay_supplier` | customer_payments / supplier_payments, journal_entries, journal_entry_lines |
 | `post_manual_journal` | journal_entries, journal_entry_lines, document_sequences |
 | `process_treasury_deposit/withdrawal/transfer` | treasury_transactions, journal_entries, journal_entry_lines |
@@ -227,11 +237,13 @@ admin      → /users, /audit-log, /settings
 i18n.ts      ← كل الصفحات والمكونات (عبر LanguageContext.t)
 types.ts     ← api/ وكل الصفحات (نماذج مشتركة) — لا يعتمد على أحد
 permissionDefs.ts ← permissions.ts (useCan) ← routes.tsx, Layout, SettingsPage
+posMath.ts   ← PosPage (إجماليات السلة) — خالص بلا تبعيات
 format.ts    ← صفحات الفواتير والتقارير والمحاسبة
 brandColor.ts + themes.ts ← SettingsContext, SettingsPage, PosPage (طباعة)
 audit.ts     ← كل صفحات الكتابة (بعد أي mutation)
 useBranchFilter.ts ← كل الصفحات ذات النطاق الفرعي
-useBranches.ts ← كل صفحات الإدارة/الفلاتر
+useBranches.ts ← كل صفحات الإدارة/الفلاتر (كاش وحدات)
+usePaginatedRows.ts ← كل قوائم الصفحات (ترقيم موحّد)
 excel.ts / barcode.ts ← صفحات الكتالوج والجرد
 ```
 
