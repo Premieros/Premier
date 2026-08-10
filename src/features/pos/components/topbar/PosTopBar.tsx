@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Grid3x3, ChefHat, ListOrdered, Plus, Wifi, WifiOff, Timer, Moon, Sun, LogOut, Tag, Zap, Clock3, MoreHorizontal } from 'lucide-react';
+import { Grid3x3, ChefHat, ListOrdered, Plus, Wifi, WifiOff, Timer, Moon, Sun, LogOut, Zap, Clock3, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
