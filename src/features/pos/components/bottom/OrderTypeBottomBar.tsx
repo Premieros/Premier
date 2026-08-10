@@ -5,7 +5,6 @@ import { useLanguage } from '@/context/LanguageContext';
 interface Props {
   activeType: OrderType | null | undefined;
   onSelect: (type: OrderType) => void;
-  onChooseTable: () => void;
   disabled?: boolean;
 }
 
