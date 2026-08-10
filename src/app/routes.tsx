@@ -36,6 +36,7 @@ const UsersPage = lazy(() => import('../features/admin/pages/UsersPage').then(m 
 const AuditLogPage = lazy(() => import('../features/reporting/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const SettingsPage = lazy(() => import('../features/admin/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const SystemControlCenterPage = lazy(() => import('../features/admin/pages/SystemControlCenterPage').then(m => ({ default: m.SystemControlCenterPage })));
+const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" /></div>; }
 function ProtectedRoute({ children, permission, fullscreen }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean }) { const { session, loading } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
@@ -76,6 +77,7 @@ export function AppRoutes() {
   <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
   <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
   <Route path="/settings/basic" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
+  <Route path="/system-health" element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
   <Route path="/" element={<Navigate to="/dashboard" replace />} />
   <Route path="*" element={<Navigate to="/dashboard" replace />} />
  </Routes></Suspense>;
