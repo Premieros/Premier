@@ -9,7 +9,7 @@ import type { Branch } from '@/lib/types';
 import type { ActiveShiftInfo } from '../../hooks/usePosOrder';
 export type PosPanelId = 'orders' | 'tables' | 'kitchen' | null;
 interface PosTopBarProps { panel: PosPanelId; onPanel:(p:Exclude<PosPanelId,null>)=>void; counts:{activeOrders:number;occupiedTables:number;kitchenOrders:number;heldOrders:number;deliveryOrders:number;takeawayOrders:number}; branchId:string; branches:Branch[]; canChangeBranch:boolean; onBranchChange:(id:string)=>void; isCashier:boolean; shiftChecked:boolean; activeShift:ActiveShiftInfo|null; onNewOrder:()=>void; onExit:()=>void; }
-export function PosTopBar({onPanel,counts,branchId,branches,canChangeBranch,isCashier,shiftChecked,activeShift,onNewOrder,onExit}:PosTopBarProps){
+export function PosTopBar({onPanel,counts,branchId,branches,canChangeBranch,onBranchChange,isCashier,shiftChecked,activeShift,onNewOrder,onExit}:PosTopBarProps){
  const {t,lang}=useLanguage(); const {theme,toggleTheme}=useTheme(); const {user,signOut}=useAuth(); const navigate=useNavigate(); const isAr=lang==='ar';
  const [now,setNow]=useState(()=>new Date()); const [online,setOnline]=useState(typeof navigator!=='undefined'?navigator.onLine:true); const [more,setMore]=useState(false);
  useEffect(()=>{const id=setInterval(()=>setNow(new Date()),30000);const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{clearInterval(id);window.removeEventListener('online',on);window.removeEventListener('offline',off)}},[]);
