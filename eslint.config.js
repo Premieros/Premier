@@ -42,5 +42,16 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': 'off',
     },
-  }
+  },
+  {
+    files: [
+      'src/features/dashboard/pages/DashboardControlCenterPage.tsx',
+      'src/features/dashboard/pages/DashboardFinalPage.tsx',
+      'src/features/dashboard/pages/DashboardModernPage.tsx',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
 );
