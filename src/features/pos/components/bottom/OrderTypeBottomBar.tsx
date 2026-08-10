@@ -6,8 +6,11 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useSettings } from '@/context/SettingsContext';
 import { useActiveOrders } from '../../hooks/useActiveOrders';
 import { formatCurrency } from '@/lib/format';
+import type { OrderType } from '@/lib/types';
 
 interface Props {
+  activeType?: OrderType | null;
+  onSelect?: (type: OrderType) => void;
   disabled?: boolean;
 }
 
