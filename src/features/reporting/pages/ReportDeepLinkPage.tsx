@@ -1,53 +1,63 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ReportsPage } from './ReportsPage';
+import { useLanguage } from '@/context/LanguageContext';
 
-const REPORT_ORDER = [
-  'sales',
-  'sales_by_payment',
-  'sales_by_employee',
-  'sales_by_product',
-  'detailed_invoices',
-  'purchases',
-  'expenses',
-  'profit',
-  'inventory',
-  'component_consumption',
-  'recipe_costs',
-  'top_consumed_components',
-  'top_consumed_products',
-  'low_stock',
-] as const;
+const REPORT_LABELS = {
+  sales: ['المبيعات', 'Sales'],
+  sales_by_payment: ['المبيعات حسب طريقة الدفع', 'Sales by Payment'],
+  sales_by_employee: ['المبيعات حسب الموظف', 'Sales by Employee'],
+  sales_by_product: ['المبيعات حسب المنتج', 'Sales by Product'],
+  detailed_invoices: ['الفواتير التفصيلية', 'Detailed Invoices'],
+  purchases: ['المشتريات', 'Purchases'],
+  expenses: ['المصروفات', 'Expenses'],
+  profit: ['الربحية', 'Profitability'],
+  inventory: ['المخزون', 'Inventory'],
+  component_consumption: ['استهلاك المكونات', 'Component Consumption'],
+  recipe_costs: ['تكلفة الوصفات', 'Recipe Costs'],
+  top_consumed_components: ['أكثر المكونات استهلاكًا', 'Top Components'],
+  top_consumed_products: ['أكثر المنتجات استهلاكًا', 'Top Consumed Products'],
+  low_stock: ['المخزون المنخفض', 'Low Stock'],
+} as const;
+
+type ReportType = keyof typeof REPORT_LABELS;
 
 /**
- * Keeps the existing ReportsPage as the single source of report logic while
- * allowing dashboard links such as /reports?reportType=sales_by_product to
- * open the requested report immediately.
+ * Opens the exact report requested by a dashboard deep link.
+ * Uses the visible report label rather than relying on DOM button position,
+ * so adding another button to ReportsPage cannot redirect to the wrong action.
  */
 export function ReportDeepLinkPage() {
   const [searchParams] = useSearchParams();
-  const requested = searchParams.get('reportType');
+  const { lang } = useLanguage();
+  const requested = searchParams.get('reportType') as ReportType | null;
 
   useEffect(() => {
-    if (!requested || !REPORT_ORDER.includes(requested as (typeof REPORT_ORDER)[number])) return;
+    if (!requested || !(requested in REPORT_LABELS)) return;
 
     let attempts = 0;
+    const labels = REPORT_LABELS[requested];
+    const wanted = labels[lang === 'ar' ? 0 : 1].trim().toLocaleLowerCase();
+
     const selectReport = () => {
       const buttons = Array.from(document.querySelectorAll('button'));
-      // ReportsPage renders one export button before the report selector buttons.
-      const reportIndex = REPORT_ORDER.indexOf(requested as (typeof REPORT_ORDER)[number]);
-      const reportButton = buttons[reportIndex + 1] as HTMLButtonElement | undefined;
+      const reportButton = buttons.find((button) => {
+        const text = (button.textContent || '').trim().toLocaleLowerCase();
+        return text === wanted || text.includes(wanted);
+      }) as HTMLButtonElement | undefined;
+
       if (reportButton) {
         reportButton.click();
         return;
       }
+
       attempts += 1;
-      if (attempts < 20) window.setTimeout(selectReport, 50);
+      if (attempts < 40) window.setTimeout(selectReport, 50);
     };
 
     const timer = window.setTimeout(selectReport, 0);
     return () => window.clearTimeout(timer);
-  }, [requested]);
+  }, [requested, lang]);
 
   return <ReportsPage />;
 }
