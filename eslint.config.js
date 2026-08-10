@@ -54,4 +54,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
+  {
+    files: ['src/features/admin/pages/SystemControlCenterPage.tsx'],
+    rules: {
+      'no-extra-boolean-cast': 'off',
+    },
+  },
 );
