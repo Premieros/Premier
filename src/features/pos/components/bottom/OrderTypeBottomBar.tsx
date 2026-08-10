@@ -27,7 +27,7 @@ export function OrderTypeBottomBar({ activeType, onSelect, onChooseTable, disabl
   const dineIn = activeType === 'dine_in';
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-35 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pointer-events-none">
+    <div className="fixed inset-x-0 bottom-0 z-[35] px-2 pb-[max(8px,env(safe-area-inset-bottom))] pointer-events-none">
       <div className="mx-auto max-w-5xl pointer-events-auto">
         <div className="rounded-2xl border border-slate-200/90 dark:border-navy-700 bg-white/95 dark:bg-navy-900/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(15,23,42,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.28)] p-1.5">
           <div className="flex items-stretch gap-1">
