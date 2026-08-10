@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout';
 import { useCan, type Permission } from '../lib/permissions';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardModernPage').then(m => ({ default: m.DashboardModernPage })));
 const PosWorkspacePage = lazy(() => import('../features/pos/pages/PosWorkspacePage').then(m => ({ default: m.PosWorkspacePage })));
 const ActiveOrdersPage = lazy(() => import('../features/pos/pages/ActiveOrdersPage').then(m => ({ default: m.ActiveOrdersPage })));
 const ProductsPage = lazy(() => import('../features/catalog/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
@@ -47,13 +47,7 @@ function PageLoader() {
 function ProtectedRoute({ children, permission, fullscreen }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean }) {
   const { session, loading } = useAuth();
   const can = useCan();
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
   if (!session) return <Navigate to="/login" replace />;
   if (permission && !can(permission)) return <Navigate to="/dashboard" replace />;
   if (fullscreen) return <>{children}</>;
