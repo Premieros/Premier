@@ -22,29 +22,35 @@ const REPORT_LABELS = {
 
 type ReportType = keyof typeof REPORT_LABELS;
 
+function isReportType(value: string | null): value is ReportType {
+  return value !== null && Object.prototype.hasOwnProperty.call(REPORT_LABELS, value);
+}
+
 /**
- * Opens the exact report requested by a dashboard deep link.
- * Uses the visible report label rather than relying on DOM button position,
- * so adding another button to ReportsPage cannot redirect to the wrong action.
+ * Resolves a dashboard deep link to the exact report control.
+ * Matching is deliberately exact and scoped to visible buttons so a generic
+ * button such as Active Orders can never be selected by accident.
  */
 export function ReportDeepLinkPage() {
   const [searchParams] = useSearchParams();
   const { lang } = useLanguage();
-  const requested = searchParams.get('reportType') as ReportType | null;
+  const requestedParam = searchParams.get('reportType');
 
   useEffect(() => {
-    if (!requested || !(requested in REPORT_LABELS)) return;
+    if (!isReportType(requestedParam)) return;
 
     let attempts = 0;
-    const labels = REPORT_LABELS[requested];
-    const wanted = labels[lang === 'ar' ? 0 : 1].trim().toLocaleLowerCase();
+    const wanted = REPORT_LABELS[requestedParam][lang === 'ar' ? 0 : 1]
+      .trim()
+      .toLocaleLowerCase();
 
     const selectReport = () => {
-      const buttons = Array.from(document.querySelectorAll('button'));
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('main button, [role="main"] button'));
       const reportButton = buttons.find((button) => {
-        const text = (button.textContent || '').trim().toLocaleLowerCase();
-        return text === wanted || text.includes(wanted);
-      }) as HTMLButtonElement | undefined;
+        if (button.disabled || !button.offsetParent) return false;
+        const text = (button.textContent || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+        return text === wanted;
+      });
 
       if (reportButton) {
         reportButton.click();
@@ -57,7 +63,7 @@ export function ReportDeepLinkPage() {
 
     const timer = window.setTimeout(selectReport, 0);
     return () => window.clearTimeout(timer);
-  }, [requested, lang]);
+  }, [requestedParam, lang]);
 
   return <ReportsPage />;
 }
