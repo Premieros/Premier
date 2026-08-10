@@ -275,7 +275,7 @@ export function PosWorkspacePage() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 overflow-hidden pb-[86px] lg:pb-[94px]">
+    <div className="h-screen flex flex-col bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 overflow-hidden pb-[62px] lg:pb-[66px]">
       <PosTopBar panel={panel} onPanel={(p) => { setStartStep(null); setPanel(p); }} counts={{ activeOrders: counts.active, occupiedTables: tables.filter((tb) => tb.status === 'occupied').length, kitchenOrders, heldOrders: counts.held, deliveryOrders: counts.delivery, takeawayOrders: counts.takeaway }} branchId={effectiveBranch} branches={branches} canChangeBranch={isAdminRole(user?.role)} onBranchChange={handleBranchChange} isCashier={isCashier} shiftChecked={shiftChecked} activeShift={activeShift} onNewOrder={() => { pos.resetWorkspace(); setStartStep('type'); setPreselectedTableId(null); setPanel(null); setMobileOrderOpen(false); if (orderIdParam) navigate('/pos'); }} onExit={() => navigate('/dashboard')} />
 
       <div className="flex-1 flex min-h-0">
@@ -286,7 +286,7 @@ export function PosWorkspacePage() {
       </div>
 
       {pos.cart.length > 0 && !mobileOrderOpen && !isCheckout && (
-        <button onClick={() => setMobileOrderOpen(true)} className="lg:hidden fixed bottom-[92px] start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-navy-900 text-white border border-gold-500/40 shadow-pos active:scale-[0.98] transition-all">
+        <button onClick={() => setMobileOrderOpen(true)} className="lg:hidden fixed bottom-[68px] start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-navy-900 text-white border border-gold-500/40 shadow-pos active:scale-[0.98] transition-all">
           <span className="flex items-center gap-2 font-bold text-sm"><ShoppingCart className="w-5 h-5 text-gold-400" />{isAr ? 'عرض السلة' : 'View Cart'}<span className="px-2 py-0.5 rounded-full bg-gold-500 text-navy-950 text-xs font-bold">{pos.cart.length}</span></span>
           <span className="font-bold text-gold-400">{formatCurrency(pos.total, pos.effCurrency, lang)}</span>
         </button>
@@ -302,7 +302,7 @@ export function PosWorkspacePage() {
         </div>
       )}
 
-      <OrderTypeBottomBar activeType={pos.orderType} onSelect={handleBottomOrderType} onChooseTable={handleChooseTable} disabled={isCheckout} />
+      <OrderTypeBottomBar activeType={pos.orderType} onSelect={handleBottomOrderType} disabled={isCheckout} />
 
       <ActiveOrdersDrawer open={panel === 'orders'} onClose={() => setPanel(null)} orders={orders} itemsByOrder={itemsByOrder} kitchenSendsByOrder={kitchenSendsByOrder} tableById={tableById} customerById={customerById} currency={pos.effCurrency} onResume={(o) => openOrderWorkspace(o.id)} onPay={(o) => openOrderWorkspace(o.id, { pay: true })} onCancel={(o) => void handleCancelOrder(o.id)} />
       <TablesPanel open={panel === 'tables'} onClose={() => setPanel(null)} tables={tables} ordersByTable={ordersByTable} currency={pos.effCurrency} onResume={(o) => openOrderWorkspace(o.id)} onPay={(o) => openOrderWorkspace(o.id, { pay: true })} onStart={(tb) => startOrderAtTable(tb.id)} />
