@@ -2,16 +2,18 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import * as api from '../api';
-import type { AppUser } from '../lib/types';
+import type { AppUser, SubscriptionStatus } from '../lib/types';
 
 interface AuthContextValue {
   session: Session | null;
   user: AppUser | null;
+  subscription: SubscriptionStatus | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: { code: string; message: string } | null }>;
   signInWithUsername: (username: string, pin: string) => Promise<{ error: { code: string; message: string } | null }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -19,6 +21,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   function makeFallbackUser(s: Session): AppUser {
@@ -33,9 +36,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } as AppUser;
   }
 
+  async function loadSubscriptionFor(u: AppUser | null): Promise<void> {
+    if (!u?.branch_id) {
+      setSubscription(null);
+      return;
+    }
+    try {
+      const { data } = await api.subscriptions.status({ p_branch_id: u.branch_id });
+      setSubscription(data as SubscriptionStatus | null);
+    } catch {
+      setSubscription(null);
+    }
+  }
+
   async function loadUser(s: Session | null): Promise<void> {
     if (!s) {
       setUser(null);
+      setSubscription(null);
       return;
     }
     try {
@@ -47,12 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.warn('loadUser query error:', error.message);
-        setUser(makeFallbackUser(s));
+        const fb = makeFallbackUser(s);
+        setUser(fb);
+        loadSubscriptionFor(fb).catch(() => {});
         return;
       }
 
       if (data) {
-        setUser(data as AppUser);
+        const u = data as AppUser;
+        setUser(u);
+        loadSubscriptionFor(u).catch(() => {});
         return;
       }
 
@@ -68,13 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (insertData) {
-        setUser(insertData as AppUser);
+        const u = insertData as AppUser;
+        setUser(u);
+        loadSubscriptionFor(u).catch(() => {});
       } else {
-        setUser(makeFallbackUser(s));
+        const fb = makeFallbackUser(s);
+        setUser(fb);
+        loadSubscriptionFor(fb).catch(() => {});
       }
     } catch (err) {
       console.warn('loadUser fallback:', err);
-      setUser(makeFallbackUser(s));
+      const fb = makeFallbackUser(s);
+      setUser(fb);
+      loadSubscriptionFor(fb).catch(() => {});
     }
   }
 
@@ -154,14 +181,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setSubscription(null);
   };
 
   const refreshUser = async () => {
     await loadUser(session);
   };
 
+  const refreshSubscription = async () => {
+    await loadSubscriptionFor(user);
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signInWithUsername, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ session, user, subscription, loading, signIn, signInWithUsername, signOut, refreshUser, refreshSubscription }}>
       {children}
     </AuthContext.Provider>
   );

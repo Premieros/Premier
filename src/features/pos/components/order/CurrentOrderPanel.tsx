@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, X, Pause, ChefHat, Banknote, Printer, Percent, UtensilsCrossed, Clock, PlusCircle, Check, Circle, Trash2, Pencil, Car, Bike } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, X, Pause, ChefHat, Banknote, Printer, Percent, UtensilsCrossed, Clock, Check, Trash2, Car, Bike } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/format';
 import type { CartItem, Customer, DiningTable, OrderItem, OrderType } from '@/lib/types';
@@ -13,17 +13,15 @@ import { OrderStageBadge } from './OrderStageBadge';
 
 interface CurrentOrderPanelProps {
   cart: CartItem[]; currency: string; subtotal: number; discountValue: number; discountType: 'amount' | 'percent'; discountAmount: number; taxRate: number; taxAmount: number; total: number; completing: boolean; orderLoading: boolean; kitchenSending: boolean; orderType: OrderType; activeOrderNumber: string | null; activeOrderId: string | null; activeTable: DiningTable | null; guestCount: number | null; customerId: string; customerById: Record<string, Customer>; orderNotes: string; activeOrderCreatedAt: string | null; orderItems: OrderItem[]; sentOrderItemIds: Set<string>; sessionSent: KitchenSendItem[];
-  onGuestCountChange: (n: number | null) => void; onDiscountTypeChange: (v: 'amount' | 'percent') => void; onDiscountAmountChange: (v: number) => void; onUpdateQty: (productId: string, delta: number) => void; onSetQty: (productId: string, qty: number) => void; onRemove: (productId: string) => void; onClear: () => void; onSetItemDiscount: (productId: string, discount: number) => void; onHold: () => void; onSendKitchen: () => void; onPrint: () => void; onPay: () => void; onAddItem: () => void;
+  onSwitchOrderType: (ot: OrderType) => void; onGuestCountChange: (n: number | null) => void; onDiscountTypeChange: (v: 'amount' | 'percent') => void; onDiscountAmountChange: (v: number) => void; onUpdateQty: (productId: string, delta: number) => void; onSetQty: (productId: string, qty: number) => void; onRemove: (productId: string) => void; onClear: () => void; onSetItemDiscount: (productId: string, discount: number) => void; onHold: () => void; onSendKitchen: () => void; onPrint: () => void; onPay: () => void; onAddItem: () => void;
 }
 
-export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, discountType, discountAmount, taxRate, taxAmount, total, completing, orderLoading, kitchenSending, orderType, activeOrderNumber, activeOrderId, activeTable, guestCount, customerId, customerById, orderNotes, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent, onGuestCountChange, onDiscountTypeChange, onDiscountAmountChange, onUpdateQty, onSetQty, onRemove, onClear, onSetItemDiscount, onHold, onSendKitchen, onPrint, onPay, onAddItem }: CurrentOrderPanelProps) {
+export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, discountAmount, total, completing, orderLoading, kitchenSending, orderType, activeOrderNumber, activeOrderId, activeTable, guestCount, customerId, customerById, orderNotes, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent, onGuestCountChange, onDiscountTypeChange, onDiscountAmountChange, onUpdateQty, onRemove, onClear, onHold, onSendKitchen, onPrint, onPay }: CurrentOrderPanelProps) {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const [showDiscount, setShowDiscount] = useState(false);
   const sentState = computeSentState(cart, orderItems, sentOrderItemIds, sessionSent);
   const newCount = cart.filter((i) => (sentState[i.product.id]?.newQty || 0) > 0).length;
-  const sentCount = cart.filter((i) => (sentState[i.product.id]?.sentQty || 0) > 0).length;
-  const hasSent = sentCount > 0;
   const allSent = cart.length > 0 && newCount === 0;
   const ago = activeOrderCreatedAt ? timeAgo(activeOrderCreatedAt) : null;
   const stage = deriveCartStage(cart, sentState, false);
@@ -55,7 +53,7 @@ export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, dis
         return <div key={item.product.id} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-navy-800/50 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors group">
           <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><p className="truncate text-xs font-black text-slate-800 dark:text-white">{item.product.name}</p>{st.sent && <Check className="w-3 h-3 text-emerald-500 shrink-0" />}</div>{item.modifiers?.length ? <p className="mt-0.5 truncate text-[10px] text-slate-400">{item.modifiers.map(m => m.name).join(' · ')}</p> : null}</div>
           <div className="flex items-center gap-1"><button onClick={() => onUpdateQty(item.product.id, -1)} className="h-7 w-7 rounded-lg border border-slate-200 dark:border-navy-700 flex items-center justify-center"><Minus className="w-3.5 h-3.5" /></button><span className="w-6 text-center text-xs font-black">{item.quantity}</span><button onClick={() => onUpdateQty(item.product.id, 1)} className="h-7 w-7 rounded-lg bg-gold-500 text-navy-950 flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button></div>
-          <span className="w-20 text-end text-xs font-black">{formatCurrency(item.lineTotal, currency, lang)}</span><button onClick={() => onRemove(item.product.id)} className="p-1 text-slate-300 hover:text-red-500"><X className="w-4 h-4" /></button>
+          <span className="w-20 text-end text-xs font-black">{formatCurrency(item.quantity * item.unit_price - (item.discount_amount || 0), currency, lang)}</span><button onClick={() => onRemove(item.product.id)} className="p-1 text-slate-300 hover:text-red-500"><X className="w-4 h-4" /></button>
         </div>;
       })}</div>}
     </div>

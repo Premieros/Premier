@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -187,6 +188,11 @@ export function LoginPage() {
                 )}
               </Button>
             </form>
+
+            <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
+              {t('noAccount')}{' '}
+              <Link to="/register" className="font-semibold text-brand-600 hover:underline dark:text-gold-400">{t('signUp')}</Link>
+            </p>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { RpcResult, Shift, TreasuryBalance, OrderType } from '@/lib/types';
+import type { RpcResult, Shift, TreasuryBalance, OrderType, SubscriptionStatus, SubscriptionPlan } from '@/lib/types';
 import type { ApiError, ApiResult, SaleItemInput, PurchaseItemInput, JournalLineInput, RefundItemInput } from './types';
 
 const rpc = async <R>(name: string, args: object): ApiResult<R> => {
@@ -315,6 +315,31 @@ export const reporting = {
     p_to_date: string | null;
   }): ApiResult<import('@/lib/types').PartyStatementResult> {
     return rpc('get_party_statement', p);
+  },
+};
+
+export const subscriptions = {
+  registerBranch(p: {
+    p_store_name: string;
+    p_owner_name: string;
+    p_email: string;
+    p_password: string;
+    p_store_name_en?: string | null;
+    p_phone?: string | null;
+    p_address?: string | null;
+    p_currency?: string | null;
+  }): ApiResult<RpcResult & { branch_id?: string; warehouse_id?: string; user_id?: string; trial_days?: number }> {
+    return rpc('register_branch', p);
+  },
+  status(p: { p_branch_id: string }): ApiResult<SubscriptionStatus> {
+    return rpc('subscription_status', p);
+  },
+  activate(p: { p_branch_id: string; p_plan_id: string; p_billing_period?: 'monthly' | 'yearly'; p_activate?: boolean }): ApiResult<RpcResult & { price_egp?: number }> {
+    return rpc('activate_subscription', p);
+  },
+  async listPlans(): ApiResult<SubscriptionPlan[]> {
+    const res = await supabase.from('subscription_plans').select('*').order('monthly_price_egp', { ascending: true });
+    return { data: (res.data as SubscriptionPlan[] | null) ?? null, error: res.error as ApiError | null };
   },
 };
 

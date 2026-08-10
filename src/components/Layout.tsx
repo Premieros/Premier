@@ -6,6 +6,7 @@ import {
   Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
   Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
   Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Activity,
+  CreditCard,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +27,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
+  { to: '/subscription', icon: <CreditCard className="w-5 h-5" />, labelKey: 'mySubscription', group: 'main' },
   { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', permission: 'pos.sell', group: 'main' },
   { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
@@ -52,6 +54,7 @@ const navItems: NavItem[] = [
   { to: '/shifts', icon: <Timer className="w-5 h-5" />, labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
   { to: '/reports', icon: <BarChart3 className="w-5 h-5" />, labelKey: 'reports', permission: 'reports.view', group: 'finance' },
   { to: '/users', icon: <UserCog className="w-5 h-5" />, labelKey: 'users', permission: 'users.view', group: 'admin' },
+  { to: '/subscriptions', icon: <CreditCard className="w-5 h-5" />, labelKey: 'subscriptionsAdmin', permission: 'settings.manage', group: 'admin' },
   { to: '/audit-log', icon: <ScrollText className="w-5 h-5" />, labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
   { to: '/settings', icon: <Settings className="w-5 h-5" />, labelKey: 'settings', permission: 'settings.manage', group: 'admin' },
 ];

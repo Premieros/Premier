@@ -5,6 +5,8 @@ import { Layout } from '../components/Layout';
 import { useCan, type Permission } from '../lib/permissions';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const SubscriptionPage = lazy(() => import('../features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardEnhancedPage').then(m => ({ default: m.DashboardEnhancedPage })));
 const PosWorkspacePage = lazy(() => import('../features/pos/pages/PosWorkspacePage').then(m => ({ default: m.PosWorkspacePage })));
 const ActiveOrdersPage = lazy(() => import('../features/pos/pages/ActiveOrdersPage').then(m => ({ default: m.ActiveOrdersPage })));
@@ -36,15 +38,18 @@ const UsersPage = lazy(() => import('../features/admin/pages/UsersPage').then(m 
 const AuditLogPage = lazy(() => import('../features/reporting/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const SettingsPage = lazy(() => import('../features/admin/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const SystemControlCenterPage = lazy(() => import('../features/admin/pages/SystemControlCenterPage').then(m => ({ default: m.SystemControlCenterPage })));
+const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/SubscriptionsAdminPage').then(m => ({ default: m.SubscriptionsAdminPage })));
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" /></div>; }
-function ProtectedRoute({ children, permission, fullscreen }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean }) { const { session, loading } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
+function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean }) { const { session, loading, user, subscription } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to="/subscription" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { session, loading } = useAuth(); if (loading) return null; if (session) return <Navigate to="/dashboard" replace />; return <>{children}</>; }
 
 export function AppRoutes() {
  return <Suspense fallback={<PageLoader />}><Routes>
   <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+  <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+  <Route path="/subscription" element={<ProtectedRoute subscriptionGate={false}><SubscriptionPage /></ProtectedRoute>} />
   <Route path="/dashboard" element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} />
   <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
   <Route path="/pos/:orderId" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
@@ -76,6 +81,7 @@ export function AppRoutes() {
   <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
   <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
   <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
+  <Route path="/subscriptions" element={<ProtectedRoute permission="settings.manage"><SubscriptionsAdminPage /></ProtectedRoute>} />
   <Route path="/settings/basic" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
   <Route path="/system-health" element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
   <Route path="/" element={<Navigate to="/dashboard" replace />} />
