@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout';
 import { useCan, type Permission } from '../lib/permissions';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardControlCenterPage').then(m => ({ default: m.DashboardControlCenterPage })));
+const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardEnhancedPage').then(m => ({ default: m.DashboardEnhancedPage })));
 const PosWorkspacePage = lazy(() => import('../features/pos/pages/PosWorkspacePage').then(m => ({ default: m.PosWorkspacePage })));
 const ActiveOrdersPage = lazy(() => import('../features/pos/pages/ActiveOrdersPage').then(m => ({ default: m.ActiveOrdersPage })));
 const ProductsPage = lazy(() => import('../features/catalog/pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
