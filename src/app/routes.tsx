@@ -25,7 +25,7 @@ const SuppliersPage = lazy(() => import('../features/parties/pages/SuppliersPage
 const ExpensesPage = lazy(() => import('../features/trade/pages/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
 const SalesPage = lazy(() => import('../features/trade/pages/SalesPage').then(m => ({ default: m.SalesPage })));
 const ShiftsPage = lazy(() => import('../features/trade/pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
-const ReportsPage = lazy(() => import('../features/reporting/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const ReportDeepLinkPage = lazy(() => import('../features/reporting/pages/ReportDeepLinkPage').then(m => ({ default: m.ReportDeepLinkPage })));
 const FinancialReportsPage = lazy(() => import('../features/accounting/pages/FinancialReportsPage').then(m => ({ default: m.FinancialReportsPage })));
 const AccountsPage = lazy(() => import('../features/accounting/pages/AccountsPage').then(m => ({ default: m.AccountsPage })));
 const PaymentsPage = lazy(() => import('../features/accounting/pages/PaymentsPage').then(m => ({ default: m.PaymentsPage })));
@@ -64,7 +64,7 @@ export function AppRoutes() {
   <Route path="/expenses" element={<ProtectedRoute permission="expenses.view"><ExpensesPage /></ProtectedRoute>} />
   <Route path="/sales" element={<ProtectedRoute permission="sales.view"><SalesPage /></ProtectedRoute>} />
   <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
-  <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportsPage /></ProtectedRoute>} />
+  <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportDeepLinkPage /></ProtectedRoute>} />
   <Route path="/financial-reports" element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
   <Route path="/accounts" element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
   <Route path="/payments" element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
