@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ShoppingCart, Printer, Barcode as BarcodeIcon } from 'lucide-react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -12,7 +12,7 @@ import { Logo } from '@/components/Logo';
 import { formatCurrency } from '@/lib/format';
 import { mergeEffectiveSettings, useSettings } from '@/context/SettingsContext';
 import { useToast } from '@/components/Toast';
-import type { Product, Customer, Settings, Branch, Category, ProductComponent, OrderType, RpcResult, Order } from '@/lib/types';
+import type { Product, Customer, Settings, Branch, Category, ProductComponent, RpcResult, Order } from '@/lib/types';
 import { usePosOrder } from '../hooks/usePosOrder';
 import { useActiveOrders } from '../hooks/useActiveOrders';
 import { OrderStartWizard, type StartStep, type StartOrderOptions } from '../components/start/OrderStartWizard';
@@ -28,7 +28,6 @@ import { PaymentPanel } from '../components/checkout/PaymentPanel';
 interface WorkspaceState {
   tableId?: string | null;
   branchId?: string | null;
-  orderType?: OrderType | null;
   guestCount?: number | null;
   pay?: number | null;
 }
@@ -67,18 +66,12 @@ export function PosWorkspacePage() {
   const payConsumed = useRef(false);
 
   const effectiveBranch = selectedBranch || branchFilter || user?.branch_id || '';
-  const effSettings: Settings | null = settings
-    ? mergeEffectiveSettings(settings, effectiveBranch ? branchSettingsMap[effectiveBranch] : null)
-    : null;
+  const effSettings: Settings | null = settings ? mergeEffectiveSettings(settings, effectiveBranch ? branchSettingsMap[effectiveBranch] : null) : null;
   const isCashier = user?.role === 'cashier';
 
   useEffect(() => {
     let cancelled = false;
-    if (!isCashier || !effectiveBranch) {
-      setShiftChecked(true);
-      setActiveShift(null);
-      return;
-    }
+    if (!isCashier || !effectiveBranch) { setShiftChecked(true); setActiveShift(null); return; }
     setShiftChecked(false);
     api.pos.getActiveShift({ p_branch_id: effectiveBranch }).then(({ data }) => {
       if (cancelled) return;
@@ -227,27 +220,6 @@ export function PosWorkspacePage() {
     setSelectedBranch(v); pos.resetWorkspace(); void loadStock(v);
   };
 
-  const handleBottomOrderType = (type: OrderType) => {
-    if (type === pos.orderType && !pos.activeOrderId && pos.cart.length === 0) {
-      if (type === 'dine_in') setStartStep('table');
-      else if (type === 'delivery') setStartStep('delivery');
-      else if (type === 'drive_thru') setStartStep('car');
-      return;
-    }
-    if (pos.activeOrderId || pos.cart.length > 0) {
-      const ok = window.confirm(isAr ? 'سيتم مسح الطلب الحالي وبدء طلب جديد. متابعة؟' : 'The current order will be cleared and a new order will start. Continue?');
-      if (!ok) return;
-    }
-    pos.resetWorkspace();
-    setPreselectedTableId(null);
-    setPanel(null);
-    setMobileOrderOpen(false);
-    if (type === 'dine_in') setStartStep('table');
-    else if (type === 'delivery') setStartStep('delivery');
-    else if (type === 'drive_thru') setStartStep('car');
-    else handleStartOrder({ orderType: 'takeaway' });
-  };
-
   const handleChooseTable = () => {
     if (pos.activeOrderId || pos.cart.length > 0) {
       const ok = window.confirm(isAr ? 'سيتم مسح الطلب الحالي وفتح اختيار الطاولة. متابعة؟' : 'The current order will be cleared before choosing a table. Continue?');
@@ -277,40 +249,18 @@ export function PosWorkspacePage() {
   return (
     <div className="h-screen flex flex-col bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 overflow-hidden pb-[62px] lg:pb-[66px]">
       <PosTopBar panel={panel} onPanel={(p) => { setStartStep(null); setPanel(p); }} counts={{ activeOrders: counts.active, occupiedTables: tables.filter((tb) => tb.status === 'occupied').length, kitchenOrders, heldOrders: counts.held, deliveryOrders: counts.delivery, takeawayOrders: counts.takeaway }} branchId={effectiveBranch} branches={branches} canChangeBranch={isAdminRole(user?.role)} onBranchChange={handleBranchChange} isCashier={isCashier} shiftChecked={shiftChecked} activeShift={activeShift} onNewOrder={() => { pos.resetWorkspace(); setStartStep('type'); setPreselectedTableId(null); setPanel(null); setMobileOrderOpen(false); if (orderIdParam) navigate('/pos'); }} onExit={() => navigate('/dashboard')} />
-
       <div className="flex-1 flex min-h-0">
         <ProductBrowser products={products} categories={categories} stockMap={stockMap} sellableStock={sellableStock} recipeMap={recipeMap} search={search} selectedCategory={selectedCategory} currency={pos.effCurrency} hasBranch={!!effectiveBranch} onSearch={setSearch} onSelectCategory={setSelectedCategory} onAddToCart={pos.addToCart} inputRef={barcodeRef} />
-        <div className="hidden lg:flex w-[390px] xl:w-[430px] 2xl:w-[460px] flex-shrink-0 flex-col border-s border-slate-200 dark:border-navy-800 shadow-[-8px_0_24px_rgba(15,23,42,0.04)] dark:shadow-none">
-          {rightPanel}
-        </div>
+        <div className="hidden lg:flex w-[390px] xl:w-[430px] 2xl:w-[460px] flex-shrink-0 flex-col border-s border-slate-200 dark:border-navy-800 shadow-[-8px_0_24px_rgba(15,23,42,0.04)] dark:shadow-none">{rightPanel}</div>
       </div>
-
-      {pos.cart.length > 0 && !mobileOrderOpen && !isCheckout && (
-        <button onClick={() => setMobileOrderOpen(true)} className="lg:hidden fixed bottom-[68px] start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-navy-900 text-white border border-gold-500/40 shadow-pos active:scale-[0.98] transition-all">
-          <span className="flex items-center gap-2 font-bold text-sm"><ShoppingCart className="w-5 h-5 text-gold-400" />{isAr ? 'عرض السلة' : 'View Cart'}<span className="px-2 py-0.5 rounded-full bg-gold-500 text-navy-950 text-xs font-bold">{pos.cart.length}</span></span>
-          <span className="font-bold text-gold-400">{formatCurrency(pos.total, pos.effCurrency, lang)}</span>
-        </button>
-      )}
-
-      {mobileOrderOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex items-end justify-center animate-fade-in">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOrderOpen(false)} />
-          <div className="relative w-full max-h-[92vh] bg-white dark:bg-navy-900 rounded-t-2xl shadow-pos overflow-hidden animate-slide-up flex flex-col">
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-navy-800"><button onClick={() => setMobileOrderOpen(false)} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800"><ShoppingCart className="w-5 h-5" /></button><span className="text-xs font-bold text-slate-500">{isAr ? 'اسحب لأسفل للإغلاق' : 'Order'}</span><span className="text-sm font-black text-brand-600 dark:text-gold-400">{formatCurrency(pos.total, pos.effCurrency, lang)}</span></div>
-            <div className="flex-1 min-h-0 overflow-hidden">{rightPanel}</div>
-          </div>
-        </div>
-      )}
-
-      <OrderTypeBottomBar activeType={pos.orderType} onSelect={handleBottomOrderType} disabled={isCheckout} />
-
+      {pos.cart.length > 0 && !mobileOrderOpen && !isCheckout && <button onClick={() => setMobileOrderOpen(true)} className="lg:hidden fixed bottom-[68px] start-4 end-4 z-30 flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-navy-900 text-white border border-gold-500/40 shadow-pos active:scale-[0.98] transition-all"><span className="flex items-center gap-2 font-bold text-sm"><ShoppingCart className="w-5 h-5 text-gold-400" />{isAr ? 'عرض السلة' : 'View Cart'}<span className="px-2 py-0.5 rounded-full bg-gold-500 text-navy-950 text-xs font-bold">{pos.cart.length}</span></span><span className="font-bold text-gold-400">{formatCurrency(pos.total, pos.effCurrency, lang)}</span></button>}
+      {mobileOrderOpen && <div className="lg:hidden fixed inset-0 z-40 flex items-end justify-center animate-fade-in"><div className="absolute inset-0 bg-black/50" onClick={() => setMobileOrderOpen(false)} /><div className="relative w-full max-h-[92vh] bg-white dark:bg-navy-900 rounded-t-2xl shadow-pos overflow-hidden animate-slide-up flex flex-col"><div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-navy-800"><button onClick={() => setMobileOrderOpen(false)} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800"><ShoppingCart className="w-5 h-5" /></button><span className="text-xs font-bold text-slate-500">{isAr ? 'اسحب لأسفل للإغلاق' : 'Order'}</span><span className="text-sm font-black text-brand-600 dark:text-gold-400">{formatCurrency(pos.total, pos.effCurrency, lang)}</span></div><div className="flex-1 min-h-0 overflow-hidden">{rightPanel}</div></div></div>}
+      <OrderTypeBottomBar disabled={isCheckout} />
       <ActiveOrdersDrawer open={panel === 'orders'} onClose={() => setPanel(null)} orders={orders} itemsByOrder={itemsByOrder} kitchenSendsByOrder={kitchenSendsByOrder} tableById={tableById} customerById={customerById} currency={pos.effCurrency} onResume={(o) => openOrderWorkspace(o.id)} onPay={(o) => openOrderWorkspace(o.id, { pay: true })} onCancel={(o) => void handleCancelOrder(o.id)} />
       <TablesPanel open={panel === 'tables'} onClose={() => setPanel(null)} tables={tables} ordersByTable={ordersByTable} currency={pos.effCurrency} onResume={(o) => openOrderWorkspace(o.id)} onPay={(o) => openOrderWorkspace(o.id, { pay: true })} onStart={(tb) => startOrderAtTable(tb.id)} />
       <KitchenPanel open={panel === 'kitchen'} onClose={() => setPanel(null)} orders={orders} itemsByOrder={itemsByOrder} kitchenSendsByOrder={kitchenSendsByOrder} tableById={tableById} productNames={productNames} />
       {startStep && <OrderStartWizard step={startStep} tables={tables} ordersByTable={ordersByTable} itemsByOrder={itemsByOrder} kitchenSendsByOrder={kitchenSendsByOrder} customers={customers} preselectedTableId={preselectedTableId} currency={pos.effCurrency} onStepChange={setStartStep} onBack={() => setStartStep('type')} onStart={handleStartOrder} onResume={handleWizardResume} onActiveOrders={() => { setStartStep(null); setPreselectedTableId(null); setPanel('orders'); }} />}
-      <Modal open={!!pos.receiptSaleId} onClose={pos.closeReceipt} title={t('printReceipt')} size="sm">
-        {pos.lastReceipt && <div className="space-y-4"><div className="text-center"><div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 ring-2 ring-gold-500/40 flex items-center justify-center mx-auto mb-3"><BarcodeIcon className="w-8 h-8 text-emerald-600 dark:text-emerald-400" /></div><p className="text-base font-semibold text-slate-800 dark:text-white">{t('saleCompleted')}</p><p className="text-sm text-slate-400 mt-1">{pos.lastReceipt.invoice}</p></div><button onClick={() => void pos.printReceipt()} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-navy-900 hover:bg-navy-800 dark:bg-brand-600 dark:hover:bg-brand-700 text-white font-bold transition-colors"><Printer className="w-5 h-5" /> {t('printReceipt')}</button></div>}
-      </Modal>
+      <Modal open={!!pos.receiptSaleId} onClose={pos.closeReceipt} title={t('printReceipt')} size="sm">{pos.lastReceipt && <div className="space-y-4"><div className="text-center"><div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 ring-2 ring-gold-500/40 flex items-center justify-center mx-auto mb-3"><BarcodeIcon className="w-8 h-8 text-emerald-600 dark:text-emerald-400" /></div><p className="text-base font-semibold text-slate-800 dark:text-white">{t('saleCompleted')}</p><p className="text-sm text-slate-400 mt-1">{pos.lastReceipt.invoice}</p></div><button onClick={() => void pos.printReceipt()} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-navy-900 hover:bg-navy-800 dark:bg-brand-600 dark:hover:bg-brand-700 text-white font-bold transition-colors"><Printer className="w-5 h-5" /> {t('printReceipt')}</button></div>}</Modal>
     </div>
   );
 }
