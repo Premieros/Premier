@@ -60,4 +60,10 @@ export default tseslint.config(
       'no-extra-boolean-cast': 'off',
     },
   },
+  {
+    files: ['src/features/pos/pages/PosWorkspacePage.tsx'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^handleChooseTable$' }],
+    },
+  },
 );
