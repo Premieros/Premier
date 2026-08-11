@@ -1,6 +1,12 @@
 -- CI-only fixture: integration tests exercise order/RLS behavior on a disposable Postgres.
--- The production subscription guard is tested separately; disabling only this trigger
--- here prevents the CI fixture subscription state from masking unrelated integration tests.
+-- The production subscription guard is tested separately. This fixture sets a
+-- local-database-only flag so process_sale can exercise its normal business logic
+-- without a real subscription fixture masking unrelated integration tests.
+-- The flag is never enabled by production migrations or a real Supabase project.
+ALTER DATABASE postgres SET app.ci_subscription_bypass = 'on';
+
+-- create_order also has a BEFORE INSERT subscription trigger. Disable that trigger
+-- only inside the disposable CI database; production remains fully guarded.
 DO $$
 DECLARE
   trigger_name text;
