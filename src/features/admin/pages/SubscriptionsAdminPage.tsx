@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BadgeCheck, Loader2, RefreshCw, Store } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, BadgeCheck, Check, ExternalLink, Loader2, RefreshCw, Store, X } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import * as api from '@/api';
+import { supabase } from '@/lib/supabase';
 import type { SubscriptionPlan, SubscriptionStatus } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { useAuth } from '@/context/AuthContext';
@@ -10,85 +11,59 @@ import { Button } from '@/components/Button';
 import { Card, PageHeader } from '@/components/PageHeader';
 import { useToast } from '@/components/Toast';
 
-interface BranchRow { id: string; name: string; name_en: string | null; is_active: boolean; }
-type Period = 'monthly' | 'yearly';
+interface BranchRow { id: string; name: string; name_en: string | null; is_active: boolean }
+interface PaymentRow { id: string; branch_id: string; plan_id: string | null; amount: number; billing_period: 'monthly'|'yearly'; reference: string|null; receipt_url: string|null; status: 'pending'|'approved'|'rejected'; submitted_at: string; rejection_reason: string|null }
+
+type Period = 'monthly'|'yearly';
 
 export function SubscriptionsAdminPage() {
   const { user } = useAuth();
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
   const { show } = useToast();
   const isAr = lang === 'ar';
   const [branches, setBranches] = useState<BranchRow[]>([]);
-  const [statusMap, setStatusMap] = useState<Record<string, SubscriptionStatus>>({});
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [period, setPeriod] = useState<Period>('monthly');
-  const [periodFor, setPeriodFor] = useState<Record<string, Period>>({});
-  const [activating, setActivating] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<Record<string, SubscriptionStatus>>({});
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewing, setReviewing] = useState<string|null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [bRes, pRes] = await Promise.all([
-      api.supabase.from('branches').select('id, name, name_en, is_active').order('name', { ascending: true }),
+    const [b, p, pay] = await Promise.all([
+      supabase.from('branches').select('id,name,name_en,is_active').order('name'),
       api.subscriptions.listPlans(),
+      supabase.from('subscription_payments').select('id,branch_id,plan_id,amount,billing_period,reference,receipt_url,status,submitted_at,rejection_reason').order('submitted_at', { ascending: false }),
     ]);
-    if (bRes.error) show(bRes.error.message, 'error');
-    if (pRes.error) show(pRes.error.message, 'error');
-    setBranches((bRes.data as BranchRow[] | null) ?? []);
-    setPlans((pRes.data ?? []).filter((p) => p.is_active));
+    if (b.error || pay.error || p.error) show((b.error || pay.error || p.error)?.message || 'Load failed', 'error');
+    setBranches((b.data as BranchRow[] | null) ?? []);
+    setPlans((p.data ?? []).filter(x => x.is_active));
+    setPayments((pay.data as PaymentRow[] | null) ?? []);
     const map: Record<string, SubscriptionStatus> = {};
-    await Promise.all((((bRes.data as BranchRow[] | null) ?? []).map(async (b) => {
-      const r = await api.subscriptions.status({ p_branch_id: b.id });
-      if (!r.error && r.data) map[b.id] = r.data as SubscriptionStatus;
-    })));
-    setStatusMap(map);
+    await Promise.all(((b.data as BranchRow[] | null) ?? []).map(async branch => { const r = await api.subscriptions.status({ p_branch_id: branch.id }); if (!r.error && r.data) map[branch.id] = r.data; }));
+    setStatuses(map);
     setLoading(false);
   }, [show]);
 
   useEffect(() => { void load(); }, [load]);
+  if (user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />;
 
-  const statusMeta = useMemo(() => ({
-    active: { label: t('subscriptionActive'), cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-    trial: { label: t('subscriptionTrial'), cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-    past_due: { label: t('subscriptionPastDue'), cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
-    cancelled: { label: t('subscriptionCancelled'), cls: 'bg-slate-200 text-slate-600 dark:bg-navy-700 dark:text-slate-300' },
-    expired: { label: t('subscriptionExpiredStatus'), cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
-  }), [t]);
-
-  const activate = async (branchId: string, planId: string) => {
-    setActivating(branchId);
-    const { data, error } = await api.subscriptions.activate({ p_branch_id: branchId, p_plan_id: planId, p_billing_period: periodFor[branchId] || period });
-    setActivating(null);
-    if (error || !data?.success) { show(t('planActivationFailed'), 'error'); return; }
-    show(t('planActivated'), 'success');
+  const review = async (id: string, approve: boolean) => {
+    setReviewing(id);
+    const { data, error } = await supabase.rpc('review_instapay_payment', { p_payment_id: id, p_approve: approve, p_rejection_reason: approve ? null : (rejectReason || (isAr ? 'لم يتم اعتماد التحويل' : 'Transfer was not approved')) });
+    setReviewing(null);
+    if (error || !(data as { success?: boolean })?.success) { show((data as { error?: string })?.error || error?.message || 'Review failed', 'error'); return; }
+    setRejectReason('');
+    show(approve ? (isAr ? 'تم اعتماد الاشتراك' : 'Subscription approved') : (isAr ? 'تم رفض التحويل' : 'Payment rejected'), 'success');
     await load();
   };
 
-  if (user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />;
+  return <div className="space-y-6 pb-10">
+    <div className="flex items-end justify-between gap-4"><PageHeader title={isAr ? 'إدارة الاشتراكات والمدفوعات' : 'Subscriptions & Payments'} subtitle={isAr ? 'Super Admin فقط — إدارة عالمية لجميع الفروع' : 'Super Admin only — global management for every branch'} /><Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{isAr ? 'تحديث' : 'Refresh'}</Button></div>
 
-  return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <PageHeader title={t('subscriptionsAdmin')} subtitle={t('subscriptionsAdminSub')} />
-        <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{t('refresh')}</Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {(['monthly', 'yearly'] as Period[]).map((p) => <button key={p} type="button" onClick={() => setPeriod(p)} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${period === p ? 'bg-brand-600 text-white shadow' : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-navy-800 dark:text-slate-300'}`}>{t(p === 'monthly' ? 'monthly' : 'yearly')}</button>)}
-      </div>
-      {loading ? <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div> : <div className="space-y-4">
-        {branches.map((b) => {
-          const st = statusMap[b.id];
-          const meta = st ? statusMeta[st.status as keyof typeof statusMeta] : statusMeta.expired;
-          const planName = st?.plan_id ? plans.find((p) => p.id === st.plan_id) : null;
-          const daysLeft = st?.status === 'trial' && st.trial_ends_at ? Math.max(0, Math.ceil((new Date(st.trial_ends_at).getTime() - Date.now()) / 86400000)) : null;
-          const selPeriod = periodFor[b.id] || period;
-          return <Card key={b.id} className="p-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-900 text-white dark:bg-brand-600"><Store className="h-5 w-5" /></div><div><p className="font-bold text-slate-900 dark:text-white">{isAr ? b.name : (b.name_en || b.name)}</p><span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${meta.cls}`}>{st?.expired ? <AlertTriangle className="h-3 w-3" /> : <BadgeCheck className="h-3 w-3" />}{meta.label}</span></div></div>
-            <div className="flex flex-wrap items-center gap-3"><div className="text-sm text-slate-500 dark:text-slate-400"><p>{t('plan')}: <span className="font-bold text-slate-800 dark:text-white">{planName ? (isAr ? planName.name_ar : planName.name_en) : (st?.status === 'trial' ? t('subscriptionTrial') : '—')}</span></p>{st?.trial_ends_at && <p className="mt-0.5">{t('trialEnds')}: {formatDate(st.trial_ends_at, lang)}{daysLeft !== null ? ` (${daysLeft} ${t('daysRemaining')})` : ''}</p>}{st?.current_period_ends_at && <p className="mt-0.5">{t('planActiveUntil')}: {formatDate(st.current_period_ends_at, lang)}</p>}</div>
-              <div className="flex items-center gap-2"><select value={selPeriod} onChange={(e) => setPeriodFor((prev) => ({ ...prev, [b.id]: e.target.value as Period }))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800"><option value="monthly">{t('monthly')}</option><option value="yearly">{t('yearly')}</option></select><select value="" onChange={(e) => { if (e.target.value) void activate(b.id, e.target.value); e.target.value = ''; }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-800"><option value="">{t('choosePlan')}…</option>{plans.map((p) => <option key={p.id} value={p.id}>{isAr ? p.name_ar : p.name_en} — {formatCurrency(selPeriod === 'monthly' ? p.monthly_price_egp : p.yearly_price_egp)}</option>)}</select>{activating === b.id && <Loader2 className="h-5 w-5 animate-spin text-brand-600" />}</div>
-            </div></div></Card>;
-        })}
-      </div>}
-    </div>
-  );
+    <Card className="p-5"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-bold">{isAr ? 'طلبات InstaPay المعلقة' : 'Pending InstaPay payments'}</h2><p className="text-sm text-slate-400">{isAr ? 'اعتماد التحويل يفعّل الاشتراك مباشرة.' : 'Approval activates the subscription immediately.'}</p></div><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">{payments.filter(x=>x.status==='pending').length}</span></div>{payments.length === 0 ? <p className="py-8 text-center text-slate-400">{isAr ? 'لا توجد عمليات دفع' : 'No payments found'}</p> : <div className="space-y-3">{payments.map(pay => { const branch = branches.find(b=>b.id===pay.branch_id); const plan = plans.find(p=>p.id===pay.plan_id); return <div key={pay.id} className="rounded-2xl border border-slate-200 p-4 dark:border-navy-700"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><Store className="h-4 w-4"/><span className="font-bold">{branch ? (isAr ? branch.name : (branch.name_en || branch.name)) : pay.branch_id}</span><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${pay.status==='pending'?'bg-amber-100 text-amber-700':pay.status==='approved'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}`}>{pay.status}</span></div><p className="mt-1 text-sm text-slate-500">{plan ? (isAr ? plan.name_ar : plan.name_en) : '—'} · {formatCurrency(pay.amount)} · {pay.billing_period}</p><p className="mt-1 text-xs text-slate-400">{formatDate(pay.submitted_at, lang)} {pay.reference ? `· ${pay.reference}` : ''}</p></div><div className="flex flex-wrap items-center gap-2">{pay.receipt_url && <a href={pay.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold"><ExternalLink className="h-4 w-4"/>{isAr?'الإيصال':'Receipt'}</a>}{pay.status==='pending' && <><Button onClick={()=>void review(pay.id,true)} disabled={reviewing===pay.id}><Check className="h-4 w-4"/>{isAr?'اعتماد':'Approve'}</Button><Button variant="outline" onClick={()=>void review(pay.id,false)} disabled={reviewing===pay.id}><X className="h-4 w-4"/>{isAr?'رفض':'Reject'}</Button></>}{reviewing===pay.id && <Loader2 className="h-5 w-5 animate-spin"/>}</div></div></div>})}</div>}</Card>
+
+    <Card className="p-5"><h2 className="mb-4 text-xl font-bold">{isAr ? 'الفروع والاشتراكات' : 'Branches & subscriptions'}</h2>{loading ? <div className="flex justify-center p-8"><Loader2 className="animate-spin"/></div> : <div className="grid gap-3 md:grid-cols-2">{branches.map(branch=>{const st=statuses[branch.id];return <div key={branch.id} className="rounded-2xl border p-4 dark:border-navy-700"><div className="flex items-center justify-between"><div><p className="font-bold">{isAr?branch.name:(branch.name_en||branch.name)}</p><p className="text-sm text-slate-500">{st?.status || '—'} {st?.current_period_ends_at ? `· ${formatDate(st.current_period_ends_at,lang)}` : ''}</p></div>{st?.expired?<AlertTriangle className="text-red-500"/>:<BadgeCheck className="text-emerald-500"/>}</div><div className="mt-3 flex flex-wrap gap-2">{plans.map(plan=><span key={plan.id} className={`rounded-lg border px-2 py-1 text-xs ${st?.plan_id===plan.id?'border-brand-500 bg-brand-50 font-bold':''}`}>{isAr?plan.name_ar:plan.name_en}</span>)}</div></div>})}</div>}</Card>
+  </div>;
 }
