@@ -65,11 +65,13 @@ jobs:
         run: node scripts/db/apply-migration.js --dir supabase/migrations
       - name: Verify schema
         run: node scripts/db/verify-schema.js
+      - name: Isolate subscription guard for order integration fixtures
+        run: node scripts/db/apply-migration.js --file supabase/ci/disable_subscription_guard.sql
       - name: Run integration tests (BEGIN/ROLLBACK)
         run: npm run test:integration
 
   deploy:
-    needs: build
+    needs: [build, db]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
