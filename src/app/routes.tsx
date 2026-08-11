@@ -42,7 +42,7 @@ const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/Subscr
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" /></div>; }
-function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean }) { const { session, loading, user, subscription } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to="/subscription" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
+function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true, superAdminOnly = false }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean; superAdminOnly?: boolean }) { const { session, loading, user, subscription } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to="/subscription" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
 function PublicRoute({ children }: { children: React.ReactNode }) { const { session, loading } = useAuth(); if (loading) return null; if (session) return <Navigate to="/dashboard" replace />; return <>{children}</>; }
 
 export function AppRoutes() {
@@ -81,7 +81,7 @@ export function AppRoutes() {
   <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
   <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
   <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
-  <Route path="/subscriptions" element={<ProtectedRoute permission="settings.manage"><SubscriptionsAdminPage /></ProtectedRoute>} />
+  <Route path="/subscriptions" element={<ProtectedRoute superAdminOnly><SubscriptionsAdminPage /></ProtectedRoute>} />
   <Route path="/settings/basic" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
   <Route path="/system-health" element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
   <Route path="/" element={<Navigate to="/dashboard" replace />} />
