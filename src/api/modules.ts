@@ -10,6 +10,7 @@ const rpc = async <R>(name: string, args: object): ApiResult<R> => {
 export const pos = {
   getActiveShift(p: { p_branch_id: string }): ApiResult<Shift> { return rpc('get_active_shift', p); },
   sendToKitchen(p: { p_order_id: string; p_sent_by?: string | null }): ApiResult<RpcResult & { order_id?: string; sent?: unknown[]; items_sent_count?: number; all_sent?: boolean }> { return rpc('send_to_kitchen', p); },
+  nextDocumentNumber(p: { p_type: string }): ApiResult<RpcResult> { return rpc('next_document_number', p); },
   processSale(p: { p_invoice_number: string; p_branch_id: string; p_shift_id: string | null; p_warehouse_id: string | null; p_customer_id: string | null; p_salesperson_id: string | null; p_subtotal: number; p_discount_amount: number; p_discount_type: 'percent' | 'amount'; p_tax_amount: number; p_bonus_amount: number; p_total: number; p_paid_amount: number; p_payment_method: string; p_status: string; p_items: SaleItemInput[]; p_order_type?: OrderType; p_table_id?: string | null; p_order_id?: string | null; p_guest_count?: number | null }): ApiResult<RpcResult> { return rpc('process_sale', p); },
 };
 
@@ -40,20 +41,53 @@ export const inventory = {
   rejectTransfer(p: { p_transfer_id: string; p_reason: string | null }): ApiResult<RpcResult> { return rpc('reject_warehouse_transfer', p); },
 };
 
+export const manufacturing = {
+  createOrder(p: { p_product_id: string; p_branch_id: string; p_warehouse_id: string | null; p_quantity: number; p_batch_number: string | null; p_planned_at: string | null; p_notes: string | null }): ApiResult<RpcResult> { return rpc('create_production_order', p); },
+  startOrder(p: { p_order_id: string }): ApiResult<RpcResult> { return rpc('start_production_order', p); },
+  completeOrder(p: { p_order_id: string; p_waste: { raw_material_id: string; quantity: number; reason: string | null }[] | null }): ApiResult<RpcResult> { return rpc('complete_production_order', p); },
+  cancelOrder(p: { p_order_id: string; p_reason: string | null }): ApiResult<RpcResult> { return rpc('cancel_production_order', p); },
+};
+
+export const catalog = { replaceProductUnits(p: { p_product_id: string; p_units: unknown }): ApiResult<null> { return rpc('replace_product_units', p); } };
+
+export const accounting = {
+  getTrialBalance(p: { p_branch_id: string | null; p_to_date: string }): ApiResult<import('@/lib/types').TrialBalanceRow[]> { return rpc('get_trial_balance', p); },
+  seedOpeningBalances(p: { p_branch_id: string | null }): ApiResult<RpcResult> { return rpc('seed_opening_balances', p); },
+  getJournals(p: { p_branch_id: string | null; p_from_date: string | null; p_to_date: string | null; p_reference_type: string | null; p_search: string | null }): ApiResult<import('@/lib/types').JournalDto[]> { return rpc('get_journals', p); },
+  postManualJournal(p: { p_branch_id: string | null; p_description: string; p_lines: JournalLineInput[] }): ApiResult<RpcResult> { return rpc('post_manual_journal', p); },
+  getArAging(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').ArAgingRow[]> { return rpc('get_ar_aging', p); },
+  getApAging(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').ApAgingRow[]> { return rpc('get_ap_aging', p); },
+  receivePayment(p: { p_customer_id: string; p_branch_id: string | null; p_amount: number; p_payment_method: string; p_sale_id: string | null; p_notes: string | null }): ApiResult<RpcResult> { return rpc('receive_payment', p); },
+  paySupplier(p: { p_supplier_id: string; p_branch_id: string | null; p_amount: number; p_payment_method: string; p_purchase_id: string | null; p_notes: string | null }): ApiResult<RpcResult> { return rpc('pay_supplier', p); },
+  getTreasuryBalances(p: { p_branch_id: string | null }): ApiResult<TreasuryBalance[]> { return rpc('get_treasury_balances', p); },
+  processTransfer(p: { p_branch_id: string | null; p_from_account_id: string; p_to_account_id: string; p_amount: number; p_notes: string | null }): ApiResult<RpcResult> { return rpc('process_transfer', p); },
+  processTreasuryDeposit(p: { p_branch_id: string | null; p_account_id: string; p_amount: number; p_notes: string | null }): ApiResult<RpcResult> { return rpc('process_treasury_deposit', p); },
+  processTreasuryWithdrawal(p: { p_branch_id: string | null; p_account_id: string; p_amount: number; p_notes: string | null }): ApiResult<RpcResult> { return rpc('process_treasury_withdrawal', p); },
+  getBankReconciliation(p: { p_reconciliation_id: string }): ApiResult<import('@/lib/types').ReconciliationDetail> { return rpc('get_bank_reconciliation', p); },
+  createBankReconciliation(p: { p_branch_id: string | null; p_treasury_account_id: string; p_statement_date: string; p_statement_balance: number }): ApiResult<RpcResult> { return rpc('create_bank_reconciliation', p); },
+  addStatementLine(p: { p_reconciliation_id: string; p_statement_date: string; p_description: string | null; p_amount: number; p_reference: string | null }): ApiResult<RpcResult> { return rpc('add_statement_line', p); },
+  matchBankLine(p: { p_line_id: string; p_journal_entry_id: string }): ApiResult<RpcResult> { return rpc('match_bank_line', p); },
+  completeBankReconciliation(p: { p_reconciliation_id: string }): ApiResult<RpcResult> { return rpc('complete_bank_reconciliation', p); },
+};
+
+export const reporting = {
+  getTrialBalance(p: { p_branch_id: string | null; p_to_date: string }): ApiResult<import('@/lib/types').TrialBalanceRow[]> { return rpc('get_trial_balance', p); },
+  getTrialBalanceSummary(p: { p_branch_id: string | null; p_to_date: string }): ApiResult<import('@/lib/types').TrialBalanceSummary> { return rpc('get_trial_balance_summary', p); },
+  getGeneralLedger(p: { p_branch_id: string | null; p_account_id: string | null; p_from_date: string | null; p_to_date: string | null }): ApiResult<import('@/lib/types').GeneralLedgerRow[]> { return rpc('get_general_ledger', p); },
+  getIncomeStatement(p: { p_branch_id: string | null; p_from_date: string; p_to_date: string }): ApiResult<import('@/lib/types').IncomeStatementResult> { return rpc('get_income_statement', p); },
+  getBalanceSheet(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').BalanceSheetResult> { return rpc('get_balance_sheet', p); },
+  getArAging(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').ArAgingRow[]> { return rpc('get_ar_aging', p); },
+  getApAging(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').ApAgingRow[]> { return rpc('get_ap_aging', p); },
+  getAgingSummary(p: { p_branch_id: string | null; p_as_of: string }): ApiResult<import('@/lib/types').AgingSummaryResult> { return rpc('get_aging_summary', p); },
+  getCashFlow(p: { p_branch_id: string | null; p_from_date: string; p_to_date: string }): ApiResult<import('@/lib/types').CashFlowRow[]> { return rpc('get_cash_flow', p); },
+  getPartyStatement(p: { p_branch_id: string | null; p_side: string; p_party_id: string | null; p_from_date: string | null; p_to_date: string | null }): ApiResult<import('@/lib/types').PartyStatementResult> { return rpc('get_party_statement', p); },
+};
+
 export const subscriptions = {
   registerBranch(p: { p_store_name: string; p_owner_name: string; p_email: string; p_password: string; p_store_name_en?: string | null; p_phone?: string | null; p_address?: string | null; p_currency?: string | null }): ApiResult<RpcResult & { branch_id?: string; warehouse_id?: string; user_id?: string; trial_days?: number }> { return rpc('register_branch', p); },
   status(p: { p_branch_id: string }): ApiResult<SubscriptionStatus> { return rpc('subscription_status', p); },
   activate(p: { p_branch_id: string; p_plan_id: string; p_billing_period?: 'monthly' | 'yearly'; p_activate?: boolean }): ApiResult<RpcResult & { price_egp?: number }> { return rpc('activate_subscription', p); },
-  submitInstaPay(p: { p_branch_id: string; p_plan_id: string; p_amount: number; p_billing_period: 'monthly' | 'yearly'; p_reference?: string | null; p_receipt_url?: string | null }): ApiResult<RpcResult & { status?: string }> { return rpc('submit_instapay_payment', p); },
-  reviewInstaPay(p: { p_payment_id: string; p_approve: boolean; p_rejection_reason?: string | null }): ApiResult<RpcResult & { status?: string; branch_id?: string }> { return rpc('review_instapay_payment', p); },
-  async listPlans(): ApiResult<SubscriptionPlan[]> {
-    const res = await supabase.from('subscription_plans').select('*').order('monthly_price_egp', { ascending: true });
-    return { data: (res.data as SubscriptionPlan[] | null) ?? null, error: res.error as ApiError | null };
-  },
-  async listPayments(): ApiResult<Array<{ id: string; branch_id: string; plan_id: string | null; amount: number; billing_period: 'monthly' | 'yearly'; reference: string | null; receipt_url: string | null; status: 'pending' | 'approved' | 'rejected'; submitted_at: string; rejection_reason: string | null }>> {
-    const res = await supabase.from('subscription_payments').select('id,branch_id,plan_id,amount,billing_period,reference,receipt_url,status,submitted_at,rejection_reason').order('submitted_at', { ascending: false });
-    return { data: (res.data as Array<{ id: string; branch_id: string; plan_id: string | null; amount: number; billing_period: 'monthly' | 'yearly'; reference: string | null; receipt_url: string | null; status: 'pending' | 'approved' | 'rejected'; submitted_at: string; rejection_reason: string | null }> | null) ?? null, error: res.error as ApiError | null };
-  },
+  async listPlans(): ApiResult<SubscriptionPlan[]> { const res = await supabase.from('subscription_plans').select('*').order('monthly_price_egp', { ascending: true }); return { data: (res.data as SubscriptionPlan[] | null) ?? null, error: res.error as ApiError | null }; },
 };
 
 export const admin = {
