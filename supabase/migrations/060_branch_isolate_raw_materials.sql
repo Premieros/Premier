@@ -8,7 +8,8 @@ ALTER TABLE public.raw_materials ADD COLUMN IF NOT EXISTS branch_id uuid;
 UPDATE public.raw_materials rm
 SET branch_id = x.branch_id
 FROM (
-  SELECT ri.raw_material_id, min(r.branch_id) AS branch_id
+  SELECT ri.raw_material_id,
+         (array_agg(r.branch_id ORDER BY r.branch_id))[1] AS branch_id
   FROM public.recipe_items ri
   JOIN public.recipes r ON r.id = ri.recipe_id
   WHERE r.branch_id IS NOT NULL
@@ -69,8 +70,9 @@ CREATE POLICY raw_materials_delete_branch_isolated
 ON public.raw_materials FOR DELETE
 USING (public.is_pos_admin() OR branch_id = public.get_branch_id());
 
--- Existing recipe_items remain valid only when their recipe and raw material
--- belong to the same branch. New or edited rows are rejected otherwise.
+-- Prevent recipe items from connecting a recipe to a raw material owned by
+-- another branch. SECURITY DEFINER is intentional so validation is not
+-- bypassed by RLS visibility.
 CREATE OR REPLACE FUNCTION public.validate_recipe_item_branch_match()
 RETURNS trigger
 LANGUAGE plpgsql
