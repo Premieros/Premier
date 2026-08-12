@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -22,36 +22,38 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === 'pin' && !/^\d{4}$/.test(pin)) {
+      show(t('pinInvalid'), 'error');
+      return;
+    }
+
     setLoading(true);
-    let result: { error: { code: string; message: string } | null };
-    if (mode === 'pin') {
-      if (!/^\d{4}$/.test(pin)) {
-        show(t('pinInvalid'), 'error');
-        return;
+    try {
+      const result = mode === 'pin'
+        ? await signInWithUsername(username, pin)
+        : await signIn(email, password);
+
+      if (result.error) {
+        const code = result.error.code;
+        let msg: string;
+        if (code === 'invalid_credentials') msg = t('invalidCredentials');
+        else if (code === 'email_not_confirmed') msg = t('emailNotConfirmed');
+        else if (code === 'user_not_found') msg = mode === 'pin' ? t('usernameNotFound') : t('userNotFound');
+        else if (code === 'user_inactive') msg = t('userInactive');
+        else if (code === 'user_locked') msg = t('userLocked');
+        else if (code === 'over_request_rate_limit') msg = t('rateLimited');
+        else if (code === 'email_address_invalid') msg = t('invalidCredentials');
+        else msg = `${t('loginFailed')} ${result.error.message}`;
+        show(msg, 'error');
       }
-      result = await signInWithUsername(username, pin);
-    } else {
-      result = await signIn(email, password);
+    } finally {
+      setLoading(false);
     }
-    if (result.error) {
-      const code = result.error.code;
-      let msg: string;
-      if (code === 'invalid_credentials') msg = t('invalidCredentials');
-      else if (code === 'email_not_confirmed') msg = t('emailNotConfirmed');
-      else if (code === 'user_not_found') msg = mode === 'pin' ? t('usernameNotFound') : t('userNotFound');
-      else if (code === 'user_inactive') msg = t('userInactive');
-      else if (code === 'user_locked') msg = t('userLocked');
-      else if (code === 'over_request_rate_limit') msg = t('rateLimited');
-      else if (code === 'email_address_invalid') msg = t('invalidCredentials');
-      else msg = `${t('loginFailed')} ${result.error.message}`;
-      show(msg, 'error');
-    }
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Branded Side */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-950 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500" />
         <div className="absolute inset-0 opacity-20">
@@ -82,7 +84,6 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Form Side */}
       <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-navy-950 relative">
         <div className="absolute top-4 end-4 z-10">
           <button
@@ -94,7 +95,6 @@ export function LoginPage() {
         </div>
 
         <div className="w-full max-w-md animate-fade-in">
-          {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex justify-center">
             <Logo variant="horizontal" size={40} tone="navy" tagline={isAr ? 'منصة إدارة الأعمال' : 'Business Management Platform'} />
           </div>
@@ -113,22 +113,14 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setMode('pin')}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  mode === 'pin'
-                    ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'pin' ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
               >
                 {t('loginWithPin')}
               </button>
               <button
                 type="button"
                 onClick={() => setMode('password')}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  mode === 'password'
-                    ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'password' ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
               >
                 {t('loginWithEmail')}
               </button>
@@ -138,6 +130,7 @@ export function LoginPage() {
               {mode === 'pin' ? (
                 <>
                   <Input
+                    id="login-username"
                     label={t('username')}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -146,6 +139,7 @@ export function LoginPage() {
                     placeholder={isAr ? 'اسم المستخدم' : 'username'}
                   />
                   <Input
+                    id="login-pin"
                     label={t('pin')}
                     type="password"
                     value={pin}
@@ -159,6 +153,7 @@ export function LoginPage() {
               ) : (
                 <>
                   <Input
+                    id="login-email"
                     label={t('email')}
                     type="email"
                     value={email}
@@ -167,6 +162,7 @@ export function LoginPage() {
                     placeholder="email@example.com"
                   />
                   <Input
+                    id="login-password"
                     label={t('password')}
                     type="password"
                     value={password}
@@ -178,14 +174,7 @@ export function LoginPage() {
                 </>
               )}
               <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    {t('signIn')}
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{t('signIn')}<ArrowRight className="w-4 h-4" /></>}
               </Button>
             </form>
 
