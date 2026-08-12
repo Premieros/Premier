@@ -109,9 +109,10 @@ Only after all required CI checks and regression tests pass: review PR #3, verif
 
 **Current phase:** PHASE 3 — POS / FloorPlan / Order Workspace
 
-**Latest source commits:**
+**Fix commits:**
 - `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — add stable cart quantity control IDs to `CurrentOrderPanel.tsx`.
 - `9cf28849332fb079d823a8e8c2f853139a30cef7` — update `pos-actions.spec.ts` to use the stable quantity IDs and assert quantity `1 → 2`.
+- `80cdb01a5d28ba41333b53c0c946979f0501875d` — record this fix and its verification state in this master log.
 
 **PR #3 status:** Open, not merged.
 
@@ -133,7 +134,7 @@ The failing selector was:
 
 This violates the project's central architectural/testing rule because it couples the action to DOM structure and visual placement.
 
-### Fix just applied
+### Fix applied
 
 Application file:
 
@@ -158,20 +159,27 @@ and verifies the real state transition from quantity `1` to `2` before opening p
 
 This is a real stable-identity fix; the application behavior was not bypassed and no assertion was weakened.
 
-## 7. Current Verification State — AFTER FIX
+## 7. Current Verification State — RUN #102
 
-The fix has been committed to the rebuild branch, but **a new CI run has not yet completed for these commits**.
+A new CI run was successfully triggered for the latest branch head:
+
+- **Run:** #102
+- **Run ID:** `31645041554`
+- **Head commit:** `80cdb01a5d28ba41333b53c0c946979f0501875d`
+- **Workflow:** Verify main
+- **Status:** **IN PROGRESS**
+- **Conclusion:** pending
 
 Therefore:
 
 - POS quantity fix: **IMPLEMENTED**
-- CI verification of the fix: **PENDING**
+- CI verification: **IN PROGRESS**
 - PHASE 3: **OPEN**
-- Do not close the blocker until CI proves the result.
+- Do not close the blocker until Run #102 proves the result.
 
 ## 8. Exact Next Action — DO NOT SKIP
 
-1. Wait for/inspect the CI run triggered by the latest branch commits.
+1. Inspect Run #102 after completion.
 2. Verify Verify + Build + Browser E2E.
 3. If the quantity test passes and Browser E2E is fully green, record the run here and close this specific POS smoke blocker.
 4. Continue with the next unverified POS flow: Dine-in/FloorPlan/Tables.
