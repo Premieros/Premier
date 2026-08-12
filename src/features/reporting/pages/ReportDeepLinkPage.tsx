@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ReportsPage } from './ReportsPage';
-import { useLanguage } from '@/context/LanguageContext';
 
 const REPORT_LABELS = {
   sales: ['المبيعات', 'Sales'],
@@ -26,14 +25,9 @@ function isReportType(value: string | null): value is ReportType {
   return value !== null && Object.prototype.hasOwnProperty.call(REPORT_LABELS, value);
 }
 
-/**
- * Resolves a dashboard deep link to the exact report control.
- * Matching is deliberately exact and scoped to visible buttons so a generic
- * button such as Active Orders can never be selected by accident.
- */
+/** Resolves report deep links by stable report key instead of DOM position or label text. */
 export function ReportDeepLinkPage() {
   const [searchParams] = useSearchParams();
-  const { lang } = useLanguage();
   const requestedParam = searchParams.get('reportType');
 
   useEffect(() => {
