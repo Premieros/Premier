@@ -24,13 +24,9 @@ async function mockPosBackend(page: Page) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
-  // Register the broad fallback FIRST. Playwright selects the most recently
-  // registered matching route, so all feature-specific REST handlers below
-  // intentionally come after this fallback.
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) =>
     r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   );
-
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/users**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/products**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([product]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/customers**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -46,18 +42,11 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
-  // One deterministic RPC handler, registered after the REST fallback.
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
     const name = new URL(r.request().url()).pathname.split('/').pop();
-    if (name === 'get_login_email') {
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, email: fakeUser.email }) });
-    }
-    if (name === 'record_login_success' || name === 'record_login_failure') {
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
-    }
-    if (name === 'get_active_shift') {
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, open: false }) });
-    }
+    if (name === 'get_login_email') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, email: fakeUser.email }) });
+    if (name === 'record_login_success' || name === 'record_login_failure') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    if (name === 'get_active_shift') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, open: false }) });
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) });
   });
 }
@@ -75,12 +64,13 @@ test.describe('POS action-level', () => {
     await mockPosBackend(page);
     await login(page);
     await page.goto('/#/pos');
+    await expect(page.getByTestId('pos-order-type-picker')).toBeVisible();
     await expect(page.locator('body')).not.toHaveText(/Error Loading Data|خطأ في تحميل البيانات/i);
   });
 
   test('starts quick pickup, adds product, changes quantity, and opens payment', async ({ page }) => {
-    await expect(page.getByText(/اختر نوع الطلب|How will this order be served/i)).toBeVisible();
-    await page.getByRole('button', { name: /استلام سريع|Quick pickup/i }).click();
+    await expect(page.getByTestId('pos-order-type-question')).toBeVisible();
+    await page.getByTestId('pos-order-type-takeaway').click();
     await expect(page.getByText('E2E Burger')).toBeVisible();
     await page.getByRole('button', { name: /E2E Burger/i }).click();
     await expect(page.getByText(/100/)).toBeVisible();
@@ -95,13 +85,14 @@ test.describe('POS action-level', () => {
   });
 
   test('order-type actions expose supported flows and back navigation', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /داخل الصالة|Dine-in/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /الطلب من السيارة|Drive thru/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /توصيل للعميل|Delivery/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /استلام سريع|Quick pickup/i })).toBeVisible();
-    await page.getByRole('button', { name: /الطلب من السيارة|Drive thru/i }).click();
+    await expect(page.getByTestId('pos-order-type-dine_in')).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-drive_thru')).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-delivery')).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-takeaway')).toBeVisible();
+    await page.getByTestId('pos-order-type-drive_thru').click();
     await expect(page.getByText(/بيانات السيارة|Vehicle|Car/i)).toBeVisible();
     await page.getByRole('button', { name: /رجوع|Back/i }).click();
-    await expect(page.getByRole('button', { name: /استلام سريع|Quick pickup/i })).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-picker')).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-takeaway')).toBeVisible();
   });
 });
