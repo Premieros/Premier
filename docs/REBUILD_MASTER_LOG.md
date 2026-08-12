@@ -10,6 +10,10 @@
 
 Rebuild Premier's interface to match the approved/reference design while respecting the existing architecture, database, business logic, permissions, and routes. The rebuilt UI must be extensible and behaviorally stable: moving a button, switch, card, menu item, or control must not change what it does.
 
+**Final UI outcome:** when all phases and final verification are complete, the rebuilt/reference design is intended to become the production UI on `main`. This is a full UI rebuild/replacement of the old visual/application-shell experience, not merely a collection of small cosmetic changes. The existing database, business logic, permissions, routes, and verified business behavior are preserved unless a real defect is found and intentionally fixed. The old UI is not retained as the final production design as a fallback.
+
+The process is deliberately staged: rebuild the UI foundation and screens, verify their real behavior, fix defects, complete regression, then merge the rebuilt UI to `main`. We do not merge or declare the new design final until the required verification passes.
+
 Core rule:
 
 `Visual Layout → Stable Component/Element ID → Action → Route/State → Permission → Service/Data`
@@ -28,6 +32,7 @@ Functionality must never depend on DOM position, visual placement, or fragile se
 8. If a later phase exposes an earlier defect, return to that phase, fix, re-verify, then continue.
 9. Preserve existing business logic unless audit proves it incorrect.
 10. Keep this file updated so future sessions cannot drift from the plan.
+11. The final result must be the rebuilt/reference UI on `main`; do not silently revert to the old UI merely to obtain passing tests.
 
 ## 3. Phase Plan
 
@@ -162,6 +167,7 @@ Every meaningful action must be recorded here with:
 
 The rebuild is complete only when:
 - Reference design and current architecture are aligned.
+- The rebuilt/reference UI is the final production UI on `main`; the old UI is not retained as the final visual fallback.
 - Critical UI controls have stable identities and actions independent of layout position.
 - Dashboard/navigation behavior is verified.
 - POS/FloorPlan/Kitchen/payment critical flows are verified end-to-end.
@@ -182,3 +188,8 @@ The rebuild is complete only when:
 - Previous cart quantity blocker: resolved
 - Current blocker: Quick Pickup payment assertion expects `طريقة الدفع|Payment method`, but the actual payment UI exposes a different state/control.
 - Action: remain in PHASE 3; inspect the real payment flow and fix the root cause/test expectation without bypassing behavior.
+
+### 2026-08-13 — Final UI outcome clarification
+- User asked whether completing all phases means the new/reference design will fully replace the old design.
+- Clarification added: **Yes.** The intended final production outcome is the rebuilt/reference UI on `main`, with the existing verified business logic, database, routes, permissions, and data preserved. The old UI is not the final fallback.
+- This clarification does not change the phase plan; it makes the original objective explicit.
