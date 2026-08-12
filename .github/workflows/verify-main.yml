@@ -31,3 +31,27 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
+
+  browser-smoke:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save @playwright/test@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verify-playwright-report
+          path: playwright-report/
+          retention-days: 7
