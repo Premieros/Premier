@@ -1,13 +1,6 @@
-﻿import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store,
-  Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText,
-  Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer,
-  Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText,
-  Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Activity,
-  CreditCard,
-} from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Tags, Boxes, Warehouse, Store, Truck, Users, Building2, Receipt, BarChart3, UserCog, Settings, ScrollText, Menu, X, Moon, Sun, Globe, LogOut, FileText, Layers, ChevronDown, Timer, Sparkles, FlaskConical, ChefHat, Factory, ArrowLeftRight, BookOpenText, Landmark, HandCoins, NotebookPen, FileSpreadsheet, Wallet, Scale, Activity, CreditCard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -17,239 +10,79 @@ import { useActiveOrders } from '../features/pos/hooks/useActiveOrders';
 import type { TranslationKey } from '../lib/i18n';
 import { Logo } from './Logo';
 
-interface NavItem {
-  to: string;
-  icon: ReactNode;
-  labelKey: TranslationKey;
-  permission?: Permission;
-  group?: string;
-}
+type NavItem = { to: string; icon: ReactNode; labelKey: TranslationKey; permission?: Permission; group: string };
 
 const navItems: NavItem[] = [
-  { to: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
-  { to: '/subscription', icon: <CreditCard className="w-5 h-5" />, labelKey: 'mySubscription', group: 'main' },
-  { to: '/pos', icon: <ShoppingCart className="w-5 h-5" />, labelKey: 'pos', permission: 'pos.sell', group: 'main' },
-  { to: '/products', icon: <Package className="w-5 h-5" />, labelKey: 'products', permission: 'products.view', group: 'catalog' },
-  { to: '/categories', icon: <Tags className="w-5 h-5" />, labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
-  { to: '/components', icon: <Layers className="w-5 h-5" />, labelKey: 'components', permission: 'components.view', group: 'catalog' },
-  { to: '/raw-materials', icon: <FlaskConical className="w-5 h-5" />, labelKey: 'rawMaterials', permission: 'raw_materials.view', group: 'catalog' },
-  { to: '/recipes', icon: <ChefHat className="w-5 h-5" />, labelKey: 'recipes', permission: 'recipes.view', group: 'catalog' },
-  { to: '/inventory', icon: <Boxes className="w-5 h-5" />, labelKey: 'inventory', permission: 'inventory.view', group: 'operations' },
-  { to: '/warehouses', icon: <Warehouse className="w-5 h-5" />, labelKey: 'warehouses', permission: 'warehouses.view', group: 'operations' },
-  { to: '/production', icon: <Factory className="w-5 h-5" />, labelKey: 'productionOrders', permission: 'production.view', group: 'operations' },
-  { to: '/transfers', icon: <ArrowLeftRight className="w-5 h-5" />, labelKey: 'warehouseTransfers', permission: 'inventory.transfers', group: 'operations' },
-  { to: '/inventory-ledger', icon: <BookOpenText className="w-5 h-5" />, labelKey: 'inventoryLedger', permission: 'inventory.ledger.view', group: 'operations' },
-  { to: '/branches', icon: <Store className="w-5 h-5" />, labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
-  { to: '/purchases', icon: <Truck className="w-5 h-5" />, labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
-  { to: '/customers', icon: <Users className="w-5 h-5" />, labelKey: 'customers', permission: 'customers.view', group: 'people' },
-  { to: '/suppliers', icon: <Building2 className="w-5 h-5" />, labelKey: 'suppliers', permission: 'suppliers.view', group: 'people' },
-  { to: '/expenses', icon: <Receipt className="w-5 h-5" />, labelKey: 'expenses', permission: 'expenses.view', group: 'finance' },
-  { to: '/accounts', icon: <Landmark className="w-5 h-5" />, labelKey: 'chartOfAccounts', permission: 'accounts.view', group: 'finance' },
-  { to: '/payments', icon: <HandCoins className="w-5 h-5" />, labelKey: 'receivePayment', permission: 'accounts.view', group: 'finance' },
-  { to: '/journal', icon: <NotebookPen className="w-5 h-5" />, labelKey: 'journalEntries', permission: 'accounts.view', group: 'finance' },
-  { to: '/treasury', icon: <Wallet className="w-5 h-5" />, labelKey: 'treasury', permission: 'accounts.view', group: 'finance' },
-  { to: '/reconciliation', icon: <Scale className="w-5 h-5" />, labelKey: 'bankReconciliation', permission: 'accounts.view', group: 'finance' },
-  { to: '/financial-reports', icon: <FileSpreadsheet className="w-5 h-5" />, labelKey: 'financialReports', permission: 'reports.financial', group: 'finance' },
-  { to: '/sales', icon: <FileText className="w-5 h-5" />, labelKey: 'salesInvoices', permission: 'sales.view', group: 'finance' },
-  { to: '/shifts', icon: <Timer className="w-5 h-5" />, labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
-  { to: '/reports', icon: <BarChart3 className="w-5 h-5" />, labelKey: 'reports', permission: 'reports.view', group: 'finance' },
-  { to: '/users', icon: <UserCog className="w-5 h-5" />, labelKey: 'users', permission: 'users.view', group: 'admin' },
-  { to: '/subscriptions', icon: <CreditCard className="w-5 h-5" />, labelKey: 'subscriptionsAdmin', permission: 'settings.manage', group: 'admin' },
-  { to: '/audit-log', icon: <ScrollText className="w-5 h-5" />, labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
-  { to: '/settings', icon: <Settings className="w-5 h-5" />, labelKey: 'settings', permission: 'settings.manage', group: 'admin' },
+  { to:'/dashboard',icon:<LayoutDashboard className="h-5 w-5"/>,labelKey:'dashboard',permission:'dashboard.view',group:'main' },
+  { to:'/subscription',icon:<CreditCard className="h-5 w-5"/>,labelKey:'mySubscription',group:'main' },
+  { to:'/pos',icon:<ShoppingCart className="h-5 w-5"/>,labelKey:'pos',permission:'pos.sell',group:'main' },
+  { to:'/products',icon:<Package className="h-5 w-5"/>,labelKey:'products',permission:'products.view',group:'catalog' },
+  { to:'/categories',icon:<Tags className="h-5 w-5"/>,labelKey:'categories',permission:'categories.view',group:'catalog' },
+  { to:'/components',icon:<Layers className="h-5 w-5"/>,labelKey:'components',permission:'components.view',group:'catalog' },
+  { to:'/raw-materials',icon:<FlaskConical className="h-5 w-5"/>,labelKey:'rawMaterials',permission:'raw_materials.view',group:'catalog' },
+  { to:'/recipes',icon:<ChefHat className="h-5 w-5"/>,labelKey:'recipes',permission:'recipes.view',group:'catalog' },
+  { to:'/inventory',icon:<Boxes className="h-5 w-5"/>,labelKey:'inventory',permission:'inventory.view',group:'operations' },
+  { to:'/warehouses',icon:<Warehouse className="h-5 w-5"/>,labelKey:'warehouses',permission:'warehouses.view',group:'operations' },
+  { to:'/production',icon:<Factory className="h-5 w-5"/>,labelKey:'productionOrders',permission:'production.view',group:'operations' },
+  { to:'/transfers',icon:<ArrowLeftRight className="h-5 w-5"/>,labelKey:'warehouseTransfers',permission:'inventory.transfers',group:'operations' },
+  { to:'/inventory-ledger',icon:<BookOpenText className="h-5 w-5"/>,labelKey:'inventoryLedger',permission:'inventory.ledger.view',group:'operations' },
+  { to:'/branches',icon:<Store className="h-5 w-5"/>,labelKey:'branches',permission:'branches.manage',group:'operations' },
+  { to:'/purchases',icon:<Truck className="h-5 w-5"/>,labelKey:'purchases',permission:'purchases.view',group:'operations' },
+  { to:'/customers',icon:<Users className="h-5 w-5"/>,labelKey:'customers',permission:'customers.view',group:'people' },
+  { to:'/suppliers',icon:<Building2 className="h-5 w-5"/>,labelKey:'suppliers',permission:'suppliers.view',group:'people' },
+  { to:'/expenses',icon:<Receipt className="h-5 w-5"/>,labelKey:'expenses',permission:'expenses.view',group:'finance' },
+  { to:'/accounts',icon:<Landmark className="h-5 w-5"/>,labelKey:'chartOfAccounts',permission:'accounts.view',group:'finance' },
+  { to:'/payments',icon:<HandCoins className="h-5 w-5"/>,labelKey:'receivePayment',permission:'accounts.view',group:'finance' },
+  { to:'/journal',icon:<NotebookPen className="h-5 w-5"/>,labelKey:'journalEntries',permission:'accounts.view',group:'finance' },
+  { to:'/treasury',icon:<Wallet className="h-5 w-5"/>,labelKey:'treasury',permission:'accounts.view',group:'finance' },
+  { to:'/reconciliation',icon:<Scale className="h-5 w-5"/>,labelKey:'bankReconciliation',permission:'accounts.view',group:'finance' },
+  { to:'/financial-reports',icon:<FileSpreadsheet className="h-5 w-5"/>,labelKey:'financialReports',permission:'reports.financial',group:'finance' },
+  { to:'/sales',icon:<FileText className="h-5 w-5"/>,labelKey:'salesInvoices',permission:'sales.view',group:'finance' },
+  { to:'/shifts',icon:<Timer className="h-5 w-5"/>,labelKey:'shifts',permission:'shifts.view',group:'finance' },
+  { to:'/reports',icon:<BarChart3 className="h-5 w-5"/>,labelKey:'reports',permission:'reports.view',group:'finance' },
+  { to:'/users',icon:<UserCog className="h-5 w-5"/>,labelKey:'users',permission:'users.view',group:'admin' },
+  { to:'/subscriptions',icon:<CreditCard className="h-5 w-5"/>,labelKey:'subscriptionsAdmin',permission:'settings.manage',group:'admin' },
+  { to:'/audit-log',icon:<ScrollText className="h-5 w-5"/>,labelKey:'auditLog',permission:'audit.view',group:'admin' },
+  { to:'/settings',icon:<Settings className="h-5 w-5"/>,labelKey:'settings',permission:'settings.manage',group:'admin' },
 ];
 
-const groupLabels: Record<string, { ar: string; en: string }> = {
-  main: { ar: 'الرئيسية', en: 'Main' },
-  catalog: { ar: 'الكتالوج', en: 'Catalog' },
-  operations: { ar: 'العمليات', en: 'Operations' },
-  people: { ar: 'الأطراف', en: 'People' },
-  finance: { ar: 'المالية', en: 'Finance' },
-  admin: { ar: 'الإدارة', en: 'Admin' },
-};
+const groups: Record<string,[string,string]> = { main:['الرئيسية','Main'],catalog:['الكتالوج','Catalog'],operations:['العمليات','Operations'],people:['الأطراف','People'],finance:['المالية','Finance'],admin:['الإدارة','Admin'] };
 
 export function Layout({ children }: { children: ReactNode }) {
   const { t, lang, setLang } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const can = useCan();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const navigate = useNavigate();
-  const isAr = lang === 'ar';
+  const [mobileOpen,setMobileOpen]=useState(false);
+  const [collapsed,setCollapsed]=useState<Record<string,boolean>>({});
+  const ar=lang==='ar';
+  const branchFilter=useBranchFilter();
+  const { counts }=useActiveOrders(branchFilter||user?.branch_id||'');
+  const visible=navItems.filter(item=>!item.permission||can(item.permission)).filter(item=>item.to!=='/subscriptions'||user?.role==='super_admin');
+  const grouped=visible.reduce<Record<string,NavItem[]>>((acc,item)=>{(acc[item.group]??=[]).push(item);return acc},{});
+  const title=visible.find(item=>item.to===location.pathname)?.labelKey||'dashboard';
+  const topTabs=[
+    {key:'general',label:ar?'عام':'General',to:'/dashboard',show:true},
+    {key:'branches',label:ar?'الفروع':'Branches',to:'/branches',show:can('branches.manage')},
+    {key:'inventory',label:ar?'المخزون':'Inventory',to:'/inventory',show:can('inventory.view')},
+    {key:'kitchen',label:ar?'المطبخ':'Kitchen',to:'/pos',show:can('pos.sell')},
+  ];
+  const activeTop=location.pathname==='/dashboard'?'general':location.pathname.startsWith('/branches')?'branches':location.pathname.startsWith('/inventory')||location.pathname.startsWith('/warehouses')?'inventory':location.pathname.startsWith('/pos')?'kitchen':'';
 
-  // Live Active Orders count for the Top Bar badge (branch-scoped).
-  const branchFilter = useBranchFilter();
-  const { counts } = useActiveOrders(branchFilter || user?.branch_id || '');
-
-  const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
-  const currentTitle = visibleNavItems.find((n) => n.to === location.pathname)?.labelKey || 'dashboard';
-
-  const toggleGroup = (group: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
-  };
-
-  const grouped = visibleNavItems.reduce<Record<string, NavItem[]>>((acc, item) => {
-    const g = item.group || 'main';
-    if (!acc[g]) acc[g] = [];
-    acc[g].push(item);
-    return acc;
-  }, {});
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-navy-950">
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-0 ${lang === 'ar' ? 'right-0' : 'left-0'} z-40 h-full w-64 bg-white dark:bg-navy-950 ${lang === 'ar' ? 'border-l' : 'border-r'} border-slate-200 dark:border-navy-800/60 shadow-xl shadow-slate-200 dark:shadow-navy-950/20 transform transition-transform duration-300 ${
-          sidebarOpen
-            ? 'translate-x-0'
-            : lang === 'ar'
-              ? 'translate-x-full'
-              : '-translate-x-full'
-        } lg:translate-x-0`}
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-5 border-b border-slate-200 dark:border-navy-800/60 text-slate-900 dark:text-white">
-          <Logo variant="horizontal" size={30} tone="auto" showTagline={false} />
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-900 dark:hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-col gap-0.5 p-3 overflow-y-auto h-[calc(100vh-4rem)]">
-          {Object.entries(grouped).map(([group, items]) => (
-            <div key={group} className="mb-1">
-              <button
-                onClick={() => toggleGroup(group)}
-                className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold text-slate-400 dark:text-navy-300/70 uppercase tracking-wider hover:text-slate-600 dark:hover:text-gold-300 transition-colors"
-              >
-                <span>{isAr ? groupLabels[group]?.ar : groupLabels[group]?.en}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${collapsedGroups[group] ? '-rotate-90' : ''}`} />
-              </button>
-              {!collapsedGroups[group] && items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/30'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300/80 dark:hover:bg-navy-800/80 dark:hover:text-white'
-                    }`
-                  }
-                >
-                  {item.icon}
-                  <span>{t(item.labelKey)}</span>
-                </NavLink>
-              ))}
-            </div>
-          ))}
-
-          {/* AI Assistant teaser */}
-          <div className="mt-auto pt-3">
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-navy-800/60 border border-gold-500/20">
-              <div className="w-8 h-8 rounded-lg bg-gold-500/15 text-gold-600 dark:text-gold-300 flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div className="text-xs">
-                <p className="text-slate-900 dark:text-white font-semibold">{isAr ? 'مساعد الذكاء الاصطناعي' : 'AI Assistant'}</p>
-                <p className="text-slate-400">{isAr ? 'قريباً' : 'Coming soon'}</p>
-              </div>
-            </div>
-          </div>
-        </nav>
-      </aside>
-
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Main content */}
-      <div className={`${lang === 'ar' ? 'lg:mr-64' : 'lg:ml-64'}`}>
-        {/* Header */}
-        <header className="sticky top-0 z-20 h-16 bg-white/80 dark:bg-navy-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-navy-800/60 flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-              <Menu className="w-6 h-6" />
-            </button>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white hidden sm:block">{t(currentTitle)}</h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Active Orders Center */}
-            {can('floor_plan.view') && (
-              <button
-                onClick={() => navigate('/floor-plan')}
-                className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all active:scale-95"
-                title={t('activeOrders')}
-              >
-                <Activity className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('activeOrders')}</span>
-                {counts.active > 0 && (
-                  <span className="absolute -top-1.5 -end-1.5 min-w-5 h-5 px-1 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-navy-950">
-                    {counts.active}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* POS Quick Access */}
-            {can('pos.sell') && (
-              <button
-                onClick={() => navigate('/pos')}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-navy-900 to-navy-800 dark:from-brand-600 dark:to-brand-500 hover:opacity-95 text-white text-sm font-bold shadow-lg shadow-navy-900/25 ring-1 ring-gold-500/30 transition-all active:scale-95"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('pos')}</span>
-              </button>
-            )}
-
-            <div className="w-px h-7 bg-slate-200 dark:bg-navy-700 mx-1" />
-
-            <button
-              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-              className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-              title={lang === 'ar' ? 'English' : 'العربية'}
-            >
-              <Globe className="w-5 h-5" />
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-              title={theme === 'light' ? t('darkMode') : t('lightMode')}
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-
-            <div className="h-8 w-px bg-slate-200 dark:bg-navy-700 mx-1" />
-
-            <div className="flex items-center gap-2.5">
-              <div className="text-end hidden sm:block">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">{user?.full_name || user?.email}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">{user?.role}</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-navy-700 to-navy-900 ring-1 ring-gold-500/40 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                {(user?.full_name || user?.email || '?')[0].toUpperCase()}
-              </div>
-            </div>
-
-            <button
-              onClick={signOut}
-              className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
-              title={t('logout')}
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="p-4 lg:p-6">{children}</main>
-      </div>
+  return <div dir={ar?'rtl':'ltr'} className="min-h-screen bg-[#fafafa] text-[#24243a] dark:bg-navy-950 dark:text-slate-100">
+    <aside className={`fixed inset-y-0 ${ar?'right-0':'left-0'} z-50 w-[252px] bg-white shadow-[0_0_28px_rgba(27,20,72,0.06)] transition-transform dark:bg-navy-950 ${mobileOpen?'translate-x-0':ar?'translate-x-full':'-translate-x-full'} lg:translate-x-0`}>
+      <div className="flex h-[76px] items-center justify-between border-b border-slate-100 px-5 dark:border-navy-800"><Logo variant="horizontal" size={30} tone="mono" showTagline={false} className="text-[#5728d6]"/><button onClick={()=>setMobileOpen(false)} className="rounded-lg p-2 text-slate-500 lg:hidden" aria-label={ar?'إغلاق القائمة':'Close sidebar'}><X className="h-5 w-5"/></button></div>
+      <nav className="h-[calc(100%-76px)] overflow-y-auto px-3 py-5">
+        {Object.entries(grouped).map(([group,items])=><section key={group} className="mb-2"><button onClick={()=>setCollapsed(v=>({...v,[group]:!v[group]}))} className="flex w-full items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400"><span>{groups[group]?.[ar?0:1]}</span><ChevronDown className={`h-4 w-4 transition-transform ${collapsed[group]?'rotate-90':''}`}/></button>{!collapsed[group]&&items.map(item=><NavLink key={item.to} to={item.to} onClick={()=>setMobileOpen(false)} className={({isActive})=>`group flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-[14px] font-semibold transition ${isActive?'bg-gradient-to-r from-[#5c2bd7] to-[#6b34e5] text-white shadow-[0_8px_20px_rgba(91,43,216,0.22)]':'text-[#3f3f55] hover:bg-[#f7f5ff] hover:text-[#5728d6] dark:text-slate-300 dark:hover:bg-navy-800'}`}>{item.icon}<span className="flex-1">{t(item.labelKey)}</span></NavLink>)}</section>)}
+        <div className="mt-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#faf8ff] text-[#6b35df]"><Sparkles className="h-4 w-4"/></div><div><p className="text-xs font-bold">{ar?'مساعد Premier':'Premier Assistant'}</p><p className="text-[10px] text-slate-400">{ar?'قريباً':'Coming soon'}</p></div></div></div>
+      </nav>
+    </aside>
+    {mobileOpen&&<button className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden" onClick={()=>setMobileOpen(false)} aria-label={ar?'إغلاق':'Close'}/>} 
+    <div className={`${ar?'lg:mr-[252px]':'lg:ml-[252px]'} min-h-screen`}>
+      <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-slate-100 bg-white px-4 shadow-sm dark:border-navy-800 dark:bg-navy-950 sm:px-7"><div className="flex min-w-0 items-center gap-4"><button onClick={()=>setMobileOpen(true)} className="rounded-lg p-2 text-slate-600 lg:hidden"><Menu className="h-5 w-5"/></button><div className="hidden h-8 w-px bg-slate-200 lg:block"/><div className="flex min-w-0 items-center gap-6 overflow-x-auto">{topTabs.filter(t=>t.show).map(tab=><NavLink key={tab.key} to={tab.to} className={`relative whitespace-nowrap px-1 py-7 text-sm font-semibold ${activeTop===tab.key?'text-[#5728d6]':'text-slate-600 dark:text-slate-300'}`}>{tab.label}{tab.key==='kitchen'&&<span className="ms-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] text-white">{ar?'جديد':'New'}</span>}{activeTop===tab.key&&<span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[#5b2bd8]"/>}</NavLink>)}</div></div><div className="flex items-center gap-2 sm:gap-4"><button onClick={()=>navigate('/floor-plan')} className="relative rounded-xl p-2 text-slate-600 hover:bg-slate-50 dark:text-slate-300" aria-label={ar?'الطلبات النشطة':'Active orders'}><Activity className="h-5 w-5"/>{counts.active>0&&<span className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{counts.active}</span>}</button><div className="hidden h-8 w-px bg-slate-200 sm:block"/><button onClick={()=>navigate('/settings')} className="flex items-center gap-3"><div className="hidden text-end sm:block"><p className="text-sm font-bold">{user?.full_name||user?.email|| (ar?'مدير النظام':'System Admin')}</p><p className="text-[11px] text-slate-400">{user?.role||'admin'}</p></div><div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-600">{(user?.full_name||user?.email||'A').slice(0,1).toUpperCase()}</div></button><button onClick={()=>setLang(ar?'en':'ar')} className="hidden items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold sm:flex dark:border-navy-700"><Globe className="h-4 w-4"/>{ar?'العربية':'English'}</button><button onClick={toggleTheme} className="rounded-xl p-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800" aria-label={ar?'تغيير المظهر':'Toggle theme'}>{theme==='light'?<Moon className="h-5 w-5"/>:<Sun className="h-5 w-5"/>}</button><button onClick={signOut} className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={ar?'تسجيل الخروج':'Sign out'}><LogOut className="h-5 w-5"/></button></div></header>
+      <main className="min-h-[calc(100vh-76px)] bg-[#fafafa] p-4 sm:p-6 lg:p-7 dark:bg-navy-950">{children}</main>
     </div>
-  );
+  </div>;
 }
