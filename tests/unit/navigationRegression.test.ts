@@ -6,13 +6,14 @@ const root = resolve(process.cwd());
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 describe('navigation regressions', () => {
-  it('keeps dashboard financial KPI links mapped to their intended reports', () => {
+  it('keeps dashboard KPI and report links mapped to intended destinations', () => {
     const source = read('src/features/dashboard/pages/DashboardFoodicsPage.tsx');
     expect(source).toContain('to="/reports?reportType=sales"');
-    expect(source).toContain('to="/reports?reportType=expenses"');
-    expect(source).toContain('to="/reports?reportType=profit"');
+    expect(source).toContain('to="/reports?reportType=sales_by_payment"');
+    expect(source).toContain('to="/reports?reportType=sales_by_branch"');
     expect(source).toContain('to="/reports?reportType=detailed_invoices"');
-    expect(source).toContain('to="/reports?reportType=low_stock"');
+    expect(source).toContain('to="/reports?reportType=sales_by_product"');
+    expect(source).toContain('to="/inventory"');
     expect(source).not.toContain('to="/pos/active"');
   });
 
