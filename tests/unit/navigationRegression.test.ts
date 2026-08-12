@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 const root = resolve(process.cwd());
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
+const sourceFiles = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+  const full = join(dir, entry.name);
+  if (entry.name === 'node_modules' || entry.name === 'dist') return [];
+  if (entry.isDirectory()) return sourceFiles(full);
+  return /\.(tsx|ts)$/.test(entry.name) ? [full] : [];
+});
 
 describe('navigation regressions', () => {
   it('keeps dashboard KPI and report links mapped to intended destinations', () => {
@@ -36,5 +42,15 @@ describe('navigation regressions', () => {
     expect(layout).toContain("user?.role==='super_admin'");
     expect(chrome).toContain('return <>{children}</>');
     expect(chrome).not.toContain('fixed inset-0 z-[45]');
+  });
+
+  it('rejects obvious dead navigation placeholders across the application', () => {
+    const files = sourceFiles(resolve(root, 'src'));
+    const offenders: string[] = [];
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8');
+      if (/href\s*=\s*["']#|to\s*=\s*["']#|javascript:/i.test(source)) offenders.push(file);
+    }
+    expect(offenders).toEqual([]);
   });
 });
