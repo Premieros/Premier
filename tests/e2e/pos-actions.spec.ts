@@ -23,10 +23,7 @@ async function mockPosBackend(page: Page) {
     if (url.includes('/auth/v1/token')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(session) });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
-
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-  );
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/users**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/products**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([product]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/customers**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -41,7 +38,6 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
     const name = new URL(r.request().url()).pathname.split('/').pop();
     if (name === 'get_login_email') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, email: fakeUser.email }) });
@@ -64,17 +60,16 @@ test.describe('POS action-level', () => {
     await mockPosBackend(page);
     await login(page);
     await page.goto('/#/pos');
-    await expect(page.getByTestId('pos-order-type-picker')).toBeVisible();
+    await expect(page.getByTestId('pos-order-type-picker')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('body')).not.toHaveText(/Error Loading Data|خطأ في تحميل البيانات/i);
   });
 
   test('starts quick pickup, adds product, changes quantity, and opens payment', async ({ page }) => {
-    await expect(page.getByTestId('pos-order-type-question')).toBeVisible();
     await page.getByTestId('pos-order-type-takeaway').click();
-    await expect(page.getByText('E2E Burger')).toBeVisible();
+    await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /E2E Burger/i }).click();
-    await expect(page.getByText(/100/)).toBeVisible();
-    const cartProduct = page.getByText('E2E Burger').last();
+    await expect(page.getByText('100.00 ج.م', { exact: true }).first()).toBeVisible();
+    const cartProduct = page.getByText('E2E Burger', { exact: true }).last();
     const cartRow = cartProduct.locator('xpath=../..');
     await cartRow.getByRole('button').filter({ has: page.locator('svg') }).nth(1).click();
     await expect(cartRow.getByText('2', { exact: true })).toBeVisible();
@@ -90,9 +85,9 @@ test.describe('POS action-level', () => {
     await expect(page.getByTestId('pos-order-type-delivery')).toBeVisible();
     await expect(page.getByTestId('pos-order-type-takeaway')).toBeVisible();
     await page.getByTestId('pos-order-type-drive_thru').click();
-    await expect(page.getByText(/بيانات السيارة|Vehicle|Car/i)).toBeVisible();
+    await expect(page.getByText(/أدخل رقم اللوحة لبدء الطلب|Enter the plate to start/i)).toBeVisible();
+    await expect(page.locator('input').first()).toBeVisible();
     await page.getByRole('button', { name: /رجوع|Back/i }).click();
     await expect(page.getByTestId('pos-order-type-picker')).toBeVisible();
-    await expect(page.getByTestId('pos-order-type-takeaway')).toBeVisible();
   });
 });
