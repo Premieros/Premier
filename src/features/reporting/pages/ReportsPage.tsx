@@ -20,6 +20,7 @@ type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 
 const PIE_COLORS = [getBrandColor(600), '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', getBrandColor(500)];
 
 export function ReportsPage() {
+  /* REPORT-BRANCH-AUDIT-2026 */
   const { t, lang } = useLanguage();
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
@@ -92,7 +93,9 @@ export function ReportsPage() {
         ]);
         setSummary({ total: profit, count: 1 });
       } else if (reportType === 'inventory') {
-        const { data: inv } = await supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold), warehouse:warehouses(name)').order('updated_at', { ascending: false });
+        let inventoryQuery = supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold), warehouse:warehouses(name)').order('updated_at', { ascending: false });
+        if (effectiveBranchFilter) inventoryQuery = inventoryQuery.eq('branch_id', effectiveBranchFilter);
+        const { data: inv } = await inventoryQuery;
         const rows = (inv || []).map((i: Record<string, unknown>) => {
           const product = i.product as { name: string; barcode: string | null; low_stock_threshold: number };
           const warehouse = i.warehouse as { name: string };
@@ -279,7 +282,9 @@ export function ReportsPage() {
         setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[3]) })));
         setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[1]), 0), count: rows.length });
       } else if (reportType === 'low_stock') {
-        const { data: inv } = await supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold, product_type), warehouse:warehouses(name)');
+        let lowStockQuery = supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold, product_type), warehouse:warehouses(name)');
+        if (effectiveBranchFilter) lowStockQuery = lowStockQuery.eq('branch_id', effectiveBranchFilter);
+        const { data: inv } = await lowStockQuery;
         const rows = (inv || [])
           .map((i: Record<string, unknown>) => {
             const product = i.product as { name: string; barcode: string | null; low_stock_threshold: number } | null;
