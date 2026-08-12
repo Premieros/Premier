@@ -1,1 +1,1 @@
-export { DashboardEnhancedPage as DashboardPage } from './DashboardEnhancedPage';
+export { DashboardFoodicsPage as DashboardPage } from './DashboardFoodicsPage';
