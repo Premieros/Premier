@@ -10,9 +10,7 @@
 
 Rebuild Premier's interface to match the approved/reference design while respecting the existing architecture, database, business logic, permissions, and routes. The rebuilt UI must be extensible and behaviorally stable: moving a button, switch, card, menu item, or control must not change what it does.
 
-**Final UI outcome:** when all phases and final verification are complete, the rebuilt/reference design is intended to become the production UI on `main`. This is a full UI rebuild/replacement of the old visual/application-shell experience, not merely a collection of small cosmetic changes. The existing database, business logic, permissions, routes, and verified business behavior are preserved unless a real defect is found and intentionally fixed. The old UI is not retained as the final production design as a fallback.
-
-The process is deliberately staged: rebuild the UI foundation and screens, verify their real behavior, fix defects, complete regression, then merge the rebuilt UI to `main`. We do not merge or declare the new design final until the required verification passes.
+**Final UI objective:** after all phases and final verification pass, the rebuilt/reference design becomes the production UI on `main`; the old UI is not the intended final fallback. The visual/UI layer is rebuilt while preserving correct existing database, business logic, routes, permissions, and services unless a verified defect requires a change.
 
 Core rule:
 
@@ -32,7 +30,8 @@ Functionality must never depend on DOM position, visual placement, or fragile se
 8. If a later phase exposes an earlier defect, return to that phase, fix, re-verify, then continue.
 9. Preserve existing business logic unless audit proves it incorrect.
 10. Keep this file updated so future sessions cannot drift from the plan.
-11. The final result must be the rebuilt/reference UI on `main`; do not silently revert to the old UI merely to obtain passing tests.
+11. Future UI changes must remain independent of visual placement; moving/reordering controls must not change their action, permission, route/state, or service behavior.
+12. New screens/components must use the shared UI foundation and stable interaction identities so future design changes do not require rewriting business logic.
 
 ## 3. Phase Plan
 
@@ -84,6 +83,8 @@ Required action-level flows:
 - POS order-type selectors include `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
 - Cart quantity controls use product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
 - Moving a control must not alter its action, permission, route, state, or service behavior.
+- The UI layer is intended to be replaceable/rearrangeable without rewriting the underlying business logic.
+- Shared components and stable action identities are the mechanism for safe future UI evolution.
 
 ## 5. Completed Work / Evidence
 
@@ -167,8 +168,9 @@ Every meaningful action must be recorded here with:
 
 The rebuild is complete only when:
 - Reference design and current architecture are aligned.
-- The rebuilt/reference UI is the final production UI on `main`; the old UI is not retained as the final visual fallback.
+- The rebuilt/reference UI is the intended final production UI after final verification; the old UI is not retained as the intended final design.
 - Critical UI controls have stable identities and actions independent of layout position.
+- Future visual rearrangement can be made without changing underlying business logic merely because controls moved.
 - Dashboard/navigation behavior is verified.
 - POS/FloorPlan/Kitchen/payment critical flows are verified end-to-end.
 - RBAC and branch isolation are verified.
@@ -189,7 +191,7 @@ The rebuild is complete only when:
 - Current blocker: Quick Pickup payment assertion expects `طريقة الدفع|Payment method`, but the actual payment UI exposes a different state/control.
 - Action: remain in PHASE 3; inspect the real payment flow and fix the root cause/test expectation without bypassing behavior.
 
-### 2026-08-13 — Final UI outcome clarification
-- User asked whether completing all phases means the new/reference design will fully replace the old design.
-- Clarification added: **Yes.** The intended final production outcome is the rebuilt/reference UI on `main`, with the existing verified business logic, database, routes, permissions, and data preserved. The old UI is not the final fallback.
-- This clarification does not change the phase plan; it makes the original objective explicit.
+### Architecture / maintainability clarification
+- Confirmed and recorded: the final rebuild must remain safely editable and extensible. Future visual rearrangement, component replacement, menu reordering, or addition of controls must not require rewriting the underlying business logic solely because the UI changed position.
+- Stable IDs, centralized navigation, shared UI components, and separation of UI/action/route/permission/service are mandatory mechanisms for this goal.
+- This clarification does not change the original plan; it explicitly records an existing requirement of the rebuild.
