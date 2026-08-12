@@ -37,7 +37,21 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-  await page.route(`${SUPABASE_ORIGIN}/rpc/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) }));
+
+  // Keep login-related RPCs ahead of the generic RPC fallback. Playwright uses the last
+  // matching route, so the generic handler must not swallow get_login_email.
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/get_login_email`, async (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: TEST_USER_ID, email: fakeUser.email, username: 'e2e-admin', pin: '1234', is_active: true }) })
+  );
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/record_login_success`, async (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) })
+  );
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/record_login_failure`, async (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) })
+  );
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) })
+  );
 }
 
 async function login(page: Page) {
