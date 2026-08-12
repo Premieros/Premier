@@ -16,10 +16,10 @@ describe('navigation regressions', () => {
     const source = read('src/features/dashboard/pages/DashboardFoodicsPage.tsx');
     expect(source).toContain('to="/reports?reportType=sales"');
     expect(source).toContain('to="/reports?reportType=sales_by_payment"');
-    expect(source).toContain('to="/reports?reportType=sales_by_branch"');
-    expect(source).toContain('to="/reports?reportType=detailed_invoices"');
     expect(source).toContain('to="/reports?reportType=sales_by_product"');
+    expect(source).toContain('to="/reports?reportType=detailed_invoices"');
     expect(source).toContain('to="/inventory"');
+    expect(source).not.toContain('to="/reports?reportType=sales_by_branch"');
     expect(source).not.toContain('to="/pos/active"');
   });
 
@@ -42,6 +42,18 @@ describe('navigation regressions', () => {
     expect(layout).toContain("user?.role==='super_admin'");
     expect(chrome).toContain('return <>{children}</>');
     expect(chrome).not.toContain('fixed inset-0 z-[45]');
+  });
+
+  it('keeps legacy navigation aliases backed by real protected destinations', () => {
+    const routes = read('src/app/routes.tsx');
+    expect(routes).toContain('path="/kitchen"');
+    expect(routes).toContain('path="/tables"');
+    expect(routes).toContain('path="/accounting"');
+    expect(routes).toContain('path="/employees"');
+    expect(routes).toContain('to="/pos"');
+    expect(routes).toContain('to="/floor-plan"');
+    expect(routes).toContain('to="/financial-reports"');
+    expect(routes).toContain('to="/users"');
   });
 
   it('rejects obvious dead navigation placeholders across the application', () => {
