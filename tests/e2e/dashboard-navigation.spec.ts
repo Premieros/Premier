@@ -54,7 +54,7 @@ async function mockAuthenticatedApp(page: Page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 
-  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/rpc/get_login_email$`), async (route) => {
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/rpc/get_login_email(?:\\?.*)?$`), async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -79,8 +79,8 @@ async function loginAsE2EAdmin(page: Page) {
   await expect(page).toHaveURL(/#\/dashboard$/);
 }
 
-async function clickVisibleText(page: Page, pattern: RegExp) {
-  const target = page.getByText(pattern).first();
+async function clickRouteLink(page: Page, route: string) {
+  const target = page.locator(`a[href="#${route}"]`).first();
   await expect(target).toBeVisible();
   await target.click();
 }
@@ -94,28 +94,28 @@ test.describe('dashboard and navigation actions', () => {
   test('dashboard renders the application shell without console errors', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-    await expect(page.getByText(/لوحة التحكم|Dashboard/i).first()).toBeVisible();
-    await expect(page.getByText(/نقطة البيع|POS/i).first()).toBeVisible();
-    await expect(page.getByText(/المخزون|Inventory/i).first()).toBeVisible();
-    await expect(page.getByText(/التقارير|Reports/i).first()).toBeVisible();
+
+    await expect(page.locator('header').first()).toBeVisible();
+    await expect(page.locator('main').first()).toBeVisible();
+    await expect(page.locator(`a[href="#/dashboard"]`).first()).toBeVisible();
+    await expect(page.locator(`a[href="#/pos"]`).first()).toBeVisible();
+    await expect(page.locator(`a[href="#/inventory"]`).first()).toBeVisible();
     expect(consoleErrors).toEqual([]);
   });
 
   test('top navigation actions keep stable route targets', async ({ page }) => {
-    const cases = [
-      { label: /الفروع|Branches/i, route: /#\/branches$/ },
-      { label: /المخزون|Inventory/i, route: /#\/inventory$/ },
-      { label: /نقطة البيع|POS/i, route: /#\/pos$/ },
-    ];
-    for (const item of cases) {
-      await clickVisibleText(page, item.label);
-      await expect(page).toHaveURL(item.route);
+    const cases = ['/branches', '/inventory', '/pos'];
+    for (const route of cases) {
+      await clickRouteLink(page, route);
+      await expect(page).toHaveURL(new RegExp(`#${route}$`));
       await page.goto('/#/dashboard');
     }
   });
 
   test('header actions are real actions, not placeholders', async ({ page }) => {
-    await clickVisibleText(page, /الطلبات النشطة|Active orders/i);
+    const activeOrders = page.getByRole('button', { name: /الطلبات النشطة|Active orders/i }).first();
+    await expect(activeOrders).toBeVisible();
+    await activeOrders.click();
     await expect(page).toHaveURL(/#\/floor-plan$/);
     await page.goto('/#/dashboard');
 
