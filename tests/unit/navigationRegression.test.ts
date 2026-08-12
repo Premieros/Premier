@@ -32,7 +32,7 @@ describe('navigation regressions', () => {
     expect(layout).toContain("to:'/inventory'");
     expect(layout).toContain("to:'/reports'");
     expect(layout).toContain("to:'/settings'");
-    expect(layout).toContain("to:'/floor-plan'");
+    expect(layout).toContain("navigate('/floor-plan')");
     expect(layout).toContain("user?.role==='super_admin'");
     expect(chrome).toContain('return <>{children}</>');
     expect(chrome).not.toContain('fixed inset-0 z-[45]');
