@@ -89,6 +89,7 @@ Only after all required CI checks and regression tests pass: review PR #3, verif
 - Stable IDs are used for critical interactions and E2E tests.
 - POS has stable order-type selectors such as `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
 - Moving a control in the layout must not alter its action, permission, route, state, or service behavior.
+- Cart quantity controls now have stable IDs based on product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
 
 ## 5. Completed Work / Evidence
 
@@ -99,7 +100,8 @@ Only after all required CI checks and regression tests pass: review PR #3, verif
 - Dashboard/navigation E2E verification completed.
 - Login E2E mocking was corrected so the POS tests reach the application instead of being blocked at `/login`.
 - POS tests were corrected to use the actual UI's stable test IDs instead of assumed text/DOM positions.
-- POS order-type action test is now passing in the latest Browser E2E run.
+- POS order-type action test is passing in the latest Browser E2E run.
+- The remaining cart quantity test was corrected to stop traversing DOM parents and using `nth(1)`; it now targets the product-specific stable quantity control ID.
 
 ## 6. Current State — 2026-08-13
 
@@ -107,64 +109,94 @@ Only after all required CI checks and regression tests pass: review PR #3, verif
 
 **Current phase:** PHASE 3 — POS / FloorPlan / Order Workspace
 
-**Current PR head:** `bc33c9cdec4835966f65fe2256efd115504c6781`
+**Latest source commits:**
+- `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — add stable cart quantity control IDs to `CurrentOrderPanel.tsx`.
+- `9cf28849332fb079d823a8e8c2f853139a30cef7` — update `pos-actions.spec.ts` to use the stable quantity IDs and assert quantity `1 → 2`.
 
-**PR #3 status:** Open, not merged. The PR merge ref used by CI is `b0fda806b0e006a7671ce8aa80041ddb4e3041ed`.
+**PR #3 status:** Open, not merged.
 
-### Latest CI — Run #98
+### Latest completed CI evidence before the current fix — Run #99
 
-Run #98 was executed against the PR merge ref containing the current head and completed with:
+Run #99 completed with:
 
 - Verify: **PASS**
 - Build: **PASS**
-- Browser E2E: **FAIL**
-- Browser E2E result: **42 passed / 1 failed**
+- Browser E2E: **42 passed / 1 failed**
 
-The passing tests include Dashboard/Navigation, Public Smoke, and the POS order-type flow.
+The only failure was the quick-pickup cart quantity increase action. The failure was caused by the test using fragile DOM traversal and `nth(1)` to identify the plus button.
 
-### Exact remaining failure
+### Root cause
 
-The only failing test is:
-
-`tests/e2e/pos-actions.spec.ts:70` — `starts quick pickup, adds product, changes quantity, and opens payment`
-
-Failure occurs at the quantity-increase click. The test currently uses a fragile DOM traversal/position selector:
+The failing selector was:
 
 `getByText('E2E Burger').last().locator('../..').getByRole('button').filter({ has: page.locator('svg') }).nth(1)`
 
-It timed out after 30 seconds. This is precisely the type of selector the rebuild rules prohibit: the action is coupled to DOM structure/position instead of a stable control identity.
+This violates the project's central architectural/testing rule because it couples the action to DOM structure and visual placement.
 
-**Important:** this failure is now isolated to the E2E selector/interaction layer. The application build, typecheck, lint, unit tests, navigation tests, public smoke tests, and order-type POS test all pass in Run #98.
+### Fix just applied
 
-### Note about commit history
+Application file:
 
-Commit `6717c9de...` received a cancelled Run #97 because a newer push superseded it. The branch then advanced to `bc33c9c...` when `REBUILD_MASTER_LOG.md` was added. Therefore the current source of truth is the current PR head above, not `6717c9de...`.
+`src/features/pos/components/order/CurrentOrderPanel.tsx`
 
-## 7. Next Action — DO NOT SKIP
+Added stable product-specific identifiers and semantic labels to the cart quantity controls:
 
-1. Fix the single failing POS quantity interaction by using a stable test ID/semantic control identity in the actual cart quantity button. Do not weaken the assertion and do not use `nth()`/DOM position as the final solution.
-2. Run CI again and record the new run number/result here.
-3. If Browser E2E becomes fully green, close the current POS smoke blocker and continue with the next unverified POS flow: Dine-in/Tables.
-4. Then verify Delivery/Drive-thru, Hold/Resume, Kitchen, Discount, Payment, and Complete Sale.
-5. Do not move to PHASE 4 until PHASE 3's required POS/FloorPlan action-level verification is closed.
+- `pos-cart-qty-decrease-{productId}`
+- `pos-cart-qty-{productId}`
+- `pos-cart-qty-increase-{productId}`
 
-## 8. Session Update Template
+Test file:
 
-Every future session must append/update this section with:
+`tests/e2e/pos-actions.spec.ts`
+
+The quick-pickup test now uses:
+
+- `getByTestId(pos-cart-qty-{PRODUCT_ID})`
+- `getByTestId(pos-cart-qty-increase-{PRODUCT_ID})`
+
+and verifies the real state transition from quantity `1` to `2` before opening payment.
+
+This is a real stable-identity fix; the application behavior was not bypassed and no assertion was weakened.
+
+## 7. Current Verification State — AFTER FIX
+
+The fix has been committed to the rebuild branch, but **a new CI run has not yet completed for these commits**.
+
+Therefore:
+
+- POS quantity fix: **IMPLEMENTED**
+- CI verification of the fix: **PENDING**
+- PHASE 3: **OPEN**
+- Do not close the blocker until CI proves the result.
+
+## 8. Exact Next Action — DO NOT SKIP
+
+1. Wait for/inspect the CI run triggered by the latest branch commits.
+2. Verify Verify + Build + Browser E2E.
+3. If the quantity test passes and Browser E2E is fully green, record the run here and close this specific POS smoke blocker.
+4. Continue with the next unverified POS flow: Dine-in/FloorPlan/Tables.
+5. Then verify Delivery/Drive-thru, Hold/Resume, Kitchen, Discount, Payment, and Complete Sale.
+6. Do not move to PHASE 4 until PHASE 3's required POS/FloorPlan action-level verification is closed.
+
+## 9. Session Update Rule
+
+Every meaningful action must be recorded in this file. The record must include:
 
 - Date/time
 - Current branch
 - Current phase
-- Last commit
-- CI run and result
-- What was verified
-- What failed
+- Previous verified CI
 - Root cause
-- Fix/commit
+- Files changed
+- Fix applied
+- Commit(s)
+- New CI status/result
 - Remaining blockers
 - Exact next action
 
-## 9. Definition of Done
+**User explicitly requested that every time progress is made, this file is updated and the user is told that it was recorded.**
+
+## 10. Definition of Done
 
 The rebuild is complete only when:
 
