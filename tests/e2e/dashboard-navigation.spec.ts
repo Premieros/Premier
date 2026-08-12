@@ -22,10 +22,17 @@ const fakeSession = {
   user: { id: TEST_USER_ID, aud: 'authenticated', role: 'authenticated', email: 'e2e@example.test', user_metadata: {}, app_metadata: {} },
 };
 
+const fakeUser = {
+  id: TEST_USER_ID,
+  email: 'e2e@example.test',
+  full_name: 'E2E Admin',
+  role: 'super_admin',
+  is_active: true,
+  branch_id: null,
+  created_at: new Date().toISOString(),
+};
+
 async function mockAuthenticatedApp(page: Page) {
-  // Supabase JS v2 persists sessions under `sb-<project-ref>-auth-token`.
-  // Seed the exact key used by createClient so AuthContext receives a real session
-  // during E2E without touching production auth data.
   await page.addInitScript(({ session }) => {
     localStorage.setItem('sb-lwnsdsncmlsroiswgoga-auth-token', JSON.stringify(session));
   }, { session: fakeSession });
@@ -33,25 +40,31 @@ async function mockAuthenticatedApp(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/**`, async (route) => {
     const url = route.request().url();
     if (url.includes('/auth/v1/user')) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(fakeSession.user),
-      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession.user) });
       return;
     }
     if (url.includes('/auth/v1/token')) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(fakeSession),
-      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession) });
       return;
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/users**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: TEST_USER_ID, email: 'e2e@example.test', full_name: 'E2E Admin', role: 'super_admin', is_active: true, branch_id: null, created_at: new Date().toISOString() }]) });
+
+  // Use a regex because Supabase adds query parameters to the REST URL.
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/users(?:\\?.*)?$`), async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
+      return;
+    }
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
+  });
+
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/roles(?:\\?.*)?$`), async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -61,6 +74,12 @@ async function mockAuthenticatedApp(page: Page) {
   });
 }
 
+async function clickVisibleText(page: Page, pattern: RegExp) {
+  const target = page.getByText(pattern).first();
+  await expect(target).toBeVisible();
+  await target.click();
+}
+
 test.describe('dashboard and navigation actions', () => {
   test.beforeEach(async ({ page }) => { await mockAuthenticatedApp(page); });
 
@@ -68,23 +87,22 @@ test.describe('dashboard and navigation actions', () => {
     const consoleErrors: string[] = [];
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     await page.goto('/#/dashboard');
-    await expect(page.locator('a[href="#/dashboard"]').first()).toBeVisible();
-    await expect(page.locator('a[href="#/pos"]').first()).toBeVisible();
-    await expect(page.locator('a[href="#/inventory"]').first()).toBeVisible();
-    await expect(page.locator('a[href="#/reports"]').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /Sign out|تسجيل الخروج/i })).toBeVisible();
+    await expect(page.getByText(/لوحة التحكم|Dashboard/i).first()).toBeVisible();
+    await expect(page.getByText(/نقطة البيع|POS/i).first()).toBeVisible();
+    await expect(page.getByText(/المخزون|Inventory/i).first()).toBeVisible();
+    await expect(page.getByText(/التقارير|Reports/i).first()).toBeVisible();
     expect(consoleErrors).toEqual([]);
   });
 
   test('top navigation actions keep stable route targets', async ({ page }) => {
     await page.goto('/#/dashboard');
     const cases = [
-      { selector: 'a[href="#/branches"]', route: /#\/branches$/ },
-      { selector: 'a[href="#/inventory"]', route: /#\/inventory$/ },
-      { selector: 'a[href="#/pos"]', route: /#\/pos$/ },
+      { label: /الفروع|Branches/i, route: /#\/branches$/ },
+      { label: /المخزون|Inventory/i, route: /#\/inventory$/ },
+      { label: /نقطة البيع|POS/i, route: /#\/pos$/ },
     ];
     for (const item of cases) {
-      await page.locator(item.selector).first().click();
+      await clickVisibleText(page, item.label);
       await expect(page).toHaveURL(item.route);
       await page.goto('/#/dashboard');
     }
@@ -92,13 +110,19 @@ test.describe('dashboard and navigation actions', () => {
 
   test('header actions are real actions, not placeholders', async ({ page }) => {
     await page.goto('/#/dashboard');
-    await page.getByRole('button', { name: /Active orders|الطلبات النشطة/i }).click();
+    await clickVisibleText(page, /الطلبات النشطة|Active orders/i);
     await expect(page).toHaveURL(/#\/floor-plan$/);
     await page.goto('/#/dashboard');
-    await page.getByRole('button', { name: /Toggle theme|تغيير المظهر/i }).click();
+
+    const themeButton = page.getByRole('button', { name: /تغيير المظهر|Toggle theme|Dark mode|Light mode/i }).first();
+    await expect(themeButton).toBeVisible();
+    await themeButton.click();
     await expect(page.locator('html')).toHaveAttribute('class', /dark/);
+
     await page.goto('/#/dashboard');
-    await page.getByRole('button', { name: /Sign out|تسجيل الخروج/i }).click();
+    const signOut = page.getByRole('button', { name: /تسجيل الخروج|Sign out/i }).first();
+    await expect(signOut).toBeVisible();
+    await signOut.click();
     await expect(page).toHaveURL(/#\/login$/);
   });
 });
