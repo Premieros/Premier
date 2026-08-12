@@ -75,7 +75,7 @@ async function loginAsE2EAdmin(page: Page) {
   await page.goto('/#/login');
   await page.locator('#login-username').fill('e2e-admin');
   await page.locator('#login-pin').fill('1234');
-  await page.getByRole('button', { name: /تسجيل الدخول|Sign in/i }).click();
+  await page.locator('form').getByRole('button', { name: /دخول|تسجيل الدخول|Sign in/i }).click();
   await expect(page).toHaveURL(/#\/dashboard$/);
 }
 
