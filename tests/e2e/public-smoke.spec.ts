@@ -44,24 +44,24 @@ test.describe('public application smoke', () => {
     await page.goto('/#/login');
     await expect(page.getByRole('heading', { name: /مرحباً بك|Welcome back/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /English|العربية/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /دخول|Sign in/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /دخول|Sign in/i, exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: /English|العربية/i }).click();
     await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Sign in/i, exact: true })).toBeVisible();
 
     expect(consoleErrors).toEqual([]);
   });
 
   test('login validation blocks invalid PIN without network navigation', async ({ page }) => {
     await page.goto('/#/login');
-    await page.getByLabel(/اسم المستخدم|username/i).fill('smoke-test');
-    await page.getByLabel(/PIN|الرمز السري/i).fill('12');
-    await page.getByRole('button', { name: /دخول|Sign in/i }).click();
+    await page.locator('#login-username').fill('smoke-test');
+    await page.locator('#login-pin').fill('12');
+    await page.getByRole('button', { name: /دخول|Sign in/i, exact: true }).click();
 
     await expect(page).toHaveURL(/#\/login$/);
     await expect(page.getByText(/4|أربع|four/i).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /دخول|Sign in/i })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /دخول|Sign in/i, exact: true })).toBeEnabled();
   });
 
   for (const route of protectedRoutes) {
