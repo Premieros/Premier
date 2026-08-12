@@ -44,11 +44,11 @@ test.describe('public application smoke', () => {
     await page.goto('/#/login');
     await expect(page.getByRole('heading', { name: /مرحباً بك|Welcome back/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /English|العربية/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /دخول|Sign in/i, exact: true })).toBeVisible();
+    await expect(page.locator('form button[type="submit"]')).toBeVisible();
 
     await page.getByRole('button', { name: /English|العربية/i }).click();
     await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Sign in/i, exact: true })).toBeVisible();
+    await expect(page.locator('form button[type="submit"]')).toHaveText(/Sign in/);
 
     expect(consoleErrors).toEqual([]);
   });
@@ -57,11 +57,11 @@ test.describe('public application smoke', () => {
     await page.goto('/#/login');
     await page.locator('#login-username').fill('smoke-test');
     await page.locator('#login-pin').fill('12');
-    await page.getByRole('button', { name: /دخول|Sign in/i, exact: true }).click();
+    await page.locator('form button[type="submit"]').click();
 
     await expect(page).toHaveURL(/#\/login$/);
     await expect(page.getByText(/4|أربع|four/i).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /دخول|Sign in/i, exact: true })).toBeEnabled();
+    await expect(page.locator('form button[type="submit"]')).toBeEnabled();
   });
 
   for (const route of protectedRoutes) {
