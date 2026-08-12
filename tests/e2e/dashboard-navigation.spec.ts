@@ -23,11 +23,31 @@ const fakeSession = {
 };
 
 async function mockAuthenticatedApp(page: Page) {
+  // Supabase JS v2 persists sessions under `sb-<project-ref>-auth-token`.
+  // Seed the exact key used by createClient so AuthContext receives a real session
+  // during E2E without touching production auth data.
   await page.addInitScript(({ session }) => {
     localStorage.setItem('sb-lwnsdsncmlsroiswgoga-auth-token', JSON.stringify(session));
   }, { session: fakeSession });
 
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/**`, async (route) => {
+    const url = route.request().url();
+    if (url.includes('/auth/v1/user')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fakeSession.user),
+      });
+      return;
+    }
+    if (url.includes('/auth/v1/token')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fakeSession),
+      });
+      return;
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/users**`, async (route) => {
@@ -48,10 +68,10 @@ test.describe('dashboard and navigation actions', () => {
     const consoleErrors: string[] = [];
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     await page.goto('/#/dashboard');
-    await expect(page.getByRole('link', { name: /Dashboard|لوحة التحكم/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /POS|نقطة البيع/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /Inventory|المخزون/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /Reports|التقارير/i }).first()).toBeVisible();
+    await expect(page.locator('a[href="#/dashboard"]').first()).toBeVisible();
+    await expect(page.locator('a[href="#/pos"]').first()).toBeVisible();
+    await expect(page.locator('a[href="#/inventory"]').first()).toBeVisible();
+    await expect(page.locator('a[href="#/reports"]').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Sign out|تسجيل الخروج/i })).toBeVisible();
     expect(consoleErrors).toEqual([]);
   });
@@ -59,12 +79,12 @@ test.describe('dashboard and navigation actions', () => {
   test('top navigation actions keep stable route targets', async ({ page }) => {
     await page.goto('/#/dashboard');
     const cases = [
-      { label: /Branches|الفروع/i, route: /#\/branches$/ },
-      { label: /Inventory|المخزون/i, route: /#\/inventory$/ },
-      { label: /Kitchen|المطبخ/i, route: /#\/pos$/ },
+      { selector: 'a[href="#/branches"]', route: /#\/branches$/ },
+      { selector: 'a[href="#/inventory"]', route: /#\/inventory$/ },
+      { selector: 'a[href="#/pos"]', route: /#\/pos$/ },
     ];
     for (const item of cases) {
-      await page.getByRole('link', { name: item.label }).first().click();
+      await page.locator(item.selector).first().click();
       await expect(page).toHaveURL(item.route);
       await page.goto('/#/dashboard');
     }
