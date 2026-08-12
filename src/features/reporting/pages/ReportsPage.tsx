@@ -337,7 +337,7 @@ export function ReportsPage() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
             {reportTypes.map((rt) => (
-              <button key={rt.key} onClick={() => setReportType(rt.key)}
+              <button key={rt.key} data-report-type={rt.key} onClick={() => setReportType(rt.key)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
                 {rt.icon} {rt.label}
               </button>

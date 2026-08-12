@@ -40,30 +40,19 @@ export function ReportDeepLinkPage() {
     if (!isReportType(requestedParam)) return;
 
     let attempts = 0;
-    const wanted = REPORT_LABELS[requestedParam][lang === 'ar' ? 0 : 1]
-      .trim()
-      .toLocaleLowerCase();
-
     const selectReport = () => {
-      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('main button, [role="main"] button'));
-      const reportButton = buttons.find((button) => {
-        if (button.disabled || !button.offsetParent) return false;
-        const text = (button.textContent || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
-        return text === wanted;
-      });
-
-      if (reportButton) {
+      const reportButton = document.querySelector<HTMLButtonElement>(`button[data-report-type="${requestedParam}"]`);
+      if (reportButton && !reportButton.disabled && reportButton.offsetParent) {
         reportButton.click();
         return;
       }
-
       attempts += 1;
       if (attempts < 40) window.setTimeout(selectReport, 50);
     };
 
     const timer = window.setTimeout(selectReport, 0);
     return () => window.clearTimeout(timer);
-  }, [requestedParam, lang]);
+  }, [requestedParam]);
 
   return <ReportsPage />;
 }
