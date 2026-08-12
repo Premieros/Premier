@@ -1,8 +1,9 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Layout } from '../components/Layout';
 import { useCan, type Permission } from '../lib/permissions';
+import { APP_ROUTES } from '@/core/navigation/routes';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
@@ -42,53 +43,63 @@ const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/Subscr
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" /></div>; }
-function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true, superAdminOnly = false }: { children: React.ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean; superAdminOnly?: boolean }) { const { session, loading, user, subscription } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to="/login" replace />; if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />; if (permission && !can(permission)) return <Navigate to="/dashboard" replace />; if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to="/subscription" replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
-function PublicRoute({ children }: { children: React.ReactNode }) { const { session, loading } = useAuth(); if (loading) return null; if (session) return <Navigate to="/dashboard" replace />; return <>{children}</>; }
+function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true, superAdminOnly = false }: { children: ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean; superAdminOnly?: boolean }) {
+  const { session, loading, user, subscription } = useAuth();
+  const can = useCan();
+  if (loading) return <PageLoader />;
+  if (!session) return <Navigate to={APP_ROUTES.login} replace />;
+  if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to={APP_ROUTES.dashboard} replace />;
+  if (permission && !can(permission)) return <Navigate to={APP_ROUTES.dashboard} replace />;
+  if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to={APP_ROUTES.subscription} replace />;
+  if (fullscreen) return <>{children}</>;
+  return <Layout>{children}</Layout>;
+}
+function PublicRoute({ children }: { children: ReactNode }) { const { session, loading } = useAuth(); if (loading) return null; if (session) return <Navigate to={APP_ROUTES.dashboard} replace />; return <>{children}</>; }
 
 export function AppRoutes() {
- return <Suspense fallback={<PageLoader />}><Routes>
-  <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-  <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-  <Route path="/subscription" element={<ProtectedRoute subscriptionGate={false}><SubscriptionPage /></ProtectedRoute>} />
-  <Route path="/dashboard" element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} />
-  <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
-  <Route path="/pos/:orderId" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
-  <Route path="/floor-plan" element={<ProtectedRoute permission="floor_plan.view"><ActiveOrdersPage /></ProtectedRoute>} />
-  <Route path="/kitchen" element={<Navigate to="/pos" replace />} />
-  <Route path="/tables" element={<ProtectedRoute permission="floor_plan.view"><Navigate to="/floor-plan" replace /></ProtectedRoute>} />
-  <Route path="/products" element={<ProtectedRoute permission="products.view"><ProductsPage /></ProtectedRoute>} />
-  <Route path="/categories" element={<ProtectedRoute permission="categories.view"><CategoriesPage /></ProtectedRoute>} />
-  <Route path="/components" element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />
-  <Route path="/inventory" element={<ProtectedRoute permission="inventory.view"><InventoryPage /></ProtectedRoute>} />
-  <Route path="/warehouses" element={<ProtectedRoute permission="warehouses.view"><WarehousesPage /></ProtectedRoute>} />
-  <Route path="/raw-materials" element={<ProtectedRoute permission="raw_materials.view"><RawMaterialsPage /></ProtectedRoute>} />
-  <Route path="/recipes" element={<ProtectedRoute permission="recipes.view"><RecipesPage /></ProtectedRoute>} />
-  <Route path="/production" element={<ProtectedRoute permission="production.view"><ProductionOrdersPage /></ProtectedRoute>} />
-  <Route path="/transfers" element={<ProtectedRoute permission="inventory.transfers"><TransfersPage /></ProtectedRoute>} />
-  <Route path="/inventory-ledger" element={<ProtectedRoute permission="inventory.ledger.view"><InventoryLedgerPage /></ProtectedRoute>} />
-  <Route path="/branches" element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
-  <Route path="/purchases" element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
-  <Route path="/customers" element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />
-  <Route path="/suppliers" element={<ProtectedRoute permission="suppliers.view"><SuppliersPage /></ProtectedRoute>} />
-  <Route path="/expenses" element={<ProtectedRoute permission="expenses.view"><ExpensesPage /></ProtectedRoute>} />
-  <Route path="/sales" element={<ProtectedRoute permission="sales.view"><SalesPage /></ProtectedRoute>} />
-  <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
-  <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportDeepLinkPage /></ProtectedRoute>} />
-  <Route path="/financial-reports" element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
-  <Route path="/accounting" element={<ProtectedRoute permission="reports.financial"><Navigate to="/financial-reports" replace /></ProtectedRoute>} />
-  <Route path="/accounts" element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
-  <Route path="/payments" element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
-  <Route path="/journal" element={<ProtectedRoute permission="accounts.view"><JournalPage /></ProtectedRoute>} />
-  <Route path="/treasury" element={<ProtectedRoute permission="accounts.view"><TreasuryPage /></ProtectedRoute>} />
-  <Route path="/reconciliation" element={<ProtectedRoute permission="accounts.view"><ReconciliationPage /></ProtectedRoute>} />
-  <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
-  <Route path="/employees" element={<ProtectedRoute permission="users.view"><Navigate to="/users" replace /></ProtectedRoute>} />
-  <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
-  <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
-  <Route path="/subscriptions" element={<ProtectedRoute superAdminOnly><SubscriptionsAdminPage /></ProtectedRoute>} />
-  <Route path="/settings/basic" element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
-  <Route path="/system-health" element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
-  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-  <Route path="*" element={<Navigate to="/dashboard" replace />} />
- </Routes></Suspense>;
+  return <Suspense fallback={<PageLoader />}><Routes>
+    <Route path={APP_ROUTES.login} element={<PublicRoute><LoginPage /></PublicRoute>} />
+    <Route path={APP_ROUTES.register} element={<PublicRoute><RegisterPage /></PublicRoute>} />
+    <Route path={APP_ROUTES.subscription} element={<ProtectedRoute subscriptionGate={false}><SubscriptionPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.dashboard} element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.pos} element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
+    <Route path={`${APP_ROUTES.pos}/:orderId`} element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.floorPlan} element={<ProtectedRoute permission="floor_plan.view"><ActiveOrdersPage /></ProtectedRoute>} />
+    <Route path="/kitchen" element={<Navigate to={APP_ROUTES.pos} replace />} />
+    <Route path="/tables" element={<ProtectedRoute permission="floor_plan.view"><Navigate to={APP_ROUTES.floorPlan} replace /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.products} element={<ProtectedRoute permission="products.view"><ProductsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.categories} element={<ProtectedRoute permission="categories.view"><CategoriesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.components} element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.inventory} element={<ProtectedRoute permission="inventory.view"><InventoryPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.warehouses} element={<ProtectedRoute permission="warehouses.view"><WarehousesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.rawMaterials} element={<ProtectedRoute permission="raw_materials.view"><RawMaterialsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.recipes} element={<ProtectedRoute permission="recipes.view"><RecipesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.production} element={<ProtectedRoute permission="production.view"><ProductionOrdersPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.transfers} element={<ProtectedRoute permission="inventory.transfers"><TransfersPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.inventoryLedger} element={<ProtectedRoute permission="inventory.ledger.view"><InventoryLedgerPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.branches} element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.purchases} element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.customers} element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.suppliers} element={<ProtectedRoute permission="suppliers.view"><SuppliersPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.expenses} element={<ProtectedRoute permission="expenses.view"><ExpensesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.sales} element={<ProtectedRoute permission="sales.view"><SalesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.shifts} element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.reports} element={<ProtectedRoute permission="reports.view"><ReportDeepLinkPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.financialReports} element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.accounting} element={<ProtectedRoute permission="reports.financial"><Navigate to={APP_ROUTES.financialReports} replace /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.accounts} element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.payments} element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.journal} element={<ProtectedRoute permission="accounts.view"><JournalPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.treasury} element={<ProtectedRoute permission="accounts.view"><TreasuryPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.reconciliation} element={<ProtectedRoute permission="accounts.view"><ReconciliationPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.users} element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.employees} element={<ProtectedRoute permission="users.view"><Navigate to={APP_ROUTES.users} replace /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.auditLog} element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.settings} element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.subscriptions} element={<ProtectedRoute superAdminOnly><SubscriptionsAdminPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.basicSettings} element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.systemHealth} element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
+    <Route path="/" element={<Navigate to={APP_ROUTES.dashboard} replace />} />
+    <Route path="*" element={<Navigate to={APP_ROUTES.dashboard} replace />} />
+  </Routes></Suspense>;
 }
