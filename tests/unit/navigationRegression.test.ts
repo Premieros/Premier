@@ -23,4 +23,18 @@ describe('navigation regressions', () => {
     expect(source).toContain("setOrdersOpen(true)");
     expect(source).not.toContain('onSelect(type)');
   });
+
+  it('uses one shared Foodics-style application shell for protected screens', () => {
+    const layout = read('src/components/Layout.tsx');
+    const chrome = read('src/features/dashboard/components/DashboardChrome.tsx');
+    expect(layout).toContain("to:'/dashboard'");
+    expect(layout).toContain("to:'/products'");
+    expect(layout).toContain("to:'/inventory'");
+    expect(layout).toContain("to:'/reports'");
+    expect(layout).toContain("to:'/settings'");
+    expect(layout).toContain("to:'/floor-plan'");
+    expect(layout).toContain("user?.role==='super_admin'");
+    expect(chrome).toContain('return <>{children}</>');
+    expect(chrome).not.toContain('fixed inset-0 z-[45]');
+  });
 });
