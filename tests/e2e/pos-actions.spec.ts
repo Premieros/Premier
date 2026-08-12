@@ -72,10 +72,11 @@ test.describe('POS action-level', () => {
     await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /E2E Burger/i }).click();
     await expect(page.getByText('100.00 ج.م', { exact: true }).first()).toBeVisible();
-    const cartProduct = page.getByText('E2E Burger', { exact: true }).last();
-    const cartRow = cartProduct.locator('xpath=../..');
-    await cartRow.getByRole('button').filter({ has: page.locator('svg') }).nth(1).click();
-    await expect(cartRow.getByText('2', { exact: true })).toBeVisible();
+    const quantity = page.getByTestId(`pos-cart-qty-${PRODUCT_ID}`);
+    const increase = page.getByTestId(`pos-cart-qty-increase-${PRODUCT_ID}`);
+    await expect(quantity).toHaveText('1');
+    await increase.click();
+    await expect(quantity).toHaveText('2');
     const pay = page.getByRole('button', { name: /الدفع|Pay/i }).first();
     await expect(pay).toBeEnabled();
     await pay.click();
