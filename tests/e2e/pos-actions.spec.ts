@@ -59,7 +59,10 @@ test.describe('POS action-level', () => {
   test.beforeEach(async ({ page }) => {
     await mockPosBackend(page);
     await login(page);
-    await page.goto('/#/pos');
+    const posLink = page.getByRole('link', { name: /نقطة البيع|POS/i }).first();
+    await expect(posLink).toBeVisible({ timeout: 10000 });
+    await posLink.click();
+    await expect(page).toHaveURL(/#\/pos$/);
     await expect(page.getByTestId('pos-order-type-picker')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('body')).not.toHaveText(/Error Loading Data|خطأ في تحميل البيانات/i);
   });
