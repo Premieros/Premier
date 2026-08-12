@@ -36,22 +36,21 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/orders**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
-  // Keep login-related RPCs ahead of the generic RPC fallback. Playwright uses the last
-  // matching route, so the generic handler must not swallow get_login_email.
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/get_login_email`, async (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: TEST_USER_ID, email: fakeUser.email, username: 'e2e-admin', pin: '1234', is_active: true }) })
-  );
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/record_login_success`, async (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) })
-  );
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/record_login_failure`, async (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) })
-  );
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) })
-  );
+  // Use one deterministic RPC handler. This removes Playwright route-order collisions
+  // between login RPCs and the generic RPC fallback.
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
+    const name = new URL(r.request().url()).pathname.split('/').pop();
+    if (name === 'get_login_email') {
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: TEST_USER_ID, email: fakeUser.email, username: 'e2e-admin', pin: '1234', is_active: true }) });
+    }
+    if (name === 'record_login_success' || name === 'record_login_failure') {
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) });
+  });
+
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 }
 
 async function login(page: Page) {
@@ -70,14 +69,11 @@ test.describe('POS action-level', () => {
     await page.getByRole('button', { name: /استلام سريع|Quick pickup/i }).click();
     await expect(page.getByText('E2E Burger')).toBeVisible();
     await page.getByRole('button', { name: /E2E Burger/i }).click();
-
     await expect(page.getByText(/100/)).toBeVisible();
     const cartProduct = page.getByText('E2E Burger').last();
-    await expect(cartProduct).toBeVisible();
     const cartRow = cartProduct.locator('xpath=../..');
     await cartRow.getByRole('button').filter({ has: page.locator('svg') }).nth(1).click();
     await expect(cartRow.getByText('2', { exact: true })).toBeVisible();
-
     const pay = page.getByRole('button', { name: /الدفع|Pay/i }).first();
     await expect(pay).toBeEnabled();
     await pay.click();
@@ -89,7 +85,6 @@ test.describe('POS action-level', () => {
     await expect(page.getByRole('button', { name: /الطلب من السيارة|Drive thru/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /توصيل للعميل|Delivery/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /استلام سريع|Quick pickup/i })).toBeVisible();
-
     await page.getByRole('button', { name: /الطلب من السيارة|Drive thru/i }).click();
     await expect(page.getByText(/بيانات السيارة|Vehicle|Car/i)).toBeVisible();
     await page.getByRole('button', { name: /رجوع|Back/i }).click();
