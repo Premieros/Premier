@@ -7,13 +7,13 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 describe('navigation regressions', () => {
   it('keeps dashboard financial KPI links mapped to their intended reports', () => {
-    const source = read('src/features/dashboard/pages/DashboardEnhancedPage.tsx');
-    expect(source).toContain('href="/reports?reportType=sales"');
-    expect(source).toContain('href="/reports?reportType=expenses"');
-    expect(source).toContain('href="/reports?reportType=profit"');
-    expect(source).toContain('href="/reports?reportType=detailed_invoices"');
-    expect(source).toContain('href="/reports?reportType=low_stock"');
-    expect(source).not.toContain('href="/pos/active"');
+    const source = read('src/features/dashboard/pages/DashboardFoodicsPage.tsx');
+    expect(source).toContain('to="/reports?reportType=sales"');
+    expect(source).toContain('to="/reports?reportType=expenses"');
+    expect(source).toContain('to="/reports?reportType=profit"');
+    expect(source).toContain('to="/reports?reportType=detailed_invoices"');
+    expect(source).toContain('to="/reports?reportType=low_stock"');
+    expect(source).not.toContain('to="/pos/active"');
   });
 
   it('keeps the POS bottom bar dedicated to active orders', () => {
