@@ -23,7 +23,7 @@ test.describe('public application smoke', () => {
 
     await page.getByRole('button', { name: /English|العربية/i }).click();
     await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-    await expect(page.locator('form button[type="submit"]')).toHaveText(/Sign in/);
+    await expect(page.locator('form button[type="submit"]')).toHaveText(/Sign in/i);
 
     expect(consoleErrors).toEqual([]);
   });
