@@ -1,0 +1,42 @@
+name: One-time report deep-link hardening
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove DOM-order report selection
+        shell: python
+        run: |
+          from pathlib import Path
+          reports = Path('src/features/reporting/pages/ReportsPage.tsx')
+          text = reports.read_text(encoding='utf-8')
+          text = text.replace(
+              "<button key={rt.key} onClick={() => setReportType(rt.key)}",
+              "<button key={rt.key} data-report-type={rt.key} onClick={() => setReportType(rt.key)}"
+          )
+          reports.write_text(text, encoding='utf-8')
+
+          deep = Path('src/features/reporting/pages/ReportDeepLinkPage.tsx')
+          text = deep.read_text(encoding='utf-8')
+          start = text.index('  useEffect(() => {')
+          end = text.index('\n\n  return <ReportsPage />;', start)
+          replacement = '''  useEffect(() => {\n    if (!isReportType(requestedParam)) return;\n\n    let attempts = 0;\n    const selectReport = () => {\n      const reportButton = document.querySelector<HTMLButtonElement>(`button[data-report-type="${requestedParam}"]`);\n      if (reportButton && !reportButton.disabled && reportButton.offsetParent) {\n        reportButton.click();\n        return;\n      }\n      attempts += 1;\n      if (attempts < 40) window.setTimeout(selectReport, 50);\n    };\n\n    const timer = window.setTimeout(selectReport, 0);\n    return () => window.clearTimeout(timer);\n  }, [requestedParam]);'''
+          deep.write_text(text[:start] + replacement + text[end:], encoding='utf-8')
+
+      - name: Commit hardening changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/reporting/pages/ReportsPage.tsx src/features/reporting/pages/ReportDeepLinkPage.tsx
+          git commit -m "fix: make report deep links key based"
+          git push
