@@ -33,10 +33,6 @@ const fakeUser = {
 };
 
 async function mockAuthenticatedApp(page: Page) {
-  await page.addInitScript(({ session }) => {
-    localStorage.setItem('sb-lwnsdsncmlsroiswgoga-auth-token', JSON.stringify(session));
-  }, { session: fakeSession });
-
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/**`, async (route) => {
     const url = route.request().url();
     if (url.includes('/auth/v1/user')) {
@@ -50,28 +46,37 @@ async function mockAuthenticatedApp(page: Page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
-  // Use a regex because Supabase adds query parameters to the REST URL.
   await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/users(?:\\?.*)?$`), async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
-      return;
-    }
-    if (route.request().method() === 'POST') {
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
-      return;
-    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) });
   });
 
   await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/roles(?:\\?.*)?$`), async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
+
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/rpc/get_login_email$`), async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, email: fakeSession.user.email }),
+    });
+  });
+
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
+
   await page.route(`${SUPABASE_ORIGIN}/rpc/**`, async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
+}
+
+async function loginAsE2EAdmin(page: Page) {
+  await page.goto('/#/login');
+  await page.locator('#login-username').fill('e2e-admin');
+  await page.locator('#login-pin').fill('1234');
+  await page.getByRole('button', { name: /تسجيل الدخول|Sign in/i }).click();
+  await expect(page).toHaveURL(/#\/dashboard$/);
 }
 
 async function clickVisibleText(page: Page, pattern: RegExp) {
@@ -81,12 +86,14 @@ async function clickVisibleText(page: Page, pattern: RegExp) {
 }
 
 test.describe('dashboard and navigation actions', () => {
-  test.beforeEach(async ({ page }) => { await mockAuthenticatedApp(page); });
+  test.beforeEach(async ({ page }) => {
+    await mockAuthenticatedApp(page);
+    await loginAsE2EAdmin(page);
+  });
 
   test('dashboard renders the application shell without console errors', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-    await page.goto('/#/dashboard');
     await expect(page.getByText(/لوحة التحكم|Dashboard/i).first()).toBeVisible();
     await expect(page.getByText(/نقطة البيع|POS/i).first()).toBeVisible();
     await expect(page.getByText(/المخزون|Inventory/i).first()).toBeVisible();
@@ -95,7 +102,6 @@ test.describe('dashboard and navigation actions', () => {
   });
 
   test('top navigation actions keep stable route targets', async ({ page }) => {
-    await page.goto('/#/dashboard');
     const cases = [
       { label: /الفروع|Branches/i, route: /#\/branches$/ },
       { label: /المخزون|Inventory/i, route: /#\/inventory$/ },
@@ -109,7 +115,6 @@ test.describe('dashboard and navigation actions', () => {
   });
 
   test('header actions are real actions, not placeholders', async ({ page }) => {
-    await page.goto('/#/dashboard');
     await clickVisibleText(page, /الطلبات النشطة|Active orders/i);
     await expect(page).toHaveURL(/#\/floor-plan$/);
     await page.goto('/#/dashboard');
