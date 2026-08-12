@@ -44,10 +44,11 @@ test.describe('public application smoke', () => {
     await page.goto('/#/login');
     await expect(page.getByRole('heading', { name: /مرحباً بك|Welcome back/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /English|العربية/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /تسجيل الدخول|Sign in/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /دخول|Sign in/i })).toBeVisible();
 
     await page.getByRole('button', { name: /English|العربية/i }).click();
-    await expect(page.getByRole('heading', { name: /Welcome back|مرحباً بك/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
 
     expect(consoleErrors).toEqual([]);
   });
@@ -56,10 +57,11 @@ test.describe('public application smoke', () => {
     await page.goto('/#/login');
     await page.getByLabel(/اسم المستخدم|username/i).fill('smoke-test');
     await page.getByLabel(/PIN|الرمز السري/i).fill('12');
-    await page.getByRole('button', { name: /تسجيل الدخول|Sign in/i }).click();
+    await page.getByRole('button', { name: /دخول|Sign in/i }).click();
 
     await expect(page).toHaveURL(/#\/login$/);
     await expect(page.getByText(/4|أربع|four/i).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /دخول|Sign in/i })).toBeEnabled();
   });
 
   for (const route of protectedRoutes) {
