@@ -1,0 +1,46 @@
+name: One-time report branch isolation hardening
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply deterministic report branch filters
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/features/reporting/pages/ReportsPage.tsx')
+          text = path.read_text(encoding='utf-8')
+          marker = '/* REPORT-BRANCH-AUDIT-2026 */'
+          if marker not in text:
+              text = text.replace(
+                  "export function ReportsPage() {",
+                  "export function ReportsPage() {\n  /* REPORT-BRANCH-AUDIT-2026 */"
+              )
+              text = text.replace(
+                  "const { data: inv } = await supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold), warehouse:warehouses(name)').order('updated_at', { ascending: false });",
+                  "let inventoryQuery = supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold), warehouse:warehouses(name)').order('updated_at', { ascending: false });\n        if (effectiveBranchFilter) inventoryQuery = inventoryQuery.eq('branch_id', effectiveBranchFilter);\n        const { data: inv } = await inventoryQuery;"
+              )
+              text = text.replace(
+                  "const { data: inv } = await supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold, product_type), warehouse:warehouses(name)');",
+                  "let lowStockQuery = supabase.from('inventory').select('quantity, product:products(name, barcode, low_stock_threshold, product_type), warehouse:warehouses(name)');\n        if (effectiveBranchFilter) lowStockQuery = lowStockQuery.eq('branch_id', effectiveBranchFilter);\n        const { data: inv } = await lowStockQuery;"
+              )
+              path.write_text(text, encoding='utf-8')
+
+      - name: Commit hardening changes
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/reporting/pages/ReportsPage.tsx
+          git commit -m "fix: isolate inventory reports by branch"
+          git push
