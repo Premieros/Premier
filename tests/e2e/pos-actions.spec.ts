@@ -37,8 +37,10 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
-  // Use one deterministic RPC handler. This removes Playwright route-order collisions
-  // between login RPCs and the generic RPC fallback.
+  // Broad REST fallback is registered before the specific RPC route.
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+
+  // Specific RPC route is registered last, so Playwright selects it over the broad REST fallback.
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
     const name = new URL(r.request().url()).pathname.split('/').pop();
     if (name === 'get_login_email') {
@@ -49,8 +51,6 @@ async function mockPosBackend(page: Page) {
     }
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) });
   });
-
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 }
 
 async function login(page: Page) {
