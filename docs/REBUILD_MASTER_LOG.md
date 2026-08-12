@@ -1,14 +1,14 @@
 # Premier UI Rebuild — Master Plan & Progress Log
 
-> **Purpose:** This file is the persistent source of truth for the UI rebuild and verification work. Every future session/agent must read this file before making changes and update it after every meaningful phase, fix, CI result, or architectural decision.
->
-> **Primary branch:** `ui-rebuild-foodics-2026`
-> **Target:** `main` only after final verification and explicit approval.
-> **PR:** #3 — UI rebuild / stable extensible design.
+> Persistent source of truth for the UI rebuild. Read before every session and update after every meaningful fix, CI result, phase change, or architectural decision.
+
+**Primary branch:** `ui-rebuild-foodics-2026`  
+**PR:** #3 — UI rebuild / stable extensible design  
+**Target:** `main` only after final verification and explicit approval.
 
 ## 1. Original Objective
 
-Rebuild the Premier interface to match the approved/reference design while respecting the existing application architecture, database, business logic, permissions, and routes. The rebuilt UI must be extensible and behaviorally stable: moving a button, switch, card, menu item, or control must not change what it does.
+Rebuild Premier's interface to match the approved/reference design while respecting the existing architecture, database, business logic, permissions, and routes. The rebuilt UI must be extensible and behaviorally stable: moving a button, switch, card, menu item, or control must not change what it does.
 
 Core rule:
 
@@ -20,13 +20,13 @@ Functionality must never depend on DOM position, visual placement, or fragile se
 
 1. Do not work directly on `main`.
 2. Do not merge PR #3 until final verification passes.
-3. Do not add unrelated features while the rebuild is in progress.
+3. Do not add unrelated features while rebuild is in progress.
 4. Do not make tests pass by bypassing real application behavior.
-5. Diagnose the root cause before changing application code or tests.
+5. Diagnose root cause before changing application code or tests.
 6. Prefer stable `data-testid`/semantic selectors over DOM position and `nth()`.
-7. A phase is closed only after its required CI evidence is green.
-8. If a later phase exposes a defect in an earlier phase, return to the earlier phase, fix it, re-verify, then continue.
-9. Preserve existing business logic unless the audit proves it is incorrect.
+7. A phase is closed only after required CI evidence is green.
+8. If a later phase exposes an earlier defect, return to that phase, fix, re-verify, then continue.
+9. Preserve existing business logic unless audit proves it incorrect.
 10. Keep this file updated so future sessions cannot drift from the plan.
 
 ## 3. Phase Plan
@@ -34,23 +34,20 @@ Functionality must never depend on DOM position, visual placement, or fragile se
 ### PHASE 0 — Baseline / Safety
 **Status: CLOSED**
 
-Establish the working branch, protect `main`, inspect baseline build/tests/CI, and document the starting point.
-
 ### PHASE 1 — Application Shell / Navigation
 **Status: CLOSED**
 
-Rebuild the application shell and navigation with stable routes/menu configuration, stable identifiers, and behavior independent of visual position. Dashboard/navigation Browser E2E and CI verification reached green.
+Unified shell/navigation, stable routes/menu configuration, stable identifiers, and Dashboard/navigation Browser E2E verification established.
 
 ### PHASE 2 — Core UI Foundation
-**Status: IN PROGRESS / FOUNDATION IMPLEMENTED**
+**Status: FOUNDATION IMPLEMENTED / CONTINUES AS NEEDED**
 
-Establish reusable UI patterns: shared layout/components, buttons, dialogs, forms, tables, toolbars, loading/error/empty states, and stable interaction identifiers. The foundation must allow future screens to be changed without coupling actions to layout.
+Reusable UI patterns and stable interaction identifiers are being established so future screens can change without coupling actions to layout.
 
 ### PHASE 3 — POS / FloorPlan / Order Workspace
 **Status: IN PROGRESS — CURRENT PHASE**
 
-Rebuild and verify POS behavior against the actual current UI and reference design. Required action-level flows include:
-
+Required action-level flows:
 - Order type picker
 - Dine-in / FloorPlan / Tables
 - Delivery
@@ -65,138 +62,95 @@ Rebuild and verify POS behavior against the actual current UI and reference desi
 - Complete Sale
 - Back/navigation behavior
 
-The objective is not merely that `/pos` renders; each critical action must produce the correct state/result.
-
 ### PHASE 4 — Security / RBAC / Branch Isolation
 **Status: PENDING**
-
-Verify role permissions and branch isolation at UI and backend/RLS levels. UI hiding alone is not security.
 
 ### PHASE 5 — Final Stabilization / Regression
 **Status: PENDING**
 
-Final audit of migrations, pagination/shared queries where required, duplicated logic, error/loading/empty states, responsive behavior, documentation, and full regression.
-
 ### FINAL — PR Review / Merge
 **Status: PENDING**
-
-Only after all required CI checks and regression tests pass: review PR #3, verify no critical issues remain, then merge to `main` only with approval.
 
 ## 4. Verified Architecture Decisions
 
 - Unified application shell is part of the rebuild.
 - Navigation/routes are centralized rather than derived from visual placement.
 - Stable IDs are used for critical interactions and E2E tests.
-- POS has stable order-type selectors such as `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
-- Moving a control in the layout must not alter its action, permission, route, state, or service behavior.
-- Cart quantity controls now have stable IDs based on product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
+- POS order-type selectors include `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
+- Cart quantity controls use product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
+- Moving a control must not alter its action, permission, route, state, or service behavior.
 
 ## 5. Completed Work / Evidence
 
 - C1 data-safety fix: migration 045.
 - C2 hold-order duplication fix: migration 046.
-- Unified application shell / Foodics-oriented UI foundation implemented on the rebuild branch.
+- Unified application shell / Foodics-oriented UI foundation implemented.
 - Stable navigation/menu foundation implemented.
 - Dashboard/navigation E2E verification completed.
-- Login E2E mocking was corrected so the POS tests reach the application instead of being blocked at `/login`.
-- POS tests were corrected to use the actual UI's stable test IDs instead of assumed text/DOM positions.
-- POS order-type action test is passing in the latest Browser E2E run.
-- The remaining cart quantity test was corrected to stop traversing DOM parents and using `nth(1)`; it now targets the product-specific stable quantity control ID.
+- Login E2E mocking corrected so POS tests reach the application.
+- POS tests corrected to use actual UI stable IDs instead of assumed text/DOM positions.
+- POS order-type action test is passing.
+- Cart quantity controls received stable product-specific IDs and the test was changed from DOM traversal/`nth()` to those IDs.
 
 ## 6. Current State — 2026-08-13
 
-**Current branch:** `ui-rebuild-foodics-2026`
+**Current branch:** `ui-rebuild-foodics-2026`  
+**Current phase:** PHASE 3 — POS / FloorPlan / Order Workspace  
+**PR #3:** Open, not merged.
 
-**Current phase:** PHASE 3 — POS / FloorPlan / Order Workspace
+### Relevant fix commits
 
-**Fix commits:**
-- `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — add stable cart quantity control IDs to `CurrentOrderPanel.tsx`.
-- `9cf28849332fb079d823a8e8c2f853139a30cef7` — update `pos-actions.spec.ts` to use the stable quantity IDs and assert quantity `1 → 2`.
-- `80cdb01a5d28ba41333b53c0c946979f0501875d` — record this fix and its verification state in this master log.
+- `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — stable cart quantity IDs.
+- `9cf28849332fb079d823a8e8c2f853139a30cef7` — POS quantity test uses stable IDs and verifies `1 → 2`.
+- `80cdb01a5d28ba41333b53c0c946979f0501875d` — master-log update / CI state.
 
-**PR #3 status:** Open, not merged.
+## 7. Latest Verification — RUN #103
 
-### Latest completed CI evidence before the current fix — Run #99
+Run #103 completed against PR #3 merge ref.
 
-Run #99 completed with:
-
-- Verify: **PASS**
-- Build: **PASS**
-- Browser E2E: **42 passed / 1 failed**
-
-The only failure was the quick-pickup cart quantity increase action. The failure was caused by the test using fragile DOM traversal and `nth(1)` to identify the plus button.
-
-### Root cause
-
-The failing selector was:
-
-`getByText('E2E Burger').last().locator('../..').getByRole('button').filter({ has: page.locator('svg') }).nth(1)`
-
-This violates the project's central architectural/testing rule because it couples the action to DOM structure and visual placement.
-
-### Fix applied
-
-Application file:
-
-`src/features/pos/components/order/CurrentOrderPanel.tsx`
-
-Added stable product-specific identifiers and semantic labels to the cart quantity controls:
-
-- `pos-cart-qty-decrease-{productId}`
-- `pos-cart-qty-{productId}`
-- `pos-cart-qty-increase-{productId}`
-
-Test file:
-
-`tests/e2e/pos-actions.spec.ts`
-
-The quick-pickup test now uses:
-
-- `getByTestId(pos-cart-qty-{PRODUCT_ID})`
-- `getByTestId(pos-cart-qty-increase-{PRODUCT_ID})`
-
-and verifies the real state transition from quantity `1` to `2` before opening payment.
-
-This is a real stable-identity fix; the application behavior was not bypassed and no assertion was weakened.
-
-## 7. Current Verification State — RUN #102
-
-A new CI run was successfully triggered for the latest branch head:
-
-- **Run:** #102
-- **Run ID:** `31645041554`
-- **Head commit:** `80cdb01a5d28ba41333b53c0c946979f0501875d`
+- **Run:** #103
+- **Run ID:** `31645073329`
+- **Merge ref tested:** `732d337374de51f88f10a82e0a3ea171e3116780`
 - **Workflow:** Verify main
-- **Status:** **IN PROGRESS**
-- **Conclusion:** pending
+- **Verify job:** PASS
+- **Build:** PASS
+- **Browser E2E:** FAIL
+- **Browser E2E:** **42 passed / 1 failed**
 
-Therefore:
+The failure is now specifically at the end of the Quick Pickup flow: after clicking the enabled Pay button, the test expects `/طريقة الدفع|Payment method/`, but no such text exists in the rendered UI. The test failure is at `tests/e2e/pos-actions.spec.ts:83`.
 
-- POS quantity fix: **IMPLEMENTED**
-- CI verification: **IN PROGRESS**
-- PHASE 3: **OPEN**
-- Do not close the blocker until Run #102 proves the result.
+### Root cause status
+
+The previous cart selector problem is no longer the reported blocker. The current blocker is an incorrect/unstable expectation about the payment UI. We must inspect the actual payment component/flow before changing the test or application.
+
+### Important evidence
+
+- Order-type test passes.
+- Public protected-route smoke tests pass.
+- Build passes.
+- The remaining failure is only the payment assertion in the Quick Pickup action test.
+- Do **not** weaken the assertion or bypass payment behavior merely to get green CI.
 
 ## 8. Exact Next Action — DO NOT SKIP
 
-1. Inspect Run #102 after completion.
-2. Verify Verify + Build + Browser E2E.
-3. If the quantity test passes and Browser E2E is fully green, record the run here and close this specific POS smoke blocker.
-4. Continue with the next unverified POS flow: Dine-in/FloorPlan/Tables.
-5. Then verify Delivery/Drive-thru, Hold/Resume, Kitchen, Discount, Payment, and Complete Sale.
-6. Do not move to PHASE 4 until PHASE 3's required POS/FloorPlan action-level verification is closed.
+1. Inspect the actual POS payment component and the rendered result after clicking Pay.
+2. Determine whether the application opens a payment modal, changes state, navigates, or completes payment inline.
+3. If the application behavior is correct, update the test to assert the real stable payment state/control using stable IDs/semantic selectors.
+4. If the application behavior is wrong, fix the application root cause instead.
+5. Record the diagnosis, files, commit, and new CI result in this file.
+6. Re-run CI and require Browser E2E to be fully green before closing this blocker.
+7. Then continue to the next unverified POS flow: Dine-in/FloorPlan/Tables.
 
 ## 9. Session Update Rule
 
-Every meaningful action must be recorded in this file. The record must include:
-
+Every meaningful action must be recorded here with:
 - Date/time
-- Current branch
-- Current phase
+- Branch
+- Phase
 - Previous verified CI
 - Root cause
 - Files changed
-- Fix applied
+- Fix
 - Commit(s)
 - New CI status/result
 - Remaining blockers
@@ -207,8 +161,7 @@ Every meaningful action must be recorded in this file. The record must include:
 ## 10. Definition of Done
 
 The rebuild is complete only when:
-
-- Reference design and current application architecture are aligned.
+- Reference design and current architecture are aligned.
 - Critical UI controls have stable identities and actions independent of layout position.
 - Dashboard/navigation behavior is verified.
 - POS/FloorPlan/Kitchen/payment critical flows are verified end-to-end.
@@ -218,3 +171,14 @@ The rebuild is complete only when:
 - PR #3 is reviewed and only then merged to `main`.
 
 **Do not replace this plan with a new plan unless the user explicitly changes the project objective.**
+
+## 11. Verification Log — 2026-08-13
+
+### Run #103
+- Result: **FAILED**
+- Verify: PASS
+- Build: PASS
+- Browser E2E: 42 PASS / 1 FAIL
+- Previous cart quantity blocker: resolved
+- Current blocker: Quick Pickup payment assertion expects `طريقة الدفع|Payment method`, but the actual payment UI exposes a different state/control.
+- Action: remain in PHASE 3; inspect the real payment flow and fix the root cause/test expectation without bypassing behavior.
