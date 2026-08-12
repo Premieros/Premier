@@ -41,10 +41,11 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
   // Specific RPC route is registered last, so Playwright selects it over the broad REST fallback.
+  // The login RPC payload mirrors AuthContext.signInWithUsername exactly: it requires success=true and email.
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
     const name = new URL(r.request().url()).pathname.split('/').pop();
     if (name === 'get_login_email') {
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: TEST_USER_ID, email: fakeUser.email, username: 'e2e-admin', pin: '1234', is_active: true }) });
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, email: fakeUser.email }) });
     }
     if (name === 'record_login_success' || name === 'record_login_failure') {
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
