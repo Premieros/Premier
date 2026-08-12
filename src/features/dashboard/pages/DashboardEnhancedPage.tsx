@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarDays, ChevronDown, Download, Filter, RefreshCw, ShoppingBag, Wallet, RotateCcw, Tag, CreditCard, Building2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Download, Filter, RefreshCw, ShoppingBag, Wallet, RotateCcw, Tag, CreditCard, Building2 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
