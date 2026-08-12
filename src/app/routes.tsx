@@ -54,6 +54,8 @@ export function AppRoutes() {
   <Route path="/pos" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
   <Route path="/pos/:orderId" element={<ProtectedRoute permission="pos.sell" fullscreen><PosWorkspacePage /></ProtectedRoute>} />
   <Route path="/floor-plan" element={<ProtectedRoute permission="floor_plan.view"><ActiveOrdersPage /></ProtectedRoute>} />
+  <Route path="/kitchen" element={<Navigate to="/pos" replace />} />
+  <Route path="/tables" element={<ProtectedRoute permission="floor_plan.view"><Navigate to="/floor-plan" replace /></ProtectedRoute>} />
   <Route path="/products" element={<ProtectedRoute permission="products.view"><ProductsPage /></ProtectedRoute>} />
   <Route path="/categories" element={<ProtectedRoute permission="categories.view"><CategoriesPage /></ProtectedRoute>} />
   <Route path="/components" element={<ProtectedRoute permission="components.view"><ComponentsPage /></ProtectedRoute>} />
@@ -73,12 +75,14 @@ export function AppRoutes() {
   <Route path="/shifts" element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
   <Route path="/reports" element={<ProtectedRoute permission="reports.view"><ReportDeepLinkPage /></ProtectedRoute>} />
   <Route path="/financial-reports" element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
+  <Route path="/accounting" element={<ProtectedRoute permission="reports.financial"><Navigate to="/financial-reports" replace /></ProtectedRoute>} />
   <Route path="/accounts" element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
   <Route path="/payments" element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />
   <Route path="/journal" element={<ProtectedRoute permission="accounts.view"><JournalPage /></ProtectedRoute>} />
   <Route path="/treasury" element={<ProtectedRoute permission="accounts.view"><TreasuryPage /></ProtectedRoute>} />
   <Route path="/reconciliation" element={<ProtectedRoute permission="accounts.view"><ReconciliationPage /></ProtectedRoute>} />
   <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
+  <Route path="/employees" element={<ProtectedRoute permission="users.view"><Navigate to="/users" replace /></ProtectedRoute>} />
   <Route path="/audit-log" element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
   <Route path="/settings" element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
   <Route path="/subscriptions" element={<ProtectedRoute superAdminOnly><SubscriptionsAdminPage /></ProtectedRoute>} />
