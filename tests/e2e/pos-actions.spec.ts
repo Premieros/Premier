@@ -23,11 +23,19 @@ async function mockPosBackend(page: Page) {
     if (url.includes('/auth/v1/token')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(session) });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
+
+  // Register the broad fallback FIRST. Playwright selects the most recently
+  // registered matching route, so all feature-specific REST handlers below
+  // intentionally come after this fallback.
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
+
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/users**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([fakeUser]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/products**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([product]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/customers**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/categories**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/branches**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: BRANCH_ID, name: 'E2E Branch', is_active: true }]) }));
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/branches**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: BRANCH_ID, name: 'E2E Branch', name_en: 'E2E Branch', is_active: true }]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/settings**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ currency: 'EGP', tax_enabled: false, tax_rate: 0 }) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/warehouses**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: WAREHOUSE_ID, branch_id: BRANCH_ID, is_active: true }]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/inventory**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ product_id: PRODUCT_ID, quantity: 20 }]) }));
@@ -35,13 +43,10 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/dining_tables**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/orders**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
-  // Broad REST fallback is registered before the specific RPC route.
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-
-  // Specific RPC route is registered last, so Playwright selects it over the broad REST fallback.
-  // The login RPC payload mirrors AuthContext.signInWithUsername exactly: it requires success=true and email.
+  // One deterministic RPC handler, registered after the REST fallback.
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
     const name = new URL(r.request().url()).pathname.split('/').pop();
     if (name === 'get_login_email') {
@@ -49,6 +54,9 @@ async function mockPosBackend(page: Page) {
     }
     if (name === 'record_login_success' || name === 'record_login_failure') {
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    }
+    if (name === 'get_active_shift') {
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, open: false }) });
     }
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) });
   });
@@ -63,7 +71,12 @@ async function login(page: Page) {
 }
 
 test.describe('POS action-level', () => {
-  test.beforeEach(async ({ page }) => { await mockPosBackend(page); await login(page); await page.goto('/#/pos'); });
+  test.beforeEach(async ({ page }) => {
+    await mockPosBackend(page);
+    await login(page);
+    await page.goto('/#/pos');
+    await expect(page.locator('body')).not.toHaveText(/Error Loading Data|خطأ في تحميل البيانات/i);
+  });
 
   test('starts quick pickup, adds product, changes quantity, and opens payment', async ({ page }) => {
     await expect(page.getByText(/اختر نوع الطلب|How will this order be served/i)).toBeVisible();
