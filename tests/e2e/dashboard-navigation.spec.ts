@@ -33,6 +33,15 @@ const fakeUser = {
 };
 
 async function mockAuthenticatedApp(page: Page) {
+  // Register broad mocks first; specific mocks below intentionally win because
+  // Playwright matches the most recently registered route first.
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.route(`${SUPABASE_ORIGIN}/rpc/**`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/**`, async (route) => {
     const url = route.request().url();
     if (url.includes('/auth/v1/user')) {
@@ -62,12 +71,12 @@ async function mockAuthenticatedApp(page: Page) {
     });
   });
 
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/rpc/record_login_success(?:\\?.*)?$`), async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
   });
 
-  await page.route(`${SUPABASE_ORIGIN}/rpc/**`, async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  await page.route(new RegExp(`${SUPABASE_ORIGIN.replace('.', '\\.')}/rest/v1/rpc/record_login_failure(?:\\?.*)?$`), async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
   });
 }
 
