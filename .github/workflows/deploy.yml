@@ -72,8 +72,32 @@ jobs:
       - name: Run integration tests (BEGIN/ROLLBACK)
         run: npm run test:integration
 
-  deploy:
+  e2e:
     needs: [build, db]
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJwcmVtaWVyb3MiLCJyZWYiOiJsd25zZHNjbWxzcm9pc3dn b2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save @playwright/test@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  deploy:
+    needs: [build, db, e2e]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
