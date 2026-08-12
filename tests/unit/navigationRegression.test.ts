@@ -19,6 +19,8 @@ describe('navigation regressions', () => {
     expect(source).toContain('to="/reports?reportType=sales_by_product"');
     expect(source).toContain('to="/reports?reportType=detailed_invoices"');
     expect(source).toContain('to="/inventory"');
+    expect(source).toContain('setCompareEnabled');
+    expect(source).toContain('setFilterOpen');
     expect(source).not.toContain('to="/reports?reportType=sales_by_branch"');
     expect(source).not.toContain('to="/pos/active"');
   });
