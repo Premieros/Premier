@@ -83,6 +83,7 @@ Required action-level flows:
 - POS order-type selectors include `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
 - Cart quantity controls use product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
 - Payment controls use stable IDs: `pos-payment-method-{method}` and `pos-payment-confirm`.
+- Dine-in table controls now use stable table identity: `pos-table-{tableId}`, `pos-table-filter-{status}`, `pos-table-search`, `pos-table-{tableId}-guest-count`, and `pos-table-{tableId}-start`.
 - Moving a control must not alter its action, permission, route, state, or service behavior.
 - The UI layer is intended to be replaceable/rearrangeable without rewriting the underlying business logic.
 - Shared components and stable action identities are the mechanism for safe future UI evolution.
@@ -101,6 +102,9 @@ Required action-level flows:
 - Payment flow was inspected: `Pay` opens the existing `PaymentPanel` inline in the POS workspace; it does not display a literal `Payment method` heading. The real UI exposes payment-method controls and a final confirmation action.
 - Added stable payment IDs to the actual payment component and updated the E2E test to assert the real payment workspace instead of the nonexistent heading.
 - Run #110 passed all required CI jobs, including Browser E2E.
+- Dine-in/FloorPlan/Table components were inspected and found to already provide the real flow: Dine-in → table picker → table action modal → guest count → start order.
+- Added stable IDs to the real table picker and table action modal rather than creating a parallel test-only UI.
+- Added a Browser E2E scenario with a real mocked vacant table that selects the table, sets guest count to 3, starts the order, and verifies return to the POS workspace.
 
 ## 6. Current State — 2026-08-13
 
@@ -115,6 +119,9 @@ Required action-level flows:
 - `e7bf73809604d7a97759f75c666ae8b7d9514d5c` — stable payment method/confirmation IDs.
 - `ecaf4dd0ea81ac6dd0145343dc9d74d7ddfbd675` — updated POS E2E to assert the actual payment workspace using stable IDs.
 - `40a240f28c2299473e8e3736d17722374aff1723` — commit associated with the verified successful Run #110.
+- `f7ea1f7bd3caef40c5b1a0d71b646a723f7a1c7c` — stable Dine-in table picker IDs.
+- `95485a7fe325db5673e302133e427a57b70e6347` — stable Dine-in table action IDs.
+- `310f3546c41b37d8603aa2b27842cb91eb3e46a9` — Browser E2E Dine-in/FloorPlan/Table flow coverage with a mocked vacant table.
 
 ## 7. Latest Verification — RUN #110
 
@@ -139,7 +146,7 @@ The Browser E2E job completed successfully, so the previous Quick Pickup payment
 
 ## 8. Phase 3 Progress After Run #110
 
-The following POS areas are now verified by the current CI suite:
+The following POS areas were already verified by Run #110:
 
 - Dashboard/navigation actions.
 - POS order-type actions and back navigation.
@@ -149,17 +156,29 @@ The following POS areas are now verified by the current CI suite:
 - Stable payment method controls and confirmation control.
 - Public protected-route smoke coverage.
 
-**Important:** Run #110 passing does **not** close PHASE 3 yet. The Master Plan requires explicit verification of the remaining POS/FloorPlan action-level flows, especially Dine-in / FloorPlan / Tables, plus any remaining Hold/Resume, Kitchen, Discount, Complete Sale, and related critical flows not yet covered.
+### Dine-in / FloorPlan / Tables — CURRENT VERIFICATION
+
+The application already contains dedicated components for this flow:
+- `OrderTypePicker`
+- `TablePickerStep`
+- `TableActionModal`
+- `TableFloorPlan`
+
+The actual flow is:
+
+`Dine-in → FloorPlan/Table Picker → Select Table → Table Action Modal → Guest Count → Start Order`
+
+The implementation was kept intact; only stable interaction identities and an E2E scenario were added.
+
+Current CI status for these new changes: **PENDING**.
 
 ## 9. Exact Next Action — DO NOT SKIP
 
-1. Keep PHASE 3 open.
-2. Inspect and verify the next unverified POS flow: **Dine-in → FloorPlan → Tables**.
-3. Add or repair stable selectors/actions only where needed.
-4. Run the relevant E2E/CI checks.
-5. Record every result in this file.
-6. Continue through the remaining POS critical flows: Hold/Resume, Send to Kitchen, Discount, Payment completion, and Complete Sale as applicable.
-7. Only after all required PHASE 3 action-level flows have green evidence, close PHASE 3 and move to PHASE 4.
+1. Run CI for the new Dine-in/FloorPlan/Table changes.
+2. If CI fails, diagnose and fix the real root cause; do not weaken the test.
+3. Record the new CI result in this file.
+4. If green, continue through the remaining POS critical flows: Hold/Resume, Send to Kitchen, Discount, Payment completion, and Complete Sale as applicable.
+5. Only after all required PHASE 3 action-level flows have green evidence, close PHASE 3 and move to PHASE 4.
 
 ## 10. Session Update Rule
 
@@ -206,14 +225,13 @@ The rebuild is complete only when:
 
 ### Run #106
 - Result: **FAILED**
-- Verify: PASS
-- Build: PASS
-- Browser E2E: **42 PASS / 1 FAIL**
 - Run ID: `31648584834`
 - Tested commit: `c3b107f08042faeacd4902a55b90518a318b0510`
+- Verify: PASS
+- Build: PASS
+- Browser E2E: 42 PASS / 1 FAIL
 - Failure: Quick Pickup payment assertion expected `طريقة الدفع|Payment method`, but no such element existed after Pay.
 - Quantity-selector issue remained resolved.
-- PHASE 3 stayed open.
 
 ### Run #110
 - Result: **SUCCESS**
@@ -227,7 +245,14 @@ The rebuild is complete only when:
 - Browser Smoke / Playwright E2E: PASS
 - Payment blocker: **RESOLVED** by the payment-panel stable-ID fix and successful Browser E2E verification.
 - Phase status: **PHASE 3 remains IN PROGRESS** because remaining POS/FloorPlan critical flows still require explicit verification.
-- Next action: Dine-in → FloorPlan → Tables.
+
+### Dine-in/FloorPlan/Table verification start
+- Application inspection: **PASS** — real components and callbacks confirmed.
+- Stable selector implementation: **COMPLETED**.
+- E2E coverage: **COMPLETED** in `tests/e2e/pos-actions.spec.ts`.
+- New commits: `f7ea1f7bd3caef40c5b1a0d71b646a723f7a1c7c`, `95485a7fe325db5673e302133e427a57b70e6347`, `310f3546c41b37d8603aa2b27842cb91eb3e46a9`.
+- CI result: **PENDING**.
+- Phase status: **PHASE 3 remains IN PROGRESS** until CI proves this flow.
 
 ## 13. Maintainability / Extensibility Requirement
 
