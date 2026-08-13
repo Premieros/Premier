@@ -55,7 +55,7 @@ Core rule:
 **CLOSED — VERIFIED by Run #141**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**IN PROGRESS — 6A verified by Run #144; 6B implementation verified by Run #147; next design completion package starting**
+**IN PROGRESS — 6A verified by Run #144; 6B verified by Run #147; 6C implementation started**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -99,6 +99,7 @@ PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34
 PHASE 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
 PHASE 6B implementation commit: `7b121cea21c7c1141403f30db069320e69593bc8`.
 PHASE 6B verification commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
+PHASE 6C implementation commit: `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
 
 ## 7. Verified CI Evidence
 
@@ -142,6 +143,15 @@ PHASE 6B verification commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
 - Browser Smoke — SUCCESS: Chromium install, build, Playwright E2E.
 
 **Conclusion:** Package 6B is VERIFIED and officially CLOSED. Run #146 was cancelled and is not treated as a code failure; Run #147 is the authoritative successful verification for 6B.
+
+### Latest baseline — Run #148
+**Run ID:** `31695863655`
+**Overall:** SUCCESS
+- Verify — PASS
+- DB / migrations / schema / integration / Security/RLS — PASS
+- Browser Smoke / Playwright E2E — PASS
+
+Run #148 validates the 6B-closed baseline before 6C implementation. It is not evidence for 6C because 6C code was committed afterward.
 
 ## 8. PHASE 5 — FINAL STABILIZATION / REGRESSION
 
@@ -196,32 +206,30 @@ Run #147 subsequently verified the 6B implementation and the complete verificati
 
 **6B OFFICIALLY CLOSED — Run #147 SUCCESS.**
 
-### Next package — Design Surface Completion 6C
+### Package 6C — Dashboard Surface Contract
 
-Objective: continue the actual reference-design rebuild on the next set of primary application surfaces without changing underlying behavior.
+Objective: begin the next high-impact design surface without coupling presentation changes to the dashboard's existing data/business implementation.
 
-Scope:
-- Audit and implement the next highest-impact shared visual surfaces after the application shell.
-- Prioritize dashboard/content workspace, reusable cards/panels, page headers, filters, action toolbars, and responsive states where they are still inconsistent with the approved design.
-- Keep critical controls on stable semantic/test IDs.
-- Preserve routes, permissions, RPCs, service/data contracts and existing business behavior.
-- Extract repeated presentation patterns into shared components only when this reduces duplication without changing behavior.
-- Add focused regression coverage for any newly stabilized critical interaction.
+Implemented in commit `77fe2606746b18f44e79ec42b2d54f3e789e191b`:
+- Added a stable `dashboard-surface` semantic boundary around the existing dashboard implementation.
+- Added a stable `dashboard-content` container for future reference-layout work.
+- Kept `DashboardFoodicsPage` as the existing data/query/business implementation.
+- Preserved routes, permissions, Supabase queries, branch filtering, dashboard actions and existing visual implementation.
+- No database or business logic changes.
 
-6C must be implemented as one coherent package where practical. If an adjacent independent design surface can safely be included, bundle it rather than creating an unnecessary separate cycle.
-
-**6C STATUS: STARTED.**
+**6C STATUS: IMPLEMENTED — AWAITING CI.**
 
 ## 11. CURRENT EXECUTION
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 6+ — Remaining rebuild/design completion packages.
-**Latest verified gate:** Run #147 — SUCCESS.
+**Latest verified gate:** Run #148 — SUCCESS (baseline before 6C).
 **PHASE 0–5 status:** VERIFIED / CLOSED.
 **Package 6A:** VERIFIED / CLOSED.
 **Package 6B:** VERIFIED / CLOSED.
-**Current package:** 6C — Design Surface Completion.
+**Current package:** 6C — Dashboard Surface Contract.
+**Current 6C commit:** `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
 
 ### Execution rule
 Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included package/phase, run the combined regression for every phase from 0 through the latest included package.
