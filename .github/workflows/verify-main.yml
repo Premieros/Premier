@@ -16,7 +16,6 @@ concurrency:
 
 env:
   VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
-  # Publishable browser key is intentionally public and is safe to use in Vite/browser builds.
   VITE_SUPABASE_ANON_KEY: sb_publishable_vnjLU0VWN3tIvxLkyHbu4Q_tYvP6uV1
 
 jobs:
@@ -31,6 +30,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Install Playwright test runner for suite typechecking
+        run: npm install --no-save @playwright/test@1.55.0
       - name: Typecheck application and test suites
         run: npm run typecheck:all
       - run: npm run test:unit
