@@ -11,6 +11,9 @@ const fakeUser = { id: TEST_USER_ID, email: 'e2e@example.test', full_name: 'E2E 
 const product = { id: PRODUCT_ID, branch_id: BRANCH_ID, name: 'E2E Burger', name_en: 'E2E Burger', sku: 'E2E-001', barcode: '628000000020', sale_price: 100, product_type: 'simple', category_id: null, is_active: true, low_stock_threshold: 5 };
 const diningTable = { id: TABLE_ID, branch_id: BRANCH_ID, area_id: null, name: 'Table 1', capacity: 4, status: 'vacant', shape: 'square', layout: { x: 0, y: 0, w: 120, h: 120 }, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 
+let rpcCalls: string[] = [];
+let rpcPayloads: Record<string, unknown[]> = {};
+
 function base64Url(value: unknown) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
 function makeSession() {
   const accessToken = [base64Url({ alg: 'none', typ: 'JWT' }), base64Url({ aud: 'authenticated', role: 'authenticated', sub: TEST_USER_ID, email: fakeUser.email, exp: Math.floor(Date.now() / 1000) + 3600 }), 'e2e-signature'].join('.');
@@ -18,6 +21,8 @@ function makeSession() {
 }
 
 async function mockPosBackend(page: Page) {
+  rpcCalls = [];
+  rpcPayloads = {};
   const session = makeSession();
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/**`, async (route) => {
     const url = route.request().url();
@@ -41,11 +46,14 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/rpc/**`, async (r) => {
-    const name = new URL(r.request().url()).pathname.split('/').pop();
+    const name = new URL(r.request().url()).pathname.split('/').pop() || '';
+    rpcCalls.push(name);
+    try { rpcPayloads[name] = [...(rpcPayloads[name] || []), JSON.parse(r.request().postData() || '{}')]; } catch { rpcPayloads[name] = [...(rpcPayloads[name] || []), {}]; }
     if (name === 'get_login_email') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, email: fakeUser.email }) });
     if (name === 'record_login_success' || name === 'record_login_failure') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
     if (name === 'get_active_shift') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, open: false }) });
-    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001' }) });
+    if (name === 'next_document_number') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, number: 'E2E-INV-001' }) });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, id: 'e2e-order-id', order_id: 'e2e-order-id', order_number: 'E2E-001', sale_id: 'e2e-sale-id', sent: [{ product_name: product.name, quantity: 1, unit_name: 'piece' }], items_sent_count: 1 }) });
   });
 }
 
@@ -55,6 +63,12 @@ async function login(page: Page) {
   await page.locator('#login-pin').fill('1234');
   await page.locator('form').getByRole('button', { name: /دخول|تسجيل الدخول|Sign in/i }).click();
   await expect(page).toHaveURL(/#\/dashboard$/);
+}
+
+async function addProduct(page: Page) {
+  await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: /E2E Burger/i }).click();
+  await expect(page.getByTestId(`pos-cart-qty-${PRODUCT_ID}`)).toHaveText('1');
 }
 
 test.describe('POS action-level', () => {
@@ -71,17 +85,10 @@ test.describe('POS action-level', () => {
 
   test('starts quick pickup, adds product, changes quantity, and opens payment', async ({ page }) => {
     await page.getByTestId('pos-order-type-takeaway').click();
-    await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await page.getByRole('button', { name: /E2E Burger/i }).click();
-    await expect(page.getByText('100.00 ج.م', { exact: true }).first()).toBeVisible();
-    const quantity = page.getByTestId(`pos-cart-qty-${PRODUCT_ID}`);
-    const increase = page.getByTestId(`pos-cart-qty-increase-${PRODUCT_ID}`);
-    await expect(quantity).toHaveText('1');
-    await increase.click();
-    await expect(quantity).toHaveText('2');
-    const pay = page.getByRole('button', { name: /الدفع|Pay/i }).first();
-    await expect(pay).toBeEnabled();
-    await pay.click();
+    await addProduct(page);
+    await page.getByTestId(`pos-cart-qty-increase-${PRODUCT_ID}`).click();
+    await expect(page.getByTestId(`pos-cart-qty-${PRODUCT_ID}`)).toHaveText('2');
+    await page.getByTestId('pos-action-pay').click();
     await expect(page.getByTestId('pos-payment-confirm')).toBeVisible();
     await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible();
   });
@@ -89,24 +96,94 @@ test.describe('POS action-level', () => {
   test('dine-in opens floorplan, selects a table, sets guests, and starts the table order', async ({ page }) => {
     await page.getByTestId('pos-order-type-dine_in').click();
     await expect(page.getByTestId(`pos-table-${TABLE_ID}`)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('pos-table-filter-vacant')).toBeVisible();
     await page.getByTestId(`pos-table-${TABLE_ID}`).click();
-    const guestCount = page.getByTestId(`pos-table-${TABLE_ID}-guest-count`);
-    await expect(guestCount).toBeVisible();
-    await guestCount.fill('3');
+    await page.getByTestId(`pos-table-${TABLE_ID}-guest-count`).fill('3');
     await page.getByTestId(`pos-table-${TABLE_ID}-start`).click();
     await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
   });
 
-  test('order-type actions expose supported flows and back navigation', async ({ page }) => {
+  test('drive-thru captures plate and starts the order action', async ({ page }) => {
+    await page.getByTestId('pos-order-type-drive_thru').click();
+    await page.getByTestId('pos-drive-thru-plate').fill('ABC-1234');
+    await page.getByTestId('pos-drive-thru-customer').fill('Drive Customer');
+    await page.getByTestId('pos-drive-thru-people').fill('2');
+    await page.getByTestId('pos-drive-thru-start').click();
+    await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
+    await expect(rpcCalls).toContain('create_order');
+    const payload = (rpcPayloads.create_order?.[0] || {}) as { p_order_type?: string; p_notes?: string };
+    expect(payload.p_order_type).toBe('drive_thru');
+    expect(payload.p_notes).toContain('ABC-1234');
+  });
+
+  test('delivery captures phone and address and starts the order action', async ({ page }) => {
+    await page.getByTestId('pos-order-type-delivery').click();
+    await page.getByTestId('pos-delivery-phone').fill('01000000000');
+    await page.getByTestId('pos-delivery-address').fill('E2E Address');
+    await page.getByTestId('pos-delivery-notes').fill('Leave at door');
+    await page.getByTestId('pos-delivery-start').click();
+    await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
+    await expect(rpcCalls).toContain('create_order');
+    const payload = (rpcPayloads.create_order?.[0] || {}) as { p_order_type?: string; p_notes?: string };
+    expect(payload.p_order_type).toBe('delivery');
+    expect(payload.p_notes).toContain('01000000000');
+    expect(payload.p_notes).toContain('E2E Address');
+  });
+
+  test('discount action changes the order total', async ({ page }) => {
+    await page.getByTestId('pos-order-type-takeaway').click();
+    await addProduct(page);
+    await expect(page.getByTestId('pos-total-value')).toContainText('100');
+    await page.getByTestId('pos-action-discount').click();
+    await expect(page.getByTestId('pos-discount-editor')).toBeVisible();
+    await page.getByTestId('pos-discount-percent').click();
+    await page.getByTestId('pos-discount-input').fill('10');
+    await expect(page.getByTestId('pos-discount-value')).toContainText('10');
+    await expect(page.getByTestId('pos-total-value')).toContainText('90');
+  });
+
+  test('hold action persists the order and changes it to held', async ({ page }) => {
+    await page.getByTestId('pos-order-type-takeaway').click();
+    await addProduct(page);
+    await page.getByTestId('pos-action-hold').click();
+    await expect(page.getByTestId('pos-action-hold')).toBeVisible();
+    await expect(rpcCalls).toContain('create_order');
+    await expect(rpcCalls).toContain('set_order_status');
+    const statusPayload = (rpcPayloads.set_order_status?.[0] || {}) as { p_status?: string };
+    expect(statusPayload.p_status).toBe('held');
+  });
+
+  test('send to kitchen persists the order and calls the kitchen RPC', async ({ page }) => {
+    await page.getByTestId('pos-order-type-takeaway').click();
+    await addProduct(page);
+    await page.getByTestId('pos-action-send-kitchen').click();
+    await expect(rpcCalls).toContain('create_order');
+    await expect(rpcCalls).toContain('send_to_kitchen');
+    const payload = (rpcPayloads.send_to_kitchen?.[0] || {}) as { p_order_id?: string };
+    expect(payload.p_order_id).toBe('e2e-order-id');
+  });
+
+  test('complete sale executes the payment confirmation and process_sale', async ({ page }) => {
+    await page.getByTestId('pos-order-type-takeaway').click();
+    await addProduct(page);
+    await page.getByTestId('pos-action-pay').click();
+    await page.getByTestId('pos-payment-method-cash').click();
+    await page.getByTestId('pos-payment-confirm').click();
+    await expect(rpcCalls).toContain('process_sale');
+    const payload = (rpcPayloads.process_sale?.[0] || {}) as { p_status?: string; p_payment_method?: string; p_order_type?: string };
+    expect(payload.p_status).toBe('completed');
+    expect(payload.p_payment_method).toBe('cash');
+    expect(payload.p_order_type).toBe('takeaway');
+  });
+
+  test('order-type actions expose all supported flows and back navigation', async ({ page }) => {
     await expect(page.getByTestId('pos-order-type-dine_in')).toBeVisible();
     await expect(page.getByTestId('pos-order-type-drive_thru')).toBeVisible();
     await expect(page.getByTestId('pos-order-type-delivery')).toBeVisible();
     await expect(page.getByTestId('pos-order-type-takeaway')).toBeVisible();
     await page.getByTestId('pos-order-type-drive_thru').click();
     await expect(page.getByText(/أدخل رقم اللوحة لبدء الطلب|Enter the plate to start/i)).toBeVisible();
-    await expect(page.locator('input').first()).toBeVisible();
+    await expect(page.getByTestId('pos-drive-thru-plate')).toBeVisible();
     await page.getByRole('button', { name: /رجوع|Back/i }).click();
     await expect(page.getByTestId('pos-order-type-picker')).toBeVisible();
   });
