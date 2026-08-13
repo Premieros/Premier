@@ -1,114 +1,94 @@
 # Premier UI Rebuild — Master Plan & Progress Log
 
-> Persistent source of truth. Read before every session and update after every meaningful fix, CI result, phase change, or architectural decision.
+> Persistent source of truth. Update after every meaningful fix, CI result, phase change, or architectural decision.
 
 ## Current Execution
 
-**Branch:** `ui-rebuild-foodics-2026`  
-**PR #3:** Open, not merged.  
-**Latest verified gate:** Run #160 — SUCCESS.  
-**PHASE 0–5:** VERIFIED / CLOSED.  
-**6A:** VERIFIED / CLOSED.  
-**6B:** VERIFIED / CLOSED.  
-**6C:** VERIFIED / CLOSED — Run #151.  
-**6D–6G:** VERIFIED / CLOSED — Run #160.
+**Branch:** `ui-visual-rebuild-6h`  
+**Base:** `main` after PR #3 merge  
+**Bundle:** 6H + 6I — Full Visual Rebuild (App Shell + Design System + Dashboard + POS)  
+**Status:** IN PROGRESS — behavior-preserving visual rebuild.
 
-## Next Bundle: PHASE 6D–6G
+## Non-Negotiable Safety Contract
 
-The user approved bundling multiple independent design-completion stages to reduce unnecessary CI cycles, provided each stage remains behavior-preserving and the combined regression passes.
+- Preserve all existing business logic, data fetching, mutations, API contracts, routes, authentication, permissions, RBAC, branch isolation, POS transaction logic, tables/orders/delivery/takeaway/car/quick-order flows, payments, printing, discounts, split/hold/send/close/save actions, kitchen integration, and customer display behavior.
+- UI changes must reuse existing hooks, queries, mutations, and handlers wherever possible.
+- Do not alter Supabase data/schema/RLS as part of visual work unless a separate approved migration is explicitly required.
+- Do not delete legacy UI until all consumers are identified and the replacement is verified.
+- Never weaken or remove existing tests to accommodate the new design.
+- Every meaningful implementation, decision, fix, CI result, and phase transition must be recorded here.
+- Create rollback-safe commits/checkpoints before risky migrations or deletions.
 
-**Status: VERIFIED / CLOSED — Run #160.** All list/filter/table pages use the unified `Design*` surface package (`DesignSurface`, `DesignPageHeader`, `DesignFilterBar`, `DesignSearch`, `DesignPanel`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, `DesignErrorState`). Canonical primitives gained stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`, `pagination-bar`, `design-*`), and `DataTable` accepts an `error` prop wired from `usePaginatedRows`. The parallel run's Layout/Login/dashboard changes were merged in; `DashboardChrome` keeps its passthrough form so the nav/shell contract test is untouched. Local gates: lint (0 errors), typecheck, `typecheck:all`, `test:unit` (139 tests incl. 17-page design-surface contract + 31 page smoke tests), build.
+## 6D–6G — VERIFIED / CLOSED
 
-### 6D — Page Headers & Action Toolbars
-- Standardize page headers, titles, breadcrumbs and primary action areas.
-- Stable semantic/test IDs for important actions.
-- Preserve existing handlers, routes and permissions.
+6D–6G was completed on the previous rebuild branch and verified by Run #160. The unified `Design*` surface package, list/filter/table migrations, stable test IDs, shell/login/dashboard reconciliation, DB/RLS checks, and browser smoke passed.
 
-### 6E — Filters / Search / Tables
-- Standardize search/filter bars, table headers, empty/loading/error states and pagination surfaces.
-- Preserve query/data contracts and branch isolation.
+## 6H + 6I — Full Visual Rebuild Bundle
 
-### 6F — Cards / Panels / Shared States
-- Consolidate repeated visual cards/panels and common state surfaces where safe.
-- Do not alter business logic or data fetching behavior.
+### 6H-A — Design Tokens
+- Establish the new visual language: color, typography, spacing, radius, shadows, density, RTL/LTR and dark mode.
+- Keep semantic identities and interaction behavior unchanged.
 
-### 6G — Responsive / Visual Consistency
-- Complete responsive behavior and visual consistency across the rebuilt surfaces.
-- Ensure desktop/mobile rearrangement does not change interaction identity or behavior.
+### 6H-B — App Shell
+- Rebuild Sidebar, Header, navigation hierarchy, content surface and responsive shell.
+- Preserve route guards, permissions, active navigation behavior and existing handlers.
 
-### Bundle execution rules
-1. Create/preserve a rollback checkpoint before risky changes.
-2. Implement 6D–6G as one coherent package where technically safe.
-3. Never weaken previous tests to accommodate the new design.
-4. Preserve PHASE 0–5, 6A, 6B and 6C behavior.
-5. Add focused tests only for newly stabilized critical interactions.
-6. Before closure, run Verify + DB/RLS + Browser E2E and the full regression from PHASE 0 through 6G.
-7. If a regression appears, stop, identify the responsible stage, fix the root cause, and rerun the affected and full regression gates.
-8. Close only the stages whose implementation and evidence are both complete.
+### 6H-C — Dashboard
+- Replace the legacy visual composition with a genuinely new dashboard surface.
+- Preserve all existing Supabase data, filters, metrics and chart data contracts.
 
-## 6D–6G Implementation Progress — Current Session
+### 6H-D — Shared Components
+- Establish the new visual treatment for cards, buttons, inputs, search, filters, tables, states, modals and drawers.
+- Avoid duplicating business logic inside presentation components.
 
-Implementation is complete and reconciled with the parallel run. The design surface package unifies all list/filter/table pages, dashboards, app shell and login surfaces.
+### 6I-A — POS Workspace
+- Rebuild POS workspace layout and visual hierarchy without changing transaction behavior.
 
-Completed:
-- Shared `DesignSurface`, `DesignPageHeader`, and `DesignFilterBar` in `src/components/design/DesignSurface.tsx`; `DesignPageHeader` delegates to the canonical `PageHeader` (breadcrumbs/testIDs/subtitle).
-- `DesignPanel`, `DesignSearch`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, and `DesignErrorState` in `src/components/design/`.
-- All list/filter/table pages migrated to the `Design*` surfaces; `DataTable` gained an `error` prop (wired from `usePaginatedRows`) and stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`); `PaginationBar` has `pagination-bar` identity.
-- Dashboard variants keep the passthrough `DashboardChrome` adapter (nav/shell contract preserved); the enhanced dashboard retains its own `dashboard-surface` identity.
-- Protected application content has a stable responsive `design-content-surface` wrapper in `Layout` without changing routing, permissions, data fetching, or business logic.
-- Login consumes the shared `DesignSurface` with stable identities for the login surface, language toggle, mode toggle, form, and submit action.
-- Added `tests/components/design-surfaces.test.tsx` locking primitives' test IDs and page-surface wiring for 17 pages.
+### 6I-B — Product Browser / Order Panel
+- Rebuild product browsing, current order and totals presentation while preserving existing handlers and data contracts.
 
-**Status:** 6D–6G is closed. See Run #160 below for verification evidence.
+### 6I-C — Order Types / Tables
+- Rebuild visual workflow for Table, Delivery, Takeaway, Car and Quick Order.
+- Preserve existing table availability, occupied-table, guest-count and order-selection logic.
 
-## Verified CI Evidence
+### 6I-D — Active Orders / Kitchen Integration UI
+- Rebuild presentation only; preserve active-order and kitchen integration behavior.
 
-### Run #160 — 6D–6G Final Verification
-**Run ID:** `31730936820`  
-**Overall:** SUCCESS
-- Verify: SUCCESS — lint, typecheck, Playwright suite typecheck, unit tests, build.
-- DB: SUCCESS — migrations, schema verification, integration, security/RLS regression.
-- Browser Smoke: SUCCESS — Chromium, build, Playwright E2E.
+## 6H–6I Execution Rules
 
-**Conclusion:** 6D–6G is officially verified and closed. (The parallel run's Run #159 failed on the nav/shell contract because its `DashboardChrome` change replaced the passthrough; reconciled in the merge commit `dc6fda9`.)
+1. Work only on `ui-visual-rebuild-6h`; `main` is protected from direct UI changes.
+2. Bundle related visual stages to reduce CI cycles, but keep clear internal checkpoints.
+3. Preserve every existing functional contract.
+4. Add focused regression/contract tests for critical interactions when needed.
+5. Do not delete legacy UI until replacement consumers are verified.
+6. Run full verification after the bundle: lint, typecheck, unit/smoke, build, DB/RLS, browser smoke/E2E.
+7. If any regression appears, stop and fix the root cause before continuing.
+8. The bundle is complete only when the new UI is visibly different, functional behavior is preserved, tests pass, and the legacy surface has a safe removal plan.
 
-### Run #151 — 6C Final Verification
-**Run ID:** `31698574739`  
-**Overall:** SUCCESS
-- Verify: SUCCESS — lint, typecheck, Playwright suite typecheck, unit tests, build.
-- DB: SUCCESS — migrations, schema verification, integration, security/RLS regression.
-- Browser Smoke: SUCCESS — Chromium, build, Playwright E2E.
+## Implementation Progress — 6H + 6I
 
-**Conclusion:** 6C is officially verified and closed. The earlier Run #149 cancellation is not treated as a code failure.
+### Completed
+- Created isolated branch `ui-visual-rebuild-6h` from `main`.
+- Began the genuinely new Dashboard visual surface on the isolated branch.
+- Existing Dashboard data/logic contracts are preserved; the new surface is presentation-focused.
+- Recorded this bundle and its safety contract in the master log before continuing implementation.
 
-## Earlier Verified Phases
+### Pending
+- App Shell visual rebuild.
+- Design token refinement.
+- Shared component visual treatment.
+- POS workspace redesign.
+- Product browser/order panel redesign.
+- Order-type/table visual redesign.
+- Active orders/kitchen UI redesign.
+- Focused regression tests.
+- Full CI verification.
+- Legacy UI consumer audit and eventual removal.
 
-- PHASE 3 — Run #126 — SUCCESS — Browser 50/50.
-- PHASE 0–4 Combined Regression — Run #136 — SUCCESS.
-- PHASE 5 — Run #141 — SUCCESS.
-- 6A — Run #144 — SUCCESS.
-- 6B — Run #147 — SUCCESS.
-- 6C — Run #151 — SUCCESS.
-- 6D–6G — Run #160 — SUCCESS.
+## Relationship Audit Note
 
-## Safety Checkpoints
+The production Supabase schema had a duplicate FK on `users.branch_id`. The duplicate `users_branch_id_fkey` was removed manually after verification, leaving only `users_branch_fk_strict`. A migration was added on the previous rebuild branch to preserve the fix for schema recreation. This relationship fix is separate from the visual rebuild and must remain behavior-preserving.
 
-- PHASE 3 rollback point: `ui-rebuild-phase3-checkpoint-2026-08-13`.
-- PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
-- PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
-- 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
-- 6B verified commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
-- 6C implementation commit: `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
-- 6C verified gate: Run #151 / `31698574739`.
-- 6D–6G base checkpoint: `e455295372aa20b5552aed511ee80a463130d8ca`.
-- 6D–6G implementation commit: `1f3f24d`.
-- 6D–6G reconciliation merge: `dc6fda9`.
-- 6D–6G verified gate: Run #160 / `31730936820`.
+## Definition of Done — 6H + 6I
 
-## Deferred Relationship Audit
-
-Per user decision, the independent Relationship Integrity Gate remains deferred until the rebuild plan is completed. It will be executed before final merge.
-
-## Definition of Done
-
-The rebuild is complete only when the reference design is the intended production UI, critical controls have stable identities independent of layout, dashboard/navigation and POS/FloorPlan/Kitchen/payment flows are verified, RBAC/branch isolation is verified, build/typecheck/lint/unit/browser/regression checks pass, no critical blocker remains, the deferred relationship audit passes, and PR #3 is reviewed before merge to `main`.
+The bundle is complete only when the new App Shell + Dashboard + POS visual surfaces are clearly distinguishable from the old design, all existing functionality remains intact, legacy consumers are audited, focused tests and full CI pass, DB/RLS/security/browser checks pass, and the work is ready for a dedicated PR into `main`.
