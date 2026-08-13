@@ -76,13 +76,16 @@ Audited gaps (from the completed branch-isolation audit):
 - Preserved ALL stable IDs: `app-shell`, `app-sidebar`, `app-navigation`, `nav-group-{group}`, `nav-group-toggle-{group}`, `nav-item-{id}`, `sidebar-close`, `sidebar-open`, `mobile-sidebar-backdrop`, `assistant-card`, `app-header`, `top-navigation`, `top-tab-{key}`, `active-orders-button`, `active-orders-count`, `user-menu-button`, `language-toggle`, `theme-toggle`, `sign-out-button`, `app-main`, `design-content-surface`.
 - Route guards, permissions, active-navigation behavior, `navigate('/floor-plan')` active-orders handler, and all existing handlers unchanged.
 
-### P3 (6H-C) — Dashboard
+### P3 (6H-C) — Dashboard — DONE (local gates green; not pushed)
 - Complete the `VisualDashboardPage` contract, restoring everything the old `DashboardFoodicsPage` had:
   - Currency from `effectiveSettings().currency` (not hardcoded `EGP`).
-  - Admin branch picker (current `isAdminRole(...) ? branchFilter : branchFilter` is a no-op).
+  - Admin branch picker wired to the global active-branch store (`useActiveBranchId`), with the correct guard `isAdmin ? activeBranchId : branchFilter` (old `isAdminRole(...) ? branchFilter : branchFilter` was a no-op).
   - KPI report deep links `to="/reports?reportType=…"` (sales, sales_by_payment, sales_by_product, detailed_invoices).
   - Year range, previous-period comparison, order-type filter, export.
 - Preserve all existing Supabase data, filters, metrics and chart data contracts.
+- New contract test `tests/unit/dashboardContract.test.ts` (currency source, `isAdmin ? activeBranchId : branchFilter`, KPI deep links, year/comparison/filter/export, no `branchFilter : branchFilter`).
+- Removed unused lucide imports (`Activity`, `CalendarDays`, `Package`).
+- Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 144/144 (fixed one contract assertion: `data-testid={testId}` is rendered as `<Metric testId="…">`), build pass. Two earlier test timeouts (`brandColor` / `pages.smoke`) were parallel-load artifacts — pass in isolation and in full sequential run.
 
 ### P4 — Reports Center (two dropdowns)
 - Dropdown 1 = report type (all 14 operational + 9 financial).
@@ -127,10 +130,11 @@ Audited gaps (from the completed branch-isolation audit):
 - **P0 (security) done & pushed** — migration `068_security_harden_audit_gaps.sql` (revoke `process_sale` from anon/public, restrict `subscription_status`, branch-scope `product_components` SELECT via parent product), `ReportsPage.tsx` `recipe_costs` branch filter, integration tests `tests/integration/p0_security_hardening.test.ts`. Local gates green; pushed to PR #4 for CI. Commit `690eb71`.
 - **P1 (design tokens) done** — expanded `--ui-*` tokens + `.dark` overrides in `src/index.css`, `ui` color namespace + shadow/radius scales in `tailwind.config.js`. Local gates green (lint 0 errors, typecheck:all, 139 unit tests, build).
 - **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
+- **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
 
 ### Pending
-- P3 dashboard contract; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P0 pushed).
+- P3 push + PR #4 CI; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P0+P1 pushed and green; P2 pushed, CI not re-checked).
 
 ## Relationship Audit Note
 
