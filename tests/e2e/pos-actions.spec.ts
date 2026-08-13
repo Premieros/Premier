@@ -80,7 +80,8 @@ test.describe('POS action-level', () => {
     const pay = page.getByRole('button', { name: /الدفع|Pay/i }).first();
     await expect(pay).toBeEnabled();
     await pay.click();
-    await expect(page.getByText(/طريقة الدفع|Payment method/i)).toBeVisible();
+    await expect(page.getByTestId('pos-payment-confirm')).toBeVisible();
+    await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible();
   });
 
   test('order-type actions expose supported flows and back navigation', async ({ page }) => {
