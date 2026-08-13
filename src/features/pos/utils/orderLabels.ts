@@ -11,22 +11,22 @@ export const ORDER_TYPE_META: Record<OrderType, OrderTypeMeta> = {
   dine_in: {
     label: 'dineIn',
     icon: 'table',
-    pill: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+    pill: 'bg-ui-success/15 text-ui-success border-ui-success/30',
   },
   drive_thru: {
     label: 'driveThru',
     icon: 'car',
-    pill: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800',
+    pill: 'bg-ui-info/15 text-ui-info border-ui-info/30',
   },
   delivery: {
     label: 'delivery',
     icon: 'bike',
-    pill: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+    pill: 'bg-ui-info/15 text-ui-info border-ui-info/30',
   },
   takeaway: {
     label: 'takeaway',
     icon: 'zap',
-    pill: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
+    pill: 'bg-ui-primary-soft text-ui-accent border-ui-primary/30',
   },
 };
 

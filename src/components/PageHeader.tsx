@@ -72,14 +72,14 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon, color = 'navy', trend }: StatCardProps) {
   const colorMap: Record<string, { bg: string; icon: string; border: string }> = {
-    navy: { bg: 'bg-navy-50 dark:bg-navy-800/50', icon: 'text-navy-700 dark:text-navy-200', border: 'border-navy-100 dark:border-navy-700' },
-    gold: { bg: 'bg-gold-50 dark:bg-gold-500/10', icon: 'text-gold-600 dark:text-gold-400', border: 'border-gold-100 dark:border-gold-500/20' },
-    brand: { bg: 'bg-brand-50 dark:bg-brand-900/20', icon: 'text-brand-600 dark:text-brand-400', border: 'border-brand-200 dark:border-brand-800' },
-    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800' },
-    amber: { bg: 'bg-amber-50 dark:bg-amber-900/20', icon: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' },
-    red: { bg: 'bg-red-50 dark:bg-red-900/20', icon: 'text-red-600 dark:text-red-400', border: 'border-red-200 dark:border-red-800' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', icon: 'text-purple-600 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800' },
-    green: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800' },
+    navy: { bg: 'bg-ui-page-alt', icon: 'text-ui-muted', border: 'border-ui-border' },
+    gold: { bg: 'bg-ui-accent/10', icon: 'text-ui-accent', border: 'border-ui-accent/25' },
+    brand: { bg: 'bg-ui-primary-soft', icon: 'text-ui-accent', border: 'border-ui-primary/25' },
+    blue: { bg: 'bg-ui-info/10', icon: 'text-ui-info', border: 'border-ui-info/25' },
+    amber: { bg: 'bg-ui-warning/10', icon: 'text-ui-warning', border: 'border-ui-warning/25' },
+    red: { bg: 'bg-ui-danger/10', icon: 'text-ui-danger', border: 'border-ui-danger/25' },
+    purple: { bg: 'bg-ui-primary-soft', icon: 'text-ui-accent', border: 'border-ui-primary/25' },
+    green: { bg: 'bg-ui-success/10', icon: 'text-ui-success', border: 'border-ui-success/25' },
   };
 
   const c = colorMap[color] || colorMap.navy;

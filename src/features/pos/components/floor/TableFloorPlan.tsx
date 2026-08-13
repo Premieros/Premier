@@ -48,7 +48,7 @@ export function TableFloorPlan({ areas, tables, ordersByTable, canManage, curren
     const maxW = positions.reduce((m, p) => Math.max(m, p.left + p.width), 0) + 20;
     const maxH = positions.reduce((m, p) => Math.max(m, p.top + p.height), 0) + 20;
     return (
-      <div className="overflow-auto rounded-xl bg-slate-50 dark:bg-navy-950/60 border border-slate-100 dark:border-navy-800">
+      <div className="overflow-auto rounded-xl bg-ui-page border border-ui-border">
         <div className="relative" style={{ width: Math.max(maxW, 900), height: Math.max(maxH, 380) }}>
           {positions.map(({ table, left, top, width, height }) => {
             const st = STATUS_STYLES[table.status] || STATUS_STYLES.vacant;
@@ -61,8 +61,8 @@ export function TableFloorPlan({ areas, tables, ordersByTable, canManage, curren
                 className={`absolute rounded-xl border-2 shadow-sm p-2 flex flex-col items-center justify-center transition-all hover:shadow-card-hover hover:-translate-y-0.5 active:scale-[0.98] ${st.card}`}
                 style={{ left, top, width, height }}
               >
-                <span className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-full">{table.name}</span>
-                <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="text-sm font-bold text-ui-text truncate max-w-full">{table.name}</span>
+                <span className="flex items-center gap-1 text-[10px] text-ui-muted">
                   <Users className="w-3 h-3" /> {table.capacity}
                 </span>
                 {order && (
@@ -80,7 +80,7 @@ export function TableFloorPlan({ areas, tables, ordersByTable, canManage, curren
 
   if (areas.length === 0 && tables.length === 0) {
     return (
-      <Card className="p-16 text-center text-slate-400">
+      <Card className="p-16 text-center text-ui-subtle">
         <Grid3x3 className="w-16 h-16 mx-auto mb-4 opacity-30" />
         <p className="text-lg font-medium">{isAr ? 'لا توجد مناطق أو طاولات بعد' : 'No areas or tables yet'}</p>
         {canManage && (
@@ -100,17 +100,17 @@ export function TableFloorPlan({ areas, tables, ordersByTable, canManage, curren
         return (
           <Card key={area.id} className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-brand-500 dark:text-gold-400" />
+              <h3 className="text-sm font-bold text-ui-text flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-ui-accent" />
                 {area.name}
-                <span className="text-xs font-normal text-slate-400">({areaTables.length})</span>
+                <span className="text-xs font-normal text-ui-subtle">({areaTables.length})</span>
               </h3>
               {canManage && (
                 <div className="flex items-center gap-1">
-                  <button onClick={() => onAddTable(area.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-navy-800" title={t('addTable')}>
+                  <button onClick={() => onAddTable(area.id)} className="p-1.5 rounded-lg text-ui-subtle hover:text-ui-accent hover:bg-ui-page-alt" title={t('addTable')}>
                     <Plus className="w-4 h-4" />
                   </button>
-                  <button onClick={() => onDeleteArea(area)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" title={isAr ? 'حذف المنطقة' : 'Delete area'}>
+                  <button onClick={() => onDeleteArea(area)} className="p-1.5 rounded-lg text-ui-subtle hover:text-ui-danger hover:bg-ui-danger/10" title={isAr ? 'حذف المنطقة' : 'Delete area'}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -125,8 +125,8 @@ export function TableFloorPlan({ areas, tables, ordersByTable, canManage, curren
         if (loose.length === 0) return null;
         return (
           <Card key="loose" className="p-4">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-400" />
+            <h3 className="text-sm font-bold text-ui-text mb-3 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-ui-subtle" />
               {isAr ? 'طاولات بدون منطقة' : 'Tables without area'}
             </h3>
             {renderCanvas(loose)}

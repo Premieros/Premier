@@ -8,7 +8,7 @@
 **Base:** `main` after PR #3 merge (`15847d1`)
 **Bundle:** 6H + 6I — Full Visual Rebuild (Security + App Shell + Design System + Dashboard + Reports Center + POS)
 **Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site always reflects green `main` only.
-**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created.
+**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created. P0–P6 pushed and CI green on PR #4 (last: P6 POS visual).
 
 ## CI Checkpoint — P0 + P1 (green)
 
@@ -47,6 +47,18 @@ After pushing P4 (`9fb9d5d`, reports center with two dropdowns):
 ## CI Checkpoint — P5 (green)
 
 After pushing P5 (`8152eb7`, shared components on ui tokens + interaction-identity registry):
+
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
+
+## CI Checkpoint — P6 (green)
+
+After pushing P6 (`POS visual on ui tokens`, on top of P5):
 
 | Check | Result |
 |-------|--------|
@@ -180,10 +192,11 @@ Audited gaps (from the completed branch-isolation audit):
 - **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
 - **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
 - **P5 (shared components + identity registry) done** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build). Pushed `8152eb7`; PR #4 CI green (verify, db, browser-smoke).
+- **P6 (POS visual) done** — swept the entire POS feature onto `ui-*` design tokens, presentation-only (no logic/props/handlers/testids changed; all `pos-*` data attributes, bottom-bar `onClick={() => setOrdersOpen(true)}`, and its aria-label preserved): `PosWorkspacePage` (workspace shell, loading/error screens, receipt modal), `PosTopBar`, `ProductBrowser` (search, category chips, cards, stock badges), `CurrentOrderPanel` (chips, cart rows, steppers, totals, pay = `bg-ui-success`, discount editor), `PaymentPanel` (method cards, paid input, change banner, confirm), `OrderTypeBottomBar` (drawer + bottom nav pill), `ActiveOrdersDrawer` (backdrop/aside/filters/cards/actions), `KitchenPanel` (sends, status badges), `TablesPanel` + `TableFloorPlan` (floor canvases, table cards), `OrderStartWizard` + `OrderTypePicker` + `CarOrderStep` + `DeliveryOrderStep` + `TablePickerStep` + `TableActionModal` + `OrderTypeQuickPicker` + `TypeChangePicker`, `ActiveOrdersPage` (StatCard color map via shared `PageHeader.tsx`, branch select, filters, order cards, table form inputs). Utility style maps tokenized: `orderTypes.ts` `STATUS_STYLES`, `orderStage.ts`, `orderState.ts` (+ `OrderStateDot`), `orderLabels.ts` `ORDER_TYPE_META` pill. `shadow-pos`/`hover:shadow-card-hover` → `shadow-ui-*`. No hardcoded slate/navy/gold/brand/emerald/amber/red/sky/blue/orange/green color classes remain under `src/features/pos`. Local gates green (lint 0 errors, typecheck:all, test:unit 213/213, build).
 
 ### Pending
-- P6 POS visual; P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P5 pushed and green — verify, db, browser-smoke all success).
+- P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P6 pushed and green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note
 

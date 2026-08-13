@@ -89,24 +89,24 @@ export function ActiveOrdersDrawer({
 
   return (
     <>
-      {open && <div className="fixed inset-0 top-16 z-40 bg-navy-950/40 backdrop-blur-[1px]" onClick={onClose} />}
+      {open && <div className="fixed inset-0 top-16 z-40 bg-ui-text/40 backdrop-blur-[1px]" onClick={onClose} />}
       <aside
-        className={`fixed top-16 bottom-0 z-50 w-[380px] max-w-[92vw] bg-white dark:bg-navy-900 border-s border-slate-200 dark:border-navy-800 shadow-2xl transition-transform duration-300 flex flex-col ${
+        className={`fixed top-16 bottom-0 z-50 w-[380px] max-w-[92vw] bg-ui-surface border-s border-ui-border shadow-ui-xl transition-transform duration-300 flex flex-col ${
           isAr ? 'left-0' : 'right-0'
         } ${open ? 'translate-x-0' : isAr ? '-translate-x-full' : 'translate-x-full'}`}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-navy-800 flex-shrink-0">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <ListOrdered className="w-4 h-4 text-brand-500 dark:text-gold-400" />
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ui-border flex-shrink-0">
+          <h2 className="text-sm font-bold text-ui-text flex items-center gap-2">
+            <ListOrdered className="w-4 h-4 text-ui-accent" />
             {t('activeOrders')}
-            <span className="px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-[11px] font-bold">{orders.length}</span>
+            <span className="px-2 py-0.5 rounded-full bg-ui-primary-soft text-ui-accent text-[11px] font-bold">{orders.length}</span>
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors">
+          <button onClick={onClose} className="p-2 rounded-lg text-ui-muted hover:bg-ui-page-alt transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="px-3 py-2.5 space-y-2 border-b border-slate-100 dark:border-navy-800 flex-shrink-0">
+        <div className="px-3 py-2.5 space-y-2 border-b border-ui-border flex-shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {filterChips.map((c) => (
               <button
@@ -114,32 +114,32 @@ export function ActiveOrdersDrawer({
                 onClick={() => setCategory(c.id)}
                 className={`whitespace-nowrap flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
                   category === c.id
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700'
+                    ? 'bg-ui-primary text-ui-primary-fg shadow-ui-sm'
+                    : 'bg-ui-page-alt text-ui-muted hover:bg-ui-page-alt'
                 }`}
               >
                 {c.icon}
                 {c.label}
                 {counts[c.id] > 0 && category !== c.id && (
-                  <span className={`px-1 rounded-full text-[9px] ${category === c.id ? 'bg-white/25' : 'bg-slate-200 dark:bg-navy-700'}`}>{counts[c.id]}</span>
+                  <span className={`px-1 rounded-full text-[9px] ${category === c.id ? 'bg-ui-primary-fg/25' : 'bg-ui-border'}`}>{counts[c.id]}</span>
                 )}
               </button>
             ))}
           </div>
           <div className="relative">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-slate-400" />
+            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-ui-subtle" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={isAr ? 'بحث برقم الطلب أو السياق...' : 'Search order # or context...'}
-              className="w-full ps-9 pe-3 py-2 rounded-xl border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
+              className="w-full ps-9 pe-3 py-2 rounded-xl border border-ui-border bg-ui-page-alt text-sm text-ui-text placeholder:text-ui-subtle focus:outline-none focus:ring-2 focus:ring-ui-ring"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
           {filtered.length === 0 ? (
-            <div className="text-center py-14 text-slate-400">
+            <div className="text-center py-14 text-ui-subtle">
               <UtensilsCrossed className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">{t('noOpenOrders')}</p>
             </div>
@@ -151,23 +151,23 @@ export function ActiveOrdersDrawer({
               const ctx = orderContextText(order, tableById, customerById);
               const ready = stage === 'ready';
               return (
-                <div key={order.id} className="p-3 rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 hover:border-brand-300 dark:hover:border-brand-700 transition-colors">
+                <div key={order.id} className="p-3 rounded-xl border border-ui-border bg-ui-page-alt hover:border-ui-accent transition-colors">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-black text-slate-800 dark:text-white shrink-0">{order.order_number}</span>
+                      <span className="text-xs font-black text-ui-text shrink-0">{order.order_number}</span>
                       <OrderTypePill type={order.order_type} />
                       {ctx && (
-                        <span className="shrink-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[110px]">
+                        <span className="shrink-0 text-[11px] font-semibold text-ui-muted truncate max-w-[110px]">
                           {ctx}
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-bold text-brand-600 dark:text-gold-400 shrink-0">
+                    <span className="text-sm font-bold text-ui-accent shrink-0">
                       {formatCurrency(order.total, currency, lang)}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-2 mt-1.5 text-[11px] text-ui-subtle">
                     <OrderStageBadge stage={stage} />
                     <span>
                       {isAr
@@ -181,8 +181,8 @@ export function ActiveOrdersDrawer({
                       onClick={() => (ready ? onPay(order) : onResume(order))}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 ${
                         ready
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          : 'bg-brand-600 hover:bg-brand-700 text-white'
+                          ? 'bg-ui-success text-ui-primary-fg'
+                          : 'bg-ui-primary text-ui-primary-fg'
                       }`}
                     >
                       {ready ? <Banknote className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -191,7 +191,7 @@ export function ActiveOrdersDrawer({
                     {!ready && (
                       <button
                         onClick={() => onPay(order)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all active:scale-95"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-ui-success text-ui-primary-fg text-[11px] font-bold transition-all active:scale-95"
                       >
                         <Banknote className="w-3.5 h-3.5" />
                         {t('payOrder')}
@@ -200,7 +200,7 @@ export function ActiveOrdersDrawer({
                     {order.status === 'held' && (
                       <button
                         onClick={() => onCancel(order)}
-                        className="ms-auto p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="ms-auto p-1.5 rounded-lg text-ui-subtle hover:text-ui-danger hover:bg-ui-danger/10 transition-colors"
                         title={t('cancelOrder')}
                       >
                         <Trash2 className="w-4 h-4" />
