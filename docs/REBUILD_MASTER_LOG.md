@@ -27,6 +27,10 @@ Core rule:
 12. New screens/components use shared UI foundation and stable interaction identities.
 13. PRE-CI VALIDATION GATE: typecheck → lint → unit → affected Playwright → full phase E2E → inspect failures/artifacts → CI.
 14. CHECKPOINT RULE: preserve a named rollback point before risky phase changes.
+15. **REGRESSION PROTECTION RULE:** every later phase must preserve every previously verified phase. A phase is not considered successful if its own tests pass while an earlier phase regresses.
+16. Before closing any phase, run the current phase suite **and the full regression suite for all previously closed phases**, plus Verify/Build.
+17. If a regression appears, stop phase advancement, classify the root cause, fix it at the correct layer, re-run the affected earlier phase, then re-run the full regression gate before continuing.
+18. Never weaken, delete, skip, or bypass an earlier test merely to make a later phase green.
 
 ## 3. Phase Plan
 
@@ -58,7 +62,7 @@ Required action-level flows verified:
 - Back/navigation behavior
 
 ### PHASE 4 — Security / RBAC / Branch Isolation
-**CURRENT PHASE — PENDING EXECUTION**
+**CURRENT PHASE — EXECUTION STARTED 2026-08-13**
 
 ### PHASE 5 — Final Stabilization / Regression
 **PENDING**
@@ -177,23 +181,33 @@ Failure classification before another code change:
 - Production behavior defect → fix application root cause.
 - Regression → compare with checkpoint and restore if necessary.
 
-## 11. PHASE 4 — Next Objective
+## 11. PHASE 4 — Security / RBAC / Branch Isolation
 
-Now that PHASE 3 is green, PHASE 4 begins. Its purpose is **Security / RBAC / Branch Isolation**, without redesigning or weakening the UI behavior already verified.
+**Objective:** verify and harden the existing security model without breaking any previously verified UI/POS behavior.
 
-PHASE 4 gate must verify:
-- Authentication and session behavior.
+Required gate:
+- Authentication/session behavior.
 - Role/permission enforcement at UI and service/data layers.
 - Branch isolation at database/RLS level.
 - Users cannot read/write another branch's protected data.
-- Super Admin behavior remains unrestricted as defined by the project rules.
+- Super Admin remains unrestricted as defined by project rules.
 - Owner/Manager/Cashier/Kitchen/Warehouse/Accountant boundaries remain correct.
 - Branch assignment is enforced consistently.
 - Protected routes/actions cannot be bypassed by changing URL, DOM position, or client state.
 - Critical RBAC/RLS operations receive Action-Level tests.
-- No PHASE 3 regression after security changes.
+- **Full regression of all previously closed phases is mandatory before PHASE 4 closes.**
 
-PHASE 4 must use the same stable IDs, architecture separation, checkpoint rule and PRE-CI validation gate.
+### PHASE 4 workflow
+1. Create a PHASE 4 checkpoint from the last fully verified state.
+2. Inventory auth/RBAC/RLS policies, helper functions, protected routes, and relevant tests.
+3. Identify gaps/unsafe assumptions before changing code.
+4. Add Action-Level security tests for the gaps.
+5. Fix root causes only where evidence requires it.
+6. Run PRE-CI VALIDATION GATE.
+7. Run CI and inspect artifacts.
+8. Run full regression suite for PHASE 0–3.
+9. Close PHASE 4 only when security tests and all earlier regression tests are green.
+10. Record checkpoint, findings, fixes, commits, CI and next action here.
 
 ## 12. Current State
 
