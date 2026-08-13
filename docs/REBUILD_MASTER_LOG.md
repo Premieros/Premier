@@ -27,12 +27,12 @@ Core rule:
 12. New screens/components use shared UI foundation and stable interaction identities.
 13. PRE-CI VALIDATION GATE: typecheck → lint → unit → affected Playwright → full phase E2E → inspect failures/artifacts → CI.
 14. CHECKPOINT RULE: preserve a named rollback point before risky phase changes.
-15. **REGRESSION PROTECTION RULE:** every later phase must preserve every previously verified phase. A phase is not considered successful if its own tests pass while an earlier phase regresses.
-16. Before closing any phase, run the current phase suite **and the full regression suite for all previously closed phases**, plus Verify/Build.
+15. REGRESSION PROTECTION RULE: every later phase must preserve every previously verified phase.
+16. Before closing any phase, run the current phase suite and the full regression suite for all previously closed phases, plus Verify/Build.
 17. If a regression appears, stop phase advancement, classify the root cause, fix it at the correct layer, re-run the affected earlier phase, then re-run the full regression gate before continuing.
 18. Never weaken, delete, skip, or bypass an earlier test merely to make a later phase green.
-19. **BATCH EXECUTION RULE:** each remaining phase will be implemented as one coherent package whenever practical; do not split a phase into unnecessary micro-cycles. After the package, run one comprehensive PRE-CI/CI regression gate.
-20. **MULTI-PHASE EFFICIENCY RULE:** if two or more consecutive phases have no dependency that requires separate verification, they may be implemented in one package, but they cannot be declared closed until the combined gate proves every included phase and all prior phases.
+19. BATCH EXECUTION RULE: each remaining phase will be implemented as one coherent package whenever practical.
+20. MULTI-PHASE EFFICIENCY RULE: independent consecutive phases may be bundled, but each included phase requires evidence in the combined gate before closure.
 
 ## 3. Phase Plan
 
@@ -52,10 +52,10 @@ Core rule:
 **CLOSED — VERIFIED 2026-08-13 by combined Regression Run #136**
 
 ### PHASE 5 — Final Stabilization / Regression
-**CURRENT — EXECUTION STARTED AS A SINGLE PACKAGE**
+**CLOSED — VERIFIED by Run #141 after CI verification-gate correction**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**PENDING — may be bundled when dependencies allow**
+**NEXT**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -87,151 +87,83 @@ Core rule:
 - Tests validate real application behavior/RPCs where persistence is part of the action.
 - Run #110 was green before the expanded PHASE 3 action coverage.
 
-## 6. PHASE 3 Commit History
+## 6. Safety Checkpoints
 
-- `bb1a9fb4d5161c401dac95b258889366c5f2a0dd` — stable CurrentOrderPanel action IDs.
-- `c27063c0148dc9336b68412e74ebb7b67efc7830` — drive-thru IDs.
-- `58eb589ec161a7499b79a6720ab94afa347dde24` — delivery IDs.
-- `f50d9996c89b614b040223b3620cc83fc7bb5009` — initial remaining PHASE 3 Action-Level E2E.
-- `cdc51c4632a6b6c72e19382cfc3fcaae97424cc6` — corrected Delivery/Drive-thru/payment async assertions.
-- `ef2a90c58162e81b1d9f26651103a2663c1de925` — corrected Hold/Complete Sale persistence boundaries.
-- `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c` — Complete Sale test corrected to assert the actual payment completion boundary and `process_sale`.
+PHASE 3 rollback point: `ui-rebuild-phase3-checkpoint-2026-08-13`.
+PHASE 3 checkpoint commit: `b46c29eb10ed085653296c326f3fa3596f8db739`.
+PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
+PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
 
-## 7. Safety Checkpoints
+## 7. Verified CI Evidence
 
-PHASE 3 rollback point:
-`ui-rebuild-phase3-checkpoint-2026-08-13`
-
-PHASE 3 checkpoint commit:
-`b46c29eb10ed085653296c326f3fa3596f8db739`
-
-PHASE 4 rollback point:
-`ui-rebuild-phase4-checkpoint-2026-08-13`
-
-PHASE 4 checkpoint is the last fully verified PHASE 3 state before PHASE 4 changes. Use it only if a later change causes regression or unsafe divergence.
-
-PHASE 5 rollback point:
-`ui-rebuild-phase5-checkpoint-2026-08-13`
-
-PHASE 5 checkpoint commit:
-`e416f4bf34fc9cf985fa77fe6ad177f852fbda03`
-
-## 8. Failure Analysis
-
-### Run #119
-50 E2E executed: 46 passed / 4 failed. Failures were test-contract/timing issues.
-
-### Run #123
-50 E2E: 48 passed / 2 failed. Hold and Complete Sale had incorrect asynchronous lifecycle boundaries.
-
-### Run #124
-50 E2E: 49 passed / 1 failed. Complete Sale was corrected in `9db50b6...`.
-
-Cancelled runs were treated as infrastructure/cancellation events and were not used as code-failure evidence.
-
-## 9. FINAL PHASE 3 VERIFICATION — RUN #126
-
-**Date:** 2026-08-13
-**Run:** #126
-**Run ID:** `31686015991`
+### PHASE 3 — Run #126
 **Commit:** `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c`
 **Overall:** SUCCESS
-
 - Verify/Lint/Typecheck/Unit/Build — PASS
-- Browser Smoke / Playwright — **50/50 PASS**
-- Critical POS/FloorPlan/Delivery/Drive-thru/Hold/Kitchen/Discount/Payment/Complete Sale flows — PASS
+- Browser Smoke / Playwright — 50/50 PASS
 
-**PHASE 3 officially CLOSED.**
-
-## 10. PRE-CI VALIDATION GATE — MANDATORY GOING FORWARD
-
-Every change must follow:
-
-`Change → Typecheck/Lint → Unit → affected Playwright → full phase E2E → inspect failure/artifacts → CI → record result`
-
-Failure classification:
-- Infrastructure/cancellation → rerun, no code change.
-- Test-contract/timing → fix test boundary.
-- Production behavior defect → fix application root cause.
-- Regression → compare with checkpoint and restore if necessary.
-
-## 11. PHASE 4 — Security / RBAC / Branch Isolation
-
-Objective: verify and harden the existing security model without breaking previously verified UI/POS behavior.
-
-The PR verification workflow was upgraded to include PostgreSQL, CI auth stub, canonical migrations, schema verification, fixture helpers, and mandatory integration/security/RLS tests before Browser E2E.
-
-Security/RBAC Action-Level coverage was added for internal function EXECUTE protection, discount permission enforcement, privileged discount path, branch-manager role permission protection, and cross-branch audit access.
-
-Relevant commits:
-- `0fc866a806a8b536e02ca26eeb57928f1178aabc` — mandatory DB/RLS gate.
-- `ccc55c4c023ae62f1d75406adf6a3e97d8e6f2e5` — RBAC hardening tests.
-- `ddc51bc5336a36bd91f8881b3eaa575f8eb5e928` — corrected `runAs()` success assertions.
-- `e416f4bf34fc9cf985fa77fe6ad177f852fbda03` — corrected RBAC test contract/fixture and reached the combined green regression gate.
-
-## 12. COMBINED PHASE 0–4 REGRESSION — RUN #136
-
-**Date:** 2026-08-13
-**Run:** #136
-**Run ID:** `31689738911`
+### PHASE 0–4 Combined Regression — Run #136
 **Commit:** `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`
-**Workflow:** Verify main
 **Overall:** SUCCESS
-
-### Verify
-- npm ci — PASS
-- Lint — PASS
-- Typecheck — PASS
-- Unit Tests — PASS
-- Build — PASS
-
-### DB / Security
-- PostgreSQL service — PASS
-- CI auth stub — PASS
-- Canonical migrations — PASS
-- Schema verification — PASS
-- Integration + Security/RLS regression — PASS
-
-### Browser Regression
-- Playwright Chromium — PASS
+- Verify — PASS
+- DB / migrations / schema / integration / Security/RLS — PASS
 - Browser E2E — PASS
 
-**Conclusion:** PHASE 0–4 all passed the same CI verification cycle with no observed regression. PHASE 4 is officially CLOSED.
+### PHASE 5 Verification Gate — Run #141
+**Commit:** `5e02ee1e26b7e888b9ad411515e02841f3fcc67d`
+**Run ID:** `31692603251`
+**Overall:** SUCCESS
 
-## 13. PHASE 5 — FINAL STABILIZATION / REGRESSION PACKAGE
+Jobs:
+- Verify — SUCCESS, including application typecheck, Playwright test-suite typecheck, unit tests and build.
+- DB — SUCCESS, including auth stub, canonical migrations, schema verification, integration/security/RLS regression.
+- Browser Smoke — SUCCESS, including Chromium installation, build and Playwright E2E.
 
-### Objective
-Make the verification gate stricter and finish stabilization without changing verified business behavior or reopening earlier phases unnecessarily.
+This verified the PHASE 5 verification package and the corrected CI gate. No business logic or security policy was weakened.
 
-### Package actions
-1. Create a rollback checkpoint before risky work. **DONE:** `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf...`.
-2. Audit the verification contract for application code **and test suites**. **DONE:** repository already exposes `typecheck:all` for app + tests but the PR verify job only ran application typecheck.
-3. Strengthen the mandatory Verify gate so test-suite TypeScript is checked in CI. **DONE:** `.github/workflows/verify-main.yml` now runs `npm run typecheck:all`.
-4. Preserve DB/RLS and Browser E2E as required downstream gates. **DONE:** existing dependencies remain `db → browser-smoke` and `verify → db`.
-5. Run one comprehensive PHASE 0–5 regression cycle. **PENDING CI RESULT.**
+## 8. PHASE 5 — FINAL STABILIZATION / REGRESSION
 
-Commit:
-`89f913e7ee50ae710191709f4048cb3b497ab1ca`
+Objective: strengthen the verification contract and finish stabilization without changing verified business behavior.
 
-This is intentionally a verification-hardening change. No business logic or security policy was altered.
+Completed package actions:
+1. Rollback checkpoint created.
+2. Verification contract audited for application and test suites.
+3. `.github/workflows/verify-main.yml` strengthened to install `@playwright/test@1.55.0` before `npm run typecheck:all`.
+4. DB/RLS and Browser E2E remain mandatory downstream gates.
+5. Comprehensive verification passed in Run #141.
 
-## 14. CURRENT STATE
+Relevant commits:
+- `89f913e7ee50ae710191709f4048cb3b497ab1ca` — PHASE 5 verification hardening.
+- `dc6b0e03f3ee03c487b2f22a44e87822e9b9d81d` — CI Playwright dependency correction.
+- `5e02ee1e26b7e888b9ad411515e02841f3fcc67d` — final PHASE 5 gate record.
+
+**PHASE 5 OFFICIALLY CLOSED.**
+
+## 9. Deferred Final Relationship Audit
+
+Per user decision, the independent Relationship Integrity Gate is intentionally deferred until after the current rebuild plan is completed. It must not block the current phase progression.
+
+After the rebuild plan, perform a dedicated final database/relationship audit covering Foreign Keys, relationship paths, orphan records, constraints, delete/update behavior, RLS through relationships, branch isolation, and RPC dependencies.
+
+## 10. CURRENT EXECUTION
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
-**Latest fully verified commit:** `e416f4bf34fc9cf985fa77fe6ad177f852fbda03` (Run #136 — SUCCESS).
-**Current phase:** PHASE 5 — Final Stabilization / Regression.
-**Latest PHASE 5 package commit:** `89f913e7ee50ae710191709f4048cb3b497ab1ca` (CI pending).
-**Rollback checkpoint:** `ui-rebuild-phase5-checkpoint-2026-08-13`.
+**Current phase:** PHASE 6+ — Remaining rebuild/design completion packages.
+**Latest verified gate:** Run #141 — SUCCESS.
+**PHASE 0–5 status:** VERIFIED / CLOSED.
 
-## 15. Session Update Rule
+### Next execution rule
+Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive phases are independent, bundle them. Before closing any included phase, run the combined regression for every phase from 0 through the latest included phase.
+
+## 11. Session Update Rule
 
 Every meaningful action must be recorded here with date/time, branch, phase, previous verified CI, root cause, files changed, fix, commit(s), new CI status/result, remaining blockers, and exact next action.
 
 User explicitly requested to be told every time progress is recorded.
 
-## 16. Definition of Done
+## 12. Definition of Done
 
-The rebuild is complete only when the reference design is the intended production UI, critical controls have stable identities independent of layout, dashboard/navigation and POS/FloorPlan/Kitchen/payment flows are verified, RBAC/branch isolation is verified, build/typecheck/lint/unit/browser/regression checks pass, no critical blocker remains, and PR #3 is reviewed before merge to `main`.
+The rebuild is complete only when the reference design is the intended production UI, critical controls have stable identities independent of layout, dashboard/navigation and POS/FloorPlan/Kitchen/payment flows are verified, RBAC/branch isolation is verified, build/typecheck/lint/unit/browser/regression checks pass, no critical blocker remains, the deferred relationship audit passes, and PR #3 is reviewed before merge to `main`.
 
 **Do not replace this plan with a new plan unless the user explicitly changes the project objective.**
