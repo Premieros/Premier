@@ -3,10 +3,9 @@ import { type ReactNode } from 'react';
 /**
  * Dashboard content adapter.
  *
- * The application shell is now provided by Layout so every protected screen
- * shares one navigation/header system. This component intentionally remains
- * as a compatibility wrapper for existing dashboard pages and future
- * dashboard-specific composition without creating a second shell.
+ * The application shell is provided by Layout. This compatibility wrapper
+ * keeps dashboard variants passthrough so the shared shell remains the only
+ * navigation/overlay surface (nav/shell contract).
  */
 export interface DashboardChromeProps {
   children: ReactNode;

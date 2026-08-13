@@ -46,6 +46,21 @@ The user approved bundling multiple independent design-completion stages to redu
 7. If a regression appears, stop, identify the responsible stage, fix the root cause, and rerun the affected and full regression gates.
 8. Close only the stages whose implementation and evidence are both complete.
 
+## 6D–6G Implementation Progress — Current Session
+
+Implementation is complete and reconciled with the parallel run. The design surface package unifies all list/filter/table pages, dashboards, app shell and login surfaces.
+
+Completed:
+- Shared `DesignSurface`, `DesignPageHeader`, and `DesignFilterBar` in `src/components/design/DesignSurface.tsx`; `DesignPageHeader` delegates to the canonical `PageHeader` (breadcrumbs/testIDs/subtitle).
+- `DesignPanel`, `DesignSearch`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, and `DesignErrorState` in `src/components/design/`.
+- All list/filter/table pages migrated to the `Design*` surfaces; `DataTable` gained an `error` prop (wired from `usePaginatedRows`) and stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`); `PaginationBar` has `pagination-bar` identity.
+- Dashboard variants keep the passthrough `DashboardChrome` adapter (nav/shell contract preserved); the enhanced dashboard retains its own `dashboard-surface` identity.
+- Protected application content has a stable responsive `design-content-surface` wrapper in `Layout` without changing routing, permissions, data fetching, or business logic.
+- Login consumes the shared `DesignSurface` with stable identities for the login surface, language toggle, mode toggle, form, and submit action.
+- Added `tests/components/design-surfaces.test.tsx` locking primitives' test IDs and page-surface wiring for 17 pages.
+
+**Status:** implementation complete. No 6D–6G stage is closed yet; CI verification is required before closure.
+
 ## Verified CI Evidence
 
 ### Run #151 — 6C Final Verification
