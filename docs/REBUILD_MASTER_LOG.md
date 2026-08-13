@@ -82,7 +82,7 @@ Required action-level flows:
 - Stable IDs are used for critical interactions and E2E tests.
 - POS order-type selectors include `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
 - Cart quantity controls use product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
-- Payment controls now use stable IDs: `pos-payment-method-{method}` and `pos-payment-confirm`.
+- Payment controls use stable IDs: `pos-payment-method-{method}` and `pos-payment-confirm`.
 - Moving a control must not alter its action, permission, route, state, or service behavior.
 - The UI layer is intended to be replaceable/rearrangeable without rewriting the underlying business logic.
 - Shared components and stable action identities are the mechanism for safe future UI evolution.
@@ -98,8 +98,9 @@ Required action-level flows:
 - POS tests corrected to use actual UI stable IDs instead of assumed text/DOM positions.
 - POS order-type action test is passing.
 - Cart quantity controls received stable product-specific IDs and the test was changed from DOM traversal/`nth()` to those IDs.
-- Payment flow was inspected: `Pay` opens the existing `PaymentPanel` inline in the POS workspace; it does not display a literal `Payment method` heading. The real UI exposes payment-method controls and a `Confirm Payment` action.
+- Payment flow was inspected: `Pay` opens the existing `PaymentPanel` inline in the POS workspace; it does not display a literal `Payment method` heading. The real UI exposes payment-method controls and a final confirmation action.
 - Added stable payment IDs to the actual payment component and updated the E2E test to assert the real payment workspace instead of the nonexistent heading.
+- Run #110 passed all required CI jobs, including Browser E2E.
 
 ## 6. Current State — 2026-08-13
 
@@ -111,71 +112,54 @@ Required action-level flows:
 
 - `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — stable cart quantity IDs.
 - `9cf28849332fb079d823a8e8c2f853139a30cef7` — POS quantity test uses stable IDs and verifies `1 → 2`.
-- `80cdb01a5d28ba41333b53c0c946979f0501875d` — master-log update / CI state.
-- `e7bf73809604d7a97759f75c666ae8b7d9514d5c` — added stable payment method/confirmation IDs to `PaymentPanel`.
+- `e7bf73809604d7a97759f75c666ae8b7d9514d5c` — stable payment method/confirmation IDs.
 - `ecaf4dd0ea81ac6dd0145343dc9d74d7ddfbd675` — updated POS E2E to assert the actual payment workspace using stable IDs.
+- `40a240f28c2299473e8e3736d17722374aff1723` — commit associated with the verified successful Run #110.
 
-## 7. Latest Verification — RUN #106
+## 7. Latest Verification — RUN #110
 
-Run #106 completed against the PR #3 merge ref and **FAILED**.
+Run #110 completed successfully.
 
-- **Run:** #106
-- **Run ID:** `31648584834`
-- **Commit tested:** `c3b107f08042faeacd4902a55b90518a318b0510`
-- **PR merge ref actually executed:** `c3f76e9a665b0d726ef380611b834aefc6eaa210`
+- **Run:** #110
+- **Run ID:** `31671565608`
+- **Commit checked:** `40a240f28c2299473e8e3736d17722374aff1723`
 - **Workflow:** Verify main
-- **Verify job:** PASS
-- **Build:** PASS
-- **Browser E2E:** FAIL
-- **Browser E2E:** **42 passed / 1 failed**
+- **Overall conclusion:** **SUCCESS**
 
-### Exact failure
+### Jobs
 
-The only Browser E2E failure was the Quick Pickup payment assertion. The test expected `/طريقة الدفع|Payment method/i`, but the actual payment UI uses the existing `PaymentPanel` with payment method buttons and a final confirmation button.
+- Verify: PASS
+- Lint: PASS
+- Typecheck: PASS
+- Unit Tests: PASS
+- Build: PASS
+- Browser Smoke / Playwright E2E: PASS
 
-### Verified successful parts of Run #106
+The Browser E2E job completed successfully, so the previous Quick Pickup payment blocker is considered **resolved by CI evidence**.
 
-- `npm ci` PASS
-- `npm run lint` PASS
-- `npm run typecheck` PASS
-- `npm run test:unit` PASS
-- `npm run build` PASS
-- Browser dashboard/navigation actions PASS
-- POS order-type actions/back navigation PASS
-- Public protected-route smoke suite PASS
-- Cart quantity flow reaches the Pay button; the earlier quantity-selector blocker is resolved.
+## 8. Phase 3 Progress After Run #110
 
-## 8. Current Fix — Payment Workspace
+The following POS areas are now verified by the current CI suite:
 
-### Diagnosis
+- Dashboard/navigation actions.
+- POS order-type actions and back navigation.
+- Quick Pickup / Takeaway path.
+- Product/cart quantity flow.
+- Pay → Payment Workspace.
+- Stable payment method controls and confirmation control.
+- Public protected-route smoke coverage.
 
-Inspection of `src/features/pos/pages/PosWorkspacePage.tsx` and `src/features/pos/components/checkout/PaymentPanel.tsx` confirmed that `Pay` calls `pos.setCheckoutOpen(true)` and the workspace renders `PaymentPanel`. The actual payment screen contains four payment-method buttons (`cash`, `card`, `transfer`, `credit`) and a final `Confirm Payment` button; there is no `Payment method` heading.
-
-### Fix
-
-- Added `data-testid="pos-payment-method-{method}"` to payment-method controls.
-- Added `data-testid="pos-payment-confirm"` to the real confirmation action.
-- Updated `tests/e2e/pos-actions.spec.ts` to verify the actual payment workspace after Pay:
-  - `pos-payment-confirm` is visible.
-  - `pos-payment-method-cash` is visible.
-- No payment business logic was bypassed or changed.
-
-### New commits
-
-- `e7bf73809604d7a97759f75c666ae8b7d9514d5c`
-- `ecaf4dd0ea81ac6dd0145343dc9d74d7ddfbd675`
-
-### Verification status
-
-A new CI cycle is expected from these commits. **Do not mark the payment blocker resolved until the new Browser E2E result is green.**
+**Important:** Run #110 passing does **not** close PHASE 3 yet. The Master Plan requires explicit verification of the remaining POS/FloorPlan action-level flows, especially Dine-in / FloorPlan / Tables, plus any remaining Hold/Resume, Kitchen, Discount, Complete Sale, and related critical flows not yet covered.
 
 ## 9. Exact Next Action — DO NOT SKIP
 
-1. Wait for and inspect the CI run triggered by the payment fix.
-2. Require Verify + Build + Browser E2E to pass.
-3. If Browser E2E fails, diagnose the exact root cause and fix it; do not weaken assertions.
-4. Record the result and fix in this file.
-5. Once Browser E2E is fully green for this blocker, continue to the next unverified POS flow: Dine-in/FloorPlan/Tables.
+1. Keep PHASE 3 open.
+2. Inspect and verify the next unverified POS flow: **Dine-in → FloorPlan → Tables**.
+3. Add or repair stable selectors/actions only where needed.
+4. Run the relevant E2E/CI checks.
+5. Record every result in this file.
+6. Continue through the remaining POS critical flows: Hold/Resume, Send to Kitchen, Discount, Payment completion, and Complete Sale as applicable.
+7. Only after all required PHASE 3 action-level flows have green evidence, close PHASE 3 and move to PHASE 4.
 
 ## 10. Session Update Rule
 
@@ -218,8 +202,7 @@ The rebuild is complete only when:
 - Build: PASS
 - Browser E2E: 42 PASS / 1 FAIL
 - Previous cart quantity blocker: resolved
-- Current blocker: Quick Pickup payment assertion expects `طريقة الدفع|Payment method`, but the actual payment UI exposes a different state/control.
-- Action: remain in PHASE 3; inspect the real payment flow and fix the root cause/test expectation without bypassing behavior.
+- Current blocker: Quick Pickup payment assertion expected `طريقة الدفع|Payment method`, but the actual payment UI exposed a different state/control.
 
 ### Run #106
 - Result: **FAILED**
@@ -228,14 +211,35 @@ The rebuild is complete only when:
 - Browser E2E: **42 PASS / 1 FAIL**
 - Run ID: `31648584834`
 - Tested commit: `c3b107f08042faeacd4902a55b90518a318b0510`
-- Executed PR merge ref: `c3f76e9a665b0d726ef380611b834aefc6eaa210`
-- Failure: Quick Pickup payment assertion at `tests/e2e/pos-actions.spec.ts:83` expects `طريقة الدفع|Payment method`, but no such element exists after Pay is clicked.
-- Quantity-selector issue remains resolved.
-- No phase transition: PHASE 3 remains open.
+- Failure: Quick Pickup payment assertion expected `طريقة الدفع|Payment method`, but no such element existed after Pay.
+- Quantity-selector issue remained resolved.
+- PHASE 3 stayed open.
 
-### Payment fix — pending verification
-- Diagnosis: Pay opens the existing `PaymentPanel`; the old test expected a nonexistent heading.
-- Application change: stable IDs added to payment methods and confirmation action.
-- Test change: payment assertion now targets `pos-payment-confirm` and `pos-payment-method-cash`.
-- Commits: `e7bf73809604d7a97759f75c666ae8b7d9514d5c`, `ecaf4dd0ea81ac6dd0145343dc9d74d7ddfbd675`.
-- CI status: **PENDING**; do not close blocker until CI passes.
+### Run #110
+- Result: **SUCCESS**
+- Run ID: `31671565608`
+- Tested commit: `40a240f28c2299473e8e3736d17722374aff1723`
+- Verify: PASS
+- Lint: PASS
+- Typecheck: PASS
+- Unit Tests: PASS
+- Build: PASS
+- Browser Smoke / Playwright E2E: PASS
+- Payment blocker: **RESOLVED** by the payment-panel stable-ID fix and successful Browser E2E verification.
+- Phase status: **PHASE 3 remains IN PROGRESS** because remaining POS/FloorPlan critical flows still require explicit verification.
+- Next action: Dine-in → FloorPlan → Tables.
+
+## 13. Maintainability / Extensibility Requirement
+
+The rebuilt UI must remain safely editable and extensible.
+
+Future visual rearrangement, component replacement, menu reordering, or addition of controls must not require rewriting underlying business logic merely because the UI changed position.
+
+Required mechanisms:
+- Stable element/action identities.
+- Shared UI components.
+- Centralized navigation.
+- Separation of UI, action, route/state, permission, and service/data layers.
+- E2E selectors that do not depend on DOM position.
+
+This is a core requirement of the original rebuild objective, not an optional future enhancement.
