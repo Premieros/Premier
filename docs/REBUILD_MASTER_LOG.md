@@ -221,16 +221,59 @@ The repository already contains a substantial RLS branch-isolation integration s
 Commit:
 `0fc866a806a8b536e02ca26eeb57928f1178aabc`
 
-This is a **test/verification infrastructure hardening change**, not a claim that PHASE 4 security is already proven. The new CI gate must run and pass before we close any PHASE 4 security item.
+This is a **test/verification infrastructure hardening change**, not a claim that PHASE 4 security is already proven.
+
+### PHASE 4 CI verification — RUN #130
+
+**Date:** 2026-08-13
+**Run:** #130
+**Run ID:** `31688138736`
+**Commit:** `6926888bd2ddcacbbf9df3bc1bc9808638c26b5b`
+**Workflow:** Verify main
+**Overall:** SUCCESS
+
+- Verify job — PASS
+  - npm ci — PASS
+  - Lint — PASS
+  - Typecheck — PASS
+  - Unit Tests — PASS
+  - Build — PASS
+- DB/Security Gate — PASS
+  - PostgreSQL service — PASS
+  - CI auth stub — PASS
+  - Canonical migrations — PASS
+  - Schema verification — PASS
+  - CI fixture helpers — PASS
+  - Integration and security/RLS regression tests — PASS
+- Browser Smoke — PASS
+  - Playwright Chromium — PASS
+
+**Conclusion:** the new mandatory DB/RLS security gate is operational and green. This validates the verification infrastructure and existing RLS regression suite; it does **not** close PHASE 4 yet.
+
+### PHASE 4 Action-Level RBAC gap coverage added
+
+Added:
+`tests/integration/rbac_hardening.test.ts`
+
+Coverage added for:
+- direct EXECUTE revocation of internal journal/audit writers;
+- cashier discount denial when `pos.discount` is absent;
+- privileged role discount path when `pos.discount` is present;
+- branch manager prevention from granting `audit.view`;
+- cross-branch audit-trail access denial.
+
+Commit:
+`ccc55c4c023ae62f1d75406adf6a3e97d8e6f2e5`
+
+**Status:** CI pending for this new test commit. Do not close any PHASE 4 security item until this commit passes the PRE-CI/CI gate and the full PHASE 0–3 regression remains green.
 
 ## 12. Current State
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 4 — Security / RBAC / Branch Isolation.
-**Latest fully verified commit:** `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c`.
-**Latest fully verified CI:** Run #126 — SUCCESS, 50/50 E2E.
-**Latest PHASE 4 verification-infrastructure commit:** `0fc866a806a8b536e02ca26eeb57928f1178aabc` (CI pending).
+**Latest fully verified commit:** `6926888bd2ddcacbbf9df3bc1bc9808638c26b5b` (Run #130 — SUCCESS).
+**Latest PHASE 4 test commit:** `ccc55c4c023ae62f1d75406adf6a3e97d8e6f2e5` (CI pending).
 **Rollback checkpoint:** `ui-rebuild-phase4-checkpoint-2026-08-13`.
 
 ## 13. Session Update Rule
