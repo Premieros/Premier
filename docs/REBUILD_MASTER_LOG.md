@@ -20,6 +20,18 @@ PR #4 (`https://github.com/Premieros/Premier/pull/4`, head `ui-visual-rebuild-6h
 | db (Postgres migrations + RLS + integration/security tests incl. P0) | ✅ success |
 | browser-smoke | ✅ success |
 
+## CI Checkpoint — P3 (green)
+
+After pushing P3 (`ea801f1`, 6H-C dashboard contract) on top of P0+P1+P2:
+
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
+
 Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
 
 ## Deployment & Branch Workflow (locked decision — user approved)
@@ -76,7 +88,7 @@ Audited gaps (from the completed branch-isolation audit):
 - Preserved ALL stable IDs: `app-shell`, `app-sidebar`, `app-navigation`, `nav-group-{group}`, `nav-group-toggle-{group}`, `nav-item-{id}`, `sidebar-close`, `sidebar-open`, `mobile-sidebar-backdrop`, `assistant-card`, `app-header`, `top-navigation`, `top-tab-{key}`, `active-orders-button`, `active-orders-count`, `user-menu-button`, `language-toggle`, `theme-toggle`, `sign-out-button`, `app-main`, `design-content-surface`.
 - Route guards, permissions, active-navigation behavior, `navigate('/floor-plan')` active-orders handler, and all existing handlers unchanged.
 
-### P3 (6H-C) — Dashboard — DONE (local gates green; not pushed)
+### P3 (6H-C) — Dashboard — DONE (pushed, CI green)
 - Complete the `VisualDashboardPage` contract, restoring everything the old `DashboardFoodicsPage` had:
   - Currency from `effectiveSettings().currency` (not hardcoded `EGP`).
   - Admin branch picker wired to the global active-branch store (`useActiveBranchId`), with the correct guard `isAdmin ? activeBranchId : branchFilter` (old `isAdminRole(...) ? branchFilter : branchFilter` was a no-op).
@@ -133,8 +145,8 @@ Audited gaps (from the completed branch-isolation audit):
 - **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
 
 ### Pending
-- P3 push + PR #4 CI; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P0+P1 pushed and green; P2 pushed, CI not re-checked).
+- P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P3 pushed and green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note
 
