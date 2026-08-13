@@ -83,7 +83,10 @@ Required action-level flows:
 - POS order-type selectors include `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, and `pos-order-type-takeaway`.
 - Cart quantity controls use product identity: `pos-cart-qty-decrease-{productId}`, `pos-cart-qty-{productId}`, and `pos-cart-qty-increase-{productId}`.
 - Payment controls use stable IDs: `pos-payment-method-{method}` and `pos-payment-confirm`.
-- Dine-in table controls now use stable table identity: `pos-table-{tableId}`, `pos-table-filter-{status}`, `pos-table-search`, `pos-table-{tableId}-guest-count`, and `pos-table-{tableId}-start`.
+- Dine-in table controls use stable table identity: `pos-table-{tableId}`, `pos-table-filter-{status}`, `pos-table-search`, `pos-table-{tableId}-guest-count`, and `pos-table-{tableId}-start`.
+- Remaining POS action controls now use stable IDs: `pos-action-discount`, `pos-action-hold`, `pos-action-send-kitchen`, `pos-action-pay`, `pos-discount-editor`, `pos-discount-input`, and `pos-total-value`.
+- Drive-thru start controls use `pos-drive-thru-plate`, `pos-drive-thru-customer`, `pos-drive-thru-people`, and `pos-drive-thru-start`.
+- Delivery start controls use `pos-delivery-phone`, `pos-delivery-address`, `pos-delivery-notes`, and `pos-delivery-start`.
 - Moving a control must not alter its action, permission, route, state, or service behavior.
 - The UI layer is intended to be replaceable/rearrangeable without rewriting the underlying business logic.
 - Shared components and stable action identities are the mechanism for safe future UI evolution.
@@ -105,6 +108,9 @@ Required action-level flows:
 - Dine-in/FloorPlan/Table components were inspected and found to already provide the real flow: Dine-in → table picker → table action modal → guest count → start order.
 - Added stable IDs to the real table picker and table action modal rather than creating a parallel test-only UI.
 - Added a Browser E2E scenario with a real mocked vacant table that selects the table, sets guest count to 3, starts the order, and verifies return to the POS workspace.
+- Added stable IDs to the real CurrentOrderPanel action controls and created Action-Level E2E coverage for Discount, Hold, Send to Kitchen, and Complete Sale.
+- Added stable IDs and Action-Level E2E coverage for Delivery and Drive-thru start flows.
+- The new E2E tests assert real Supabase RPC calls/payloads for `create_order`, `set_order_status`, `send_to_kitchen`, and `process_sale`, rather than merely asserting button visibility.
 
 ## 6. Current State — 2026-08-13
 
@@ -112,7 +118,14 @@ Required action-level flows:
 **Current phase:** PHASE 3 — POS / FloorPlan / Order Workspace  
 **PR #3:** Open, not merged.
 
-### Relevant fix commits
+### New action-coverage commits
+
+- `bb1a9fb4d5161c401dac95b258889366c5f2a0dd` — stable IDs for CurrentOrderPanel actions, discount editor, total/discount values.
+- `c27063c0148dc9336b68412e74ebb7b67efc7830` — stable IDs for drive-thru start flow.
+- `58eb589ec161a7499b79a6720ab94afa347dde24` — stable IDs for delivery start flow.
+- `f50d9996c89b614b040223b3620cc83fc7bb5009` — Action-Level E2E coverage for remaining PHASE 3 flows.
+
+### Earlier relevant commits
 
 - `4ebb0ddd8855afe7880cf84ce35ab9bc9f60bc6c` — stable cart quantity IDs.
 - `9cf28849332fb079d823a8e8c2f853139a30cef7` — POS quantity test uses stable IDs and verifies `1 → 2`.
@@ -144,43 +157,37 @@ Run #110 completed successfully.
 
 The Browser E2E job completed successfully, so the previous Quick Pickup payment blocker is considered **resolved by CI evidence**.
 
-## 8. Phase 3 Progress After Run #110
+## 8. PHASE 3 Action-Level Coverage — NEW
 
-The following POS areas were already verified by Run #110:
+The new tests now cover these real actions:
 
-- Dashboard/navigation actions.
-- POS order-type actions and back navigation.
-- Quick Pickup / Takeaway path.
-- Product/cart quantity flow.
-- Pay → Payment Workspace.
-- Stable payment method controls and confirmation control.
-- Public protected-route smoke coverage.
+- Delivery: phone + address → start order → verify `create_order` with `p_order_type=delivery` and notes.
+- Drive-thru: plate + customer + people → start order → verify `create_order` with `p_order_type=drive_thru` and plate notes.
+- Discount: open discount editor → select percent → enter 10 → verify discount value and total change from 100 to 90.
+- Hold: add product → Hold → verify `create_order` followed by `set_order_status` with `p_status=held`.
+- Send to Kitchen: add product → Send to Kitchen → verify `create_order` and `send_to_kitchen` with the generated order ID.
+- Complete Sale: add product → Pay → Cash → Confirm Payment → verify `process_sale` with `p_status=completed`, `p_payment_method=cash`, and `p_order_type=takeaway`.
 
-### Dine-in / FloorPlan / Tables — CURRENT VERIFICATION
+The tests use stable IDs and inspect the application's real RPC contract. They do not use DOM position, `nth()`, or button-only assertions for these flows.
 
-The application already contains dedicated components for this flow:
-- `OrderTypePicker`
-- `TablePickerStep`
-- `TableActionModal`
-- `TableFloorPlan`
+## 9. Current Verification Status After New Tests
 
-The actual flow is:
+**CI for commit `f50d9996c89b614b040223b3620cc83fc7bb5009` is currently PENDING.**
 
-`Dine-in → FloorPlan/Table Picker → Select Table → Table Action Modal → Guest Count → Start Order`
+The PR head is confirmed to be `f50d9996c89b614b040223b3620cc83fc7bb5009`.
 
-The implementation was kept intact; only stable interaction identities and an E2E scenario were added.
+No green result is claimed yet for the new action-level coverage.
 
-Current CI status for these new changes: **PENDING**.
+## 10. Exact Next Action — DO NOT SKIP
 
-## 9. Exact Next Action — DO NOT SKIP
+1. Wait for/inspect CI for commit `f50d9996c89b614b040223b3620cc83fc7bb5009`.
+2. If CI fails, diagnose and fix the real root cause; do not weaken or delete the new assertions.
+3. If the tests expose a real application defect, fix the application and re-run CI.
+4. Record every CI result and fix in this file.
+5. Once all PHASE 3 critical flows have green CI evidence, close PHASE 3.
+6. Only then move to PHASE 4 — Security / RBAC / Branch Isolation.
 
-1. Run CI for the new Dine-in/FloorPlan/Table changes.
-2. If CI fails, diagnose and fix the real root cause; do not weaken the test.
-3. Record the new CI result in this file.
-4. If green, continue through the remaining POS critical flows: Hold/Resume, Send to Kitchen, Discount, Payment completion, and Complete Sale as applicable.
-5. Only after all required PHASE 3 action-level flows have green evidence, close PHASE 3 and move to PHASE 4.
-
-## 10. Session Update Rule
+## 11. Session Update Rule
 
 Every meaningful action must be recorded here with:
 - Date/time
@@ -197,7 +204,7 @@ Every meaningful action must be recorded here with:
 
 **User explicitly requested that every time progress is made, this file is updated and the user is told that it was recorded.**
 
-## 11. Definition of Done
+## 12. Definition of Done
 
 The rebuild is complete only when:
 - Reference design and current architecture are aligned.
@@ -213,7 +220,7 @@ The rebuild is complete only when:
 
 **Do not replace this plan with a new plan unless the user explicitly changes the project objective.**
 
-## 12. Verification Log — 2026-08-13
+## 13. Verification Log — 2026-08-13
 
 ### Run #103
 - Result: **FAILED**
@@ -246,15 +253,14 @@ The rebuild is complete only when:
 - Payment blocker: **RESOLVED** by the payment-panel stable-ID fix and successful Browser E2E verification.
 - Phase status: **PHASE 3 remains IN PROGRESS** because remaining POS/FloorPlan critical flows still require explicit verification.
 
-### Dine-in/FloorPlan/Table verification start
-- Application inspection: **PASS** — real components and callbacks confirmed.
-- Stable selector implementation: **COMPLETED**.
-- E2E coverage: **COMPLETED** in `tests/e2e/pos-actions.spec.ts`.
-- New commits: `f7ea1f7bd3caef40c5b1a0d71b646a723f7a1c7c`, `95485a7fe325db5673e302133e427a57b70e6347`, `310f3546c41b37d8603aa2b27842cb91eb3e46a9`.
-- CI result: **PENDING**.
-- Phase status: **PHASE 3 remains IN PROGRESS** until CI proves this flow.
+### New PHASE 3 Action-Level Coverage — commit `f50d9996c89b614b040223b3620cc83fc7bb5009`
+- Result: **PENDING CI**
+- Added tests: Delivery, Drive-thru, Discount, Hold, Send to Kitchen, Complete Sale.
+- Added stable selectors to the actual UI components.
+- Assertions inspect actual RPC names and relevant payload values.
+- No success is claimed until CI completes.
 
-## 13. Maintainability / Extensibility Requirement
+## 14. Maintainability / Extensibility Requirement
 
 The rebuilt UI must remain safely editable and extensible.
 
