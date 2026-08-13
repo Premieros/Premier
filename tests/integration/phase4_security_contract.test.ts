@@ -39,18 +39,18 @@ describe.skipIf(skipLocal)('PHASE 4 security contract', () => {
         `SELECT count(*)::int AS n FROM public.products WHERE id IN ($1, $2)`,
         [ids.prodA, ids.prodB],
       );
-      expect(result.error).toBeNull();
+      expect(result.error).toBeUndefined();
       expect(result.rows?.[0]?.n).toBe(2);
     }
   });
 
   it('keeps branch staff isolated for read and write', async () => {
     const ownRead = await runAs(client, ids.users.cashier, 'SELECT id FROM public.products WHERE id = $1', [ids.prodA]);
-    expect(ownRead.error).toBeNull();
+    expect(ownRead.error).toBeUndefined();
     expect(ownRead.rowCount).toBe(1);
 
     const otherRead = await runAs(client, ids.users.cashier, 'SELECT id FROM public.products WHERE id = $1', [ids.prodB]);
-    expect(otherRead.error).toBeNull();
+    expect(otherRead.error).toBeUndefined();
     expect(otherRead.rowCount).toBe(0);
 
     const otherInsert = await runAs(
@@ -106,7 +106,7 @@ describe.skipIf(skipLocal)('PHASE 4 security contract', () => {
        VALUES ('PH4-ALLOW', $1, $2, 100, 10, 0, 90, 90, 'cash', 'completed')`,
       [ids.branchA, ids.whA],
     );
-    expect(allowed.error).toBeNull();
+    expect(allowed.error).toBeUndefined();
     expect(allowed.rowCount).toBe(1);
   });
 
