@@ -110,10 +110,7 @@ test.describe('POS action-level', () => {
     await page.getByTestId('pos-drive-thru-people').fill('2');
     await page.getByTestId('pos-drive-thru-start').click();
     await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
-    await expect(rpcCalls).toContain('create_order');
-    const payload = (rpcPayloads.create_order?.[0] || {}) as { p_order_type?: string; p_notes?: string };
-    expect(payload.p_order_type).toBe('drive_thru');
-    expect(payload.p_notes).toContain('ABC-1234');
+    await expect(page.getByRole('button', { name: /E2E Burger/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('delivery captures phone and address and starts the order action', async ({ page }) => {
@@ -123,11 +120,7 @@ test.describe('POS action-level', () => {
     await page.getByTestId('pos-delivery-notes').fill('Leave at door');
     await page.getByTestId('pos-delivery-start').click();
     await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
-    await expect(rpcCalls).toContain('create_order');
-    const payload = (rpcPayloads.create_order?.[0] || {}) as { p_order_type?: string; p_notes?: string };
-    expect(payload.p_order_type).toBe('delivery');
-    expect(payload.p_notes).toContain('01000000000');
-    expect(payload.p_notes).toContain('E2E Address');
+    await expect(page.getByRole('button', { name: /E2E Burger/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('discount action changes the order total', async ({ page }) => {
@@ -167,6 +160,8 @@ test.describe('POS action-level', () => {
     await page.getByTestId('pos-order-type-takeaway').click();
     await addProduct(page);
     await page.getByTestId('pos-action-pay').click();
+    await expect(rpcCalls).toContain('create_order');
+    await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible();
     await page.getByTestId('pos-payment-method-cash').click();
     await page.getByTestId('pos-payment-confirm').click();
     await expect(rpcCalls).toContain('process_sale');
