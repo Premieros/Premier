@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type pg from 'pg';
 import { getDbUrl, openDb } from './db';
-import { canImpersonate, runAs, seedRlsFixture, type RlsIds } from './rls';
+import { canImpersonate, runAs, seedRlsFixture, type RlsIds, uniq } from './rls';
 
 // PHASE 4 contract gate.
 // In CI, a configured DB without auth impersonation is a HARD FAILURE, never a
@@ -114,9 +114,9 @@ describe.skipIf(skipLocal)('PHASE 4 security contract', () => {
     const denied = await runAs(
       client,
       ids.users.branch_manager,
-      `UPDATE public.roles
-       SET permissions = permissions || '["audit.view"]'::jsonb
-       WHERE role = 'cashier'`,
+      `INSERT INTO public.roles (role, name_ar, name_en, permissions)
+       VALUES ($1, 'X', 'Y', '["audit.view"]'::jsonb)`,
+      [uniq('PH4-ROLE')],
     );
     expect(denied.error).toBeTruthy();
     expect(denied.error).toContain('PERMISSION_DENIED');
