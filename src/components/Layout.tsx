@@ -91,49 +91,49 @@ export function Layout({ children }: { children: ReactNode }) {
           : '';
 
   return (
-    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen bg-[#fafafa] text-[#24243a] dark:bg-navy-950 dark:text-slate-100">
-      <aside className={`fixed inset-y-0 ${ar ? 'right-0' : 'left-0'} z-50 w-[252px] bg-white shadow-[0_0_28px_rgba(27,20,72,0.06)] transition-transform dark:bg-navy-950 ${mobileOpen ? 'translate-x-0' : ar ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}>
+    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen bg-[#fafafa] text-[#24243a] dark:bg-navy-950 dark:text-slate-100" data-testid="app-shell">
+      <aside data-testid="app-sidebar" className={`fixed inset-y-0 ${ar ? 'right-0' : 'left-0'} z-50 w-[252px] bg-white shadow-[0_0_28px_rgba(27,20,72,0.06)] transition-transform dark:bg-navy-950 ${mobileOpen ? 'translate-x-0' : ar ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="flex h-[76px] items-center justify-between border-b border-slate-100 px-5 dark:border-navy-800">
           <Logo variant="horizontal" size={30} tone="mono" showTagline={false} className="text-[#5728d6]" />
-          <button type="button" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-slate-500 lg:hidden" aria-label={ar ? 'إغلاق القائمة' : 'Close sidebar'}><X className="h-5 w-5" /></button>
+          <button data-testid="sidebar-close" type="button" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-slate-500 lg:hidden" aria-label={ar ? 'إغلاق القائمة' : 'Close sidebar'}><X className="h-5 w-5" /></button>
         </div>
-        <nav className="h-[calc(100%-76px)] overflow-y-auto px-3 py-5">
+        <nav data-testid="app-navigation" className="h-[calc(100%-76px)] overflow-y-auto px-3 py-5">
           {(Object.keys(MENU_GROUPS) as MenuGroup[]).map((group) => {
             const items = grouped[group] ?? [];
             if (!items.length) return null;
             return (
-              <section key={group} className="mb-2">
-                <button type="button" onClick={() => setCollapsed((v) => ({ ...v, [group]: !v[group] }))} className="flex w-full items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <section key={group} data-testid={`nav-group-${group}`} className="mb-2">
+                <button data-testid={`nav-group-toggle-${group}`} type="button" onClick={() => setCollapsed((v) => ({ ...v, [group]: !v[group] }))} className="flex w-full items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                   <span>{MENU_GROUPS[group][ar ? 'ar' : 'en']}</span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${collapsed[group] ? 'rotate-90' : ''}`} />
                 </button>
                 {!collapsed[group] && items.map((item) => (
-                  <NavLink key={item.id} to={item.route} onClick={() => setMobileOpen(false)} className={({ isActive }) => `group flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-[14px] font-semibold transition ${isActive ? 'bg-gradient-to-r from-[#5c2bd7] to-[#6b34e5] text-white shadow-[0_8px_20px_rgba(91,43,216,0.22)]' : 'text-[#3f3f55] hover:bg-[#f7f5ff] hover:text-[#5728d6] dark:text-slate-300 dark:hover:bg-navy-800'}`}>
+                  <NavLink data-testid={`nav-item-${item.id}`} key={item.id} to={item.route} onClick={() => setMobileOpen(false)} className={({ isActive }) => `group flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-[14px] font-semibold transition ${isActive ? 'bg-gradient-to-r from-[#5c2bd7] to-[#6b34e5] text-white shadow-[0_8px_20px_rgba(91,43,216,0.22)]' : 'text-[#3f3f55] hover:bg-[#f7f5ff] hover:text-[#5728d6] dark:text-slate-300 dark:hover:bg-navy-800'}`}>
                     {ICONS[item.icon]}<span className="flex-1">{t(item.labelKey)}</span>
                   </NavLink>
                 ))}
               </section>
             );
           })}
-          <div className="mt-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900">
+          <div data-testid="assistant-card" className="mt-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-navy-800 dark:bg-navy-900">
             <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#faf8ff] text-[#6b35df]"><Sparkles className="h-4 w-4" /></div><div><p className="text-xs font-bold">{ar ? 'مساعد Premier' : 'Premier Assistant'}</p><p className="text-[10px] text-slate-400">{ar ? 'قريباً' : 'Coming soon'}</p></div></div>
           </div>
         </nav>
       </aside>
-      {mobileOpen && <button type="button" className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden" onClick={() => setMobileOpen(false)} aria-label={ar ? 'إغلاق' : 'Close'} />}
+      {mobileOpen && <button data-testid="mobile-sidebar-backdrop" type="button" className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden" onClick={() => setMobileOpen(false)} aria-label={ar ? 'إغلاق' : 'Close'} />}
       <div className={`${ar ? 'lg:mr-[252px]' : 'lg:ml-[252px]'} min-h-screen`}>
-        <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-slate-100 bg-white px-4 shadow-sm dark:border-navy-800 dark:bg-navy-950 sm:px-7">
-          <div className="flex min-w-0 items-center gap-4"><button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-600 lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}><Menu className="h-5 w-5" /></button><div className="hidden h-8 w-px bg-slate-200 lg:block" /><div className="flex min-w-0 items-center gap-6 overflow-x-auto">{TOP_TABS.map((tab) => { const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view'); if (!allowed) return null; return <NavLink key={tab.key} to={tab.route} className={`relative whitespace-nowrap px-1 py-7 text-sm font-semibold ${activeTop === tab.key ? 'text-[#5728d6]' : 'text-slate-600 dark:text-slate-300'}`}>{tab.label[ar ? 0 : 1]}{tab.key === 'kitchen' && <span className="ms-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] text-white">{ar ? 'جديد' : 'New'}</span>}{activeTop === tab.key && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[#5b2bd8]" />}</NavLink>; })}</div></div>
+        <header data-testid="app-header" className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-slate-100 bg-white px-4 shadow-sm dark:border-navy-800 dark:bg-navy-950 sm:px-7">
+          <div className="flex min-w-0 items-center gap-4"><button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-600 lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}><Menu className="h-5 w-5" /></button><div className="hidden h-8 w-px bg-slate-200 lg:block" /><div data-testid="top-navigation" className="flex min-w-0 items-center gap-6 overflow-x-auto">{TOP_TABS.map((tab) => { const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view'); if (!allowed) return null; return <NavLink data-testid={`top-tab-${tab.key}`} key={tab.key} to={tab.route} className={`relative whitespace-nowrap px-1 py-7 text-sm font-semibold ${activeTop === tab.key ? 'text-[#5728d6]' : 'text-slate-600 dark:text-slate-300'}`}>{tab.label[ar ? 0 : 1]}{tab.key === 'kitchen' && <span className="ms-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] text-white">{ar ? 'جديد' : 'New'}</span>}{activeTop === tab.key && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[#5b2bd8]" />}</NavLink>; })}</div></div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <button type="button" onClick={() => navigate('/floor-plan')} className="relative rounded-xl p-2 text-slate-600 hover:bg-slate-50 dark:text-slate-300" aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}><Activity className="h-5 w-5" />{counts.active > 0 && <span className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{counts.active}</span>}</button>
+            <button data-testid="active-orders-button" type="button" onClick={() => navigate('/floor-plan')} className="relative rounded-xl p-2 text-slate-600 hover:bg-slate-50 dark:text-slate-300" aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}><Activity className="h-5 w-5" />{counts.active > 0 && <span data-testid="active-orders-count" className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{counts.active}</span>}</button>
             <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-            <button type="button" onClick={() => navigate(APP_ROUTES.settings)} className="flex items-center gap-3"><div className="hidden text-end sm:block"><p className="text-sm font-bold">{user?.full_name || user?.email || (ar ? 'مدير النظام' : 'System Admin')}</p><p className="text-[11px] text-slate-400">{user?.role || 'admin'}</p></div><div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-600">{(user?.full_name || user?.email || 'A').slice(0, 1).toUpperCase()}</div></button>
-            <button type="button" onClick={() => setLang(ar ? 'en' : 'ar')} className="hidden items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold sm:flex dark:border-navy-700"><Globe className="h-4 w-4" />{ar ? 'العربية' : 'English'}</button>
-            <button type="button" onClick={toggleTheme} className="rounded-xl p-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800" aria-label={ar ? 'تغيير المظهر' : 'Toggle theme'}>{theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}</button>
-            <button type="button" onClick={signOut} className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={ar ? 'تسجيل الخروج' : 'Sign out'}><LogOut className="h-5 w-5" /></button>
+            <button data-testid="user-menu-button" type="button" onClick={() => navigate(APP_ROUTES.settings)} className="flex items-center gap-3"><div className="hidden text-end sm:block"><p className="text-sm font-bold">{user?.full_name || user?.email || (ar ? 'مدير النظام' : 'System Admin')}</p><p className="text-[11px] text-slate-400">{user?.role || 'admin'}</p></div><div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-600">{(user?.full_name || user?.email || 'A').slice(0, 1).toUpperCase()}</div></button>
+            <button data-testid="language-toggle" type="button" onClick={() => setLang(ar ? 'en' : 'ar')} className="hidden items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold sm:flex dark:border-navy-700"><Globe className="h-4 w-4" />{ar ? 'العربية' : 'English'}</button>
+            <button data-testid="theme-toggle" type="button" onClick={toggleTheme} className="rounded-xl p-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-navy-800" aria-label={ar ? 'تغيير المظهر' : 'Toggle theme'}>{theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}</button>
+            <button data-testid="sign-out-button" type="button" onClick={signOut} className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={ar ? 'تسجيل الخروج' : 'Sign out'}><LogOut className="h-5 w-5" /></button>
           </div>
         </header>
-        <main className="min-h-[calc(100vh-76px)] bg-[#fafafa] p-4 sm:p-6 lg:p-7 dark:bg-navy-950">{children}</main>
+        <main data-testid="app-main" className="min-h-[calc(100vh-76px)] bg-[#fafafa] p-4 sm:p-6 lg:p-7 dark:bg-navy-950">{children}</main>
       </div>
     </div>
   );
