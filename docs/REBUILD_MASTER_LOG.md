@@ -55,7 +55,7 @@ Core rule:
 **CLOSED — VERIFIED by Run #141 after CI verification-gate correction**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**IN PROGRESS — first package: navigation/UI contract hardening**
+**IN PROGRESS — 6A navigation/UI contract hardening verified by Run #144; next design completion package starting**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -96,6 +96,7 @@ PHASE 3 rollback point: `ui-rebuild-phase3-checkpoint-2026-08-13`.
 PHASE 3 checkpoint commit: `b46c29eb10ed085653296c326f3fa3596f8db739`.
 PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
 PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
+PHASE 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
 
 ## 7. Verified CI Evidence
 
@@ -116,13 +117,19 @@ PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34
 **Commit:** `5e02ee1e26b7e888b9ad411515e02841f3fcc67d`
 **Run ID:** `31692603251`
 **Overall:** SUCCESS
-
-Jobs:
 - Verify — SUCCESS, including application typecheck, Playwright test-suite typecheck, unit tests and build.
 - DB — SUCCESS, including auth stub, canonical migrations, schema verification, integration/security/RLS regression.
 - Browser Smoke — SUCCESS, including Chromium installation, build and Playwright E2E.
 
-This verified the PHASE 5 verification package and the corrected CI gate. No business logic or security policy was weakened.
+### PHASE 6A — Run #144
+**Commit:** `ed56e4a57202125d377b13facd58db2640084cc5`
+**Run ID:** `31693369805`
+**Overall:** SUCCESS
+- Verify — SUCCESS: lint, application typecheck, Playwright test-suite typecheck, unit tests, build.
+- DB — SUCCESS: PostgreSQL, auth stub, migrations, schema verification, integration/security/RLS regression.
+- Browser Smoke — SUCCESS: Chromium install, build, Playwright E2E.
+
+**Conclusion:** Package 6A is VERIFIED. Run #143 was cancelled and is not treated as a code failure; Run #144 is the authoritative successful verification for 6A.
 
 ## 8. PHASE 5 — FINAL STABILIZATION / REGRESSION
 
@@ -148,13 +155,13 @@ Per user decision, the independent Relationship Integrity Gate is intentionally 
 
 After the rebuild plan, perform a dedicated final database/relationship audit covering Foreign Keys, relationship paths, orphan records, constraints, delete/update behavior, RLS through relationships, branch isolation, and RPC dependencies.
 
-## 10. PHASE 6+ — CURRENT REBUILD/DESIGN COMPLETION PACKAGE
+## 10. PHASE 6+ — CURRENT REBUILD/DESIGN COMPLETION
 
 ### Package 6A — Navigation/UI contract hardening
 
 Objective: make the remaining UI rebuild safer to continue by locking the canonical navigation contract independently of visual placement.
 
-Completed in this package:
+Completed:
 - Added `tests/unit/navigation-contract.test.ts`.
 - Verifies canonical route values are unique.
 - Verifies menu item IDs are unique and stable.
@@ -162,24 +169,39 @@ Completed in this package:
 - Verifies protected navigation items carry explicit permissions.
 - No business logic, permissions, routes, or visual behavior were changed.
 
-Commit:
-`8241281dfee078e8a5beac7f3079eaa25aad076f`
+Commit: `8241281dfee078e8a5beac7f3079eaa25aad076f4`
 
-Status: **IMPLEMENTED — CI verification pending.**
+**6A VERIFIED — Run #144.**
 
-Next within PHASE 6+: audit remaining reference-design surfaces and bundle compatible UI completion work before another full regression gate. Do not declare this package/phase closed until PHASE 0 through the latest included package all pass together.
+### Next package — Design Surface Completion (6B)
+
+Objective: complete the remaining approved/reference-design surfaces without changing underlying behavior.
+
+Scope:
+- Audit the remaining primary screens and shared surfaces against the approved design contract.
+- Consolidate repeated visual patterns into shared components where safe.
+- Ensure critical buttons, switches, tabs, cards and menu controls use stable semantic/test IDs independent of DOM position.
+- Keep action handlers/services separate from presentation layout.
+- Preserve existing routes, permissions, RPCs and data contracts.
+- Add/extend focused tests only where a current design surface lacks stable interaction coverage.
+- Avoid unrelated feature work.
+
+6B must be implemented as one coherent package. If an adjacent independent design-completion package can safely be included, bundle it rather than creating an unnecessary separate cycle.
+
+**6B STATUS: STARTED.**
 
 ## 11. CURRENT EXECUTION
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 6+ — Remaining rebuild/design completion packages.
-**Latest verified gate:** Run #141 — SUCCESS.
+**Latest verified gate:** Run #144 — SUCCESS.
 **PHASE 0–5 status:** VERIFIED / CLOSED.
-**Current package:** 6A — Navigation/UI contract hardening.
+**Package 6A:** VERIFIED / CLOSED.
+**Current package:** 6B — Design Surface Completion.
 
 ### Execution rule
-Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included phase/package, run the combined regression for every phase from 0 through the latest included package.
+Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included package/phase, run the combined regression for every phase from 0 through the latest included package.
 
 ## 12. Session Update Rule
 
