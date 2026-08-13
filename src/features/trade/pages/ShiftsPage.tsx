@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Timer, Play, Square, Printer, Search } from 'lucide-react';
+import { Timer, Play, Square, Printer } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useAuth } from '@/context/AuthContext';
@@ -9,9 +9,8 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
-import { PaginationBar } from '@/components/PaginationBar';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { Button } from '@/components/Button';
 import { Input, Textarea, Select } from '@/components/Input';
@@ -32,7 +31,7 @@ export function ShiftsPage() {
   const isAr = lang === 'ar';
 
   const [branchSel, setBranchSel] = useState<string>(branchFilter || '');
-  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadShifts } = usePaginatedRows<Shift>({
+  const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadShifts } = usePaginatedRows<Shift>({
     table: 'shifts',
     select: 'id, branch_id, cashier_id, opened_at, closed_at, opening_amount, expected_amount, actual_amount, difference, status, notes, created_at',
     order: { column: 'opened_at', ascending: false },
@@ -213,8 +212,8 @@ export function ShiftsPage() {
   const openShifts = items.filter((s) => s.status === 'open');
 
   return (
-    <div>
-      <PageHeader title={t('shifts')} subtitle={isAr ? 'إدارة ومراقبة شيفتات الكاشير' : 'Manage and monitor cashier shifts'} actions={
+    <DesignSurface testId="shifts-page">
+      <DesignPageHeader title={t('shifts')} subtitle={isAr ? 'إدارة ومراقبة شيفتات الكاشير' : 'Manage and monitor cashier shifts'} actions={
         isCashier && can('shifts.open') ? (
           <Button onClick={() => setOpenModal(true)}>
             <Play className="w-4 h-4" /> {t('openShift')}
@@ -223,7 +222,7 @@ export function ShiftsPage() {
       } />
 
       {isCashier && openShifts.length > 0 && (
-        <Card className="mb-4 p-4 border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-900/10">
+        <DesignPanel className="border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-900/10" testId="shifts-open-banner">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <Timer className="w-6 h-6 text-brand-600 dark:text-brand-400" />
@@ -238,16 +237,13 @@ export function ShiftsPage() {
               </Button>
             )}
           </div>
-        </Card>
+        </DesignPanel>
       )}
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="shifts-search-panel">
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isAr ? 'بحث بالفرع أو الكاشير...' : 'Search by branch or cashier...'}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+          <DesignSearch value={search} onChange={setSearch} className="flex-1" label={t('search')}
+            placeholder={isAr ? 'بحث بالفرع أو الكاشير...' : 'Search by branch or cashier...'} testId="shifts-search" />
           {!branchFilter && (
             <Select label={t('filterByBranch')} value={branchSel} onChange={(e) => setBranchSel(e.target.value)} className="sm:w-64">
               <option value="">{t('allBranches')}</option>
@@ -255,12 +251,12 @@ export function ShiftsPage() {
             </Select>
           )}
         </div>
-      </Card>
+      </DesignPanel>
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="shifts-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} />
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} title={t('openShift')}>
         <div className="space-y-4">
@@ -306,6 +302,6 @@ export function ShiftsPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

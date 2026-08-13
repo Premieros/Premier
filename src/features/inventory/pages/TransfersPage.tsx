@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, CheckCircle2, XCircle, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle2, XCircle, ArrowLeftRight, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -7,7 +7,7 @@ import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -15,7 +15,6 @@ import { Modal } from '@/components/Modal';
 import { formatDateTime } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { WarehouseTransfer, Warehouse, Product, Branch, RpcResult } from '@/lib/types';
 interface TransferLine {
   product_id: string;
@@ -32,7 +31,7 @@ export function TransfersPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
 
-  const { rows: transfers, loading, total, hasMore, loadMore, loadingMore, refresh: reloadTransfers } = usePaginatedRows<WarehouseTransfer>({
+  const { rows: transfers, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadTransfers } = usePaginatedRows<WarehouseTransfer>({
     table: 'warehouse_transfers',
     select: '*, from_warehouse:warehouses!warehouse_transfers_from_warehouse_id_fkey(*), to_warehouse:warehouses!warehouse_transfers_to_warehouse_id_fkey(*), branch:branches(*), requester:users(id, full_name, email)',
     order: { column: 'created_at', ascending: false },
@@ -208,25 +207,21 @@ export function TransfersPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('warehouseTransfers')} subtitle={t('transfers')} actions={
+    <DesignSurface testId="transfers-page">
+      <DesignPageHeader title={t('warehouseTransfers')} subtitle={t('transfers')} actions={
         can('inventory.transfers') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('newTransfer')}</Button>
         ) : undefined
       } />
 
-      <Card className="mb-4 p-4">
-        <div className="relative flex-1">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
+      <DesignPanel testId="transfers-search-panel">
+        <DesignSearch value={search} onChange={setSearch} label={t('search')} placeholder={t('search')} testId="transfers-search" />
+      </DesignPanel>
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={transfers.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="transfers-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} />
+        <DesignPagination loaded={transfers.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('newTransfer')} size="lg">
         <div className="space-y-5">
@@ -289,6 +284,6 @@ export function TransfersPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

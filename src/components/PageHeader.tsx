@@ -1,35 +1,62 @@
-﻿import { type ReactNode } from 'react';
+﻿import { type HTMLAttributes, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 
-interface PageHeaderProps {
-  title: string;
-  subtitle?: string;
-  actions?: ReactNode;
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
 }
 
-export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
+interface PageHeaderProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+export function PageHeader({ title, subtitle, actions, breadcrumbs }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{subtitle}</p>}
+    <div data-testid="page-header" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+      <div className="min-w-0">
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <nav data-testid="page-breadcrumbs" aria-label="Breadcrumbs" className="mb-1.5 flex flex-wrap items-center gap-1 text-xs">
+            {breadcrumbs.map((crumb, i) => {
+              const last = i === breadcrumbs.length - 1;
+              return (
+                <span key={crumb.label + i} className="flex items-center gap-1">
+                  {crumb.href && !last ? (
+                    <Link to={crumb.href} className="font-medium text-slate-400 hover:text-brand-600 dark:text-slate-500 dark:hover:text-brand-400">{crumb.label}</Link>
+                  ) : (
+                    <span className={clsx(last ? 'font-semibold text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500')}>{crumb.label}</span>
+                  )}
+                  {!last && <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600 [dir='rtl']:rotate-180" />}
+                </span>
+              );
+            })}
+          </nav>
+        )}
+        <h1 data-testid="page-title" className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h1>
+        {subtitle && <p data-testid="page-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+      {actions && <div data-testid="page-actions" className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>
   );
 }
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
 }
 
-export function Card({ children, className = '' }: CardProps) {
+export function Card({ children, className = '', ...rest }: CardProps) {
   return (
-    <div className={clsx(
-      'bg-white dark:bg-navy-900 rounded-2xl shadow-soft border border-slate-100 dark:border-navy-800/70',
-      className
-    )}>
+    <div
+      className={clsx(
+        'bg-white dark:bg-navy-900 rounded-2xl shadow-soft border border-slate-100 dark:border-navy-800/70',
+        className
+      )}
+      {...rest}
+    >
       {children}
     </div>
   );

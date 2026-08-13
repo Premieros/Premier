@@ -12,7 +12,8 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan, isAdminRole } from '@/lib/permissions';
-import { PageHeader, Card, StatCard } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignPanel } from '@/components/design';
+import { StatCard } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { formatCurrency, formatDateTime } from '@/lib/format';
@@ -216,8 +217,8 @@ export function ActiveOrdersPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <DesignSurface testId="active-orders-page" className="space-y-6">
+      <DesignPageHeader
         title={t('activeOrders')}
         subtitle={isAr ? 'مركز الطلبات النشطة والطاولات' : 'Active orders and table center'}
         actions={
@@ -241,7 +242,7 @@ export function ActiveOrdersPage() {
 
       {/* Branch selector (admins) */}
       {isAdmin && (
-        <Card className="p-4">
+        <DesignPanel testId="active-orders-branch-panel">
           <div className="flex items-center gap-3 flex-wrap">
             <Tag className="w-4 h-4 text-slate-400" />
             <select
@@ -256,7 +257,7 @@ export function ActiveOrdersPage() {
               {isAr ? `${counts.active} طلب نشط` : `${counts.active} active orders`}
             </span>
           </div>
-        </Card>
+        </DesignPanel>
       )}
 
       {/* Live summary tiles */}
@@ -267,10 +268,10 @@ export function ActiveOrdersPage() {
       </div>
 
       {!effectiveBranch ? (
-        <Card className="p-16 text-center text-slate-400">
+        <DesignPanel testId="active-orders-placeholder" bodyClassName="p-16 text-center text-slate-400">
           <UtensilsCrossed className="w-16 h-16 mx-auto mb-4 opacity-30" />
           <p className="text-lg font-medium">{isAr ? 'اختر الفرع لعرض مركز الطلبات' : 'Select a branch to view the active orders'}</p>
-        </Card>
+        </DesignPanel>
       ) : loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
@@ -280,9 +281,9 @@ export function ActiveOrdersPage() {
           {/* ===== FLOOR CANVAS ===== */}
           <div className="xl:col-span-2 space-y-5">
             {error && (
-              <Card className="p-3 text-sm text-red-500 border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10">
+              <DesignPanel className="text-sm text-red-500 border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10" bodyClassName="p-3">
                 {error}
-              </Card>
+              </DesignPanel>
             )}
             <TableFloorPlan
               areas={areas}
@@ -298,7 +299,7 @@ export function ActiveOrdersPage() {
 
           {/* ===== OPEN ORDERS PANEL ===== */}
           <div className="space-y-3">
-            <Card className="p-4">
+            <DesignPanel testId="active-orders-list">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-brand-500 dark:text-gold-400" />
@@ -379,7 +380,7 @@ export function ActiveOrdersPage() {
                   ))
                 )}
               </div>
-            </Card>
+            </DesignPanel>
           </div>
         </div>
       )}
@@ -539,6 +540,6 @@ export function ActiveOrdersPage() {
           <Button className="w-full" onClick={saveTable}>{t('saveSuccess')}</Button>
         </div>
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

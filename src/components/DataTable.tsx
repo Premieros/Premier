@@ -11,6 +11,7 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
+  error?: ReactNode | null;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
   selectedIds?: Set<string>;
@@ -18,10 +19,10 @@ interface DataTableProps<T> {
   showCheckbox?: boolean;
 }
 
-export function DataTable<T extends { id?: string }>({ columns, data, loading, emptyMessage, onRowClick, selectedIds, onSelectionChange, showCheckbox }: DataTableProps<T>) {
+export function DataTable<T extends { id?: string }>({ columns, data, loading, error, emptyMessage, onRowClick, selectedIds, onSelectionChange, showCheckbox }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div data-testid="table-loading" className="flex items-center justify-center py-16">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-8 w-8 border-3 border-brand-500 border-t-transparent" />
           <p className="text-sm text-slate-400">Loading...</p>
@@ -30,9 +31,22 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
     );
   }
 
+  if (error) {
+    return (
+      <div data-testid="table-error" className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
+        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-3">
+          <svg className="w-8 h-8 text-red-400 dark:text-red-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium">{error}</p>
+      </div>
+    );
+  }
+
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
+      <div data-testid="table-empty" className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
           <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center mb-3">
           <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
         </div>
@@ -60,7 +74,7 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl">
+    <div data-testid="data-table" className="overflow-x-auto rounded-xl">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-800/40">

@@ -4,7 +4,8 @@ import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignPanel } from '@/components/design';
+import { Card } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
 import { formatCurrency, todayISO, formatDate } from '@/lib/format';
@@ -174,10 +175,10 @@ export function FinancialReportsPage() {
   const partyList = partySide === 'ar' ? customers : suppliers;
 
   return (
-    <div>
-      <PageHeader title={t('financialReports')} actions={<Button variant="outline" size="sm" onClick={exportData}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>} />
+    <DesignSurface testId="financial-reports-page">
+      <DesignPageHeader title={t('financialReports')} actions={<Button variant="outline" size="sm" onClick={exportData}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>} />
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="financial-reports-filters">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
             {views.map((v) => (
@@ -220,12 +221,12 @@ export function FinancialReportsPage() {
             )}
           </div>
         </div>
-      </Card>
+      </DesignPanel>
 
       {loading ? (
-        <Card className="p-4"><div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div></Card>
+        <DesignPanel testId="financial-reports-loading"><div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div></DesignPanel>
       ) : !effectiveBranchFilter ? (
-        <Card className="p-4"><div className="text-center py-12 text-slate-400 text-sm">{t('filterByBranch')}</div></Card>
+        <DesignPanel testId="financial-reports-placeholder"><div className="text-center py-12 text-slate-400 text-sm">{t('filterByBranch')}</div></DesignPanel>
       ) : view === 'trial_balance' ? (
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-6">
@@ -527,6 +528,6 @@ export function FinancialReportsPage() {
           )}
         </Card>
       )}
-    </div>
+    </DesignSurface>
   );
 }

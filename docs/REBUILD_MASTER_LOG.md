@@ -11,11 +11,13 @@
 **6A:** VERIFIED / CLOSED.  
 **6B:** VERIFIED / CLOSED.  
 **6C:** VERIFIED / CLOSED — Run #151.  
-**Next bundled package:** **6D–6G — Design Surface Completion Bundle.**
+**6D–6G:** IMPLEMENTED — commit pending, CI verification pending.
 
 ## Next Bundle: PHASE 6D–6G
 
 The user approved bundling multiple independent design-completion stages to reduce unnecessary CI cycles, provided each stage remains behavior-preserving and the combined regression passes.
+
+**Status: IMPLEMENTED (pending commit + CI).** All list/filter/table pages now use the unified `Design*` surface package (`DesignSurface`, `DesignPageHeader`, `DesignFilterBar`, `DesignSearch`, `DesignPanel`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, `DesignErrorState`). Canonical primitives gained stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`, `pagination-bar`, `design-*`), and `DataTable` accepts an `error` prop wired from `usePaginatedRows`. Local gates green: lint (0 errors), typecheck, `typecheck:all`, `test:unit` (139 tests incl. 17-page design-surface contract + 31 page smoke tests), `build`.
 
 ### 6D — Page Headers & Action Toolbars
 - Standardize page headers, titles, breadcrumbs and primary action areas.
@@ -73,6 +75,7 @@ The user approved bundling multiple independent design-completion stages to redu
 - 6B verified commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
 - 6C implementation commit: `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
 - 6C verified gate: Run #151 / `31698574739`.
+- 6D–6G base checkpoint: `e455295372aa20b5552aed511ee80a463130d8ca`.
 
 ## Deferred Relationship Audit
 

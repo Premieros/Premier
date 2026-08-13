@@ -1,11 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
-import { HandCoins, Search, Phone, User, Building2 } from 'lucide-react';
+import { HandCoins, Phone, User, Building2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Card, StatCard } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
+import { StatCard } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -17,7 +18,6 @@ import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { ArAgingRow, ApAgingRow, CustomerPayment, SupplierPayment } from '@/lib/types';
 
 type Tab = 'ar' | 'ap';
@@ -38,7 +38,7 @@ export function PaymentsPage() {
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
   const isAr = lang === 'ar';
-  const { rows: payments, loading: paymentsLoading, total: paymentsTotal, hasMore: paymentsHasMore, loadMore: loadMorePayments, loadingMore: loadingMorePayments, refresh: reloadPayments } = usePaginatedRows<CustomerPayment>({
+  const { rows: payments, loading: paymentsLoading, error: paymentsError, total: paymentsTotal, hasMore: paymentsHasMore, loadMore: loadMorePayments, loadingMore: loadingMorePayments, refresh: reloadPayments } = usePaginatedRows<CustomerPayment>({
     table: 'customer_payments',
     select: 'id, amount, payment_method, reference_number, notes, created_at, customer:customers(name)',
     order: { column: 'created_at', ascending: false },
@@ -46,7 +46,7 @@ export function PaymentsPage() {
     pageSize: 100,
     enabled: !!effectiveBranchFilter,
   });
-  const { rows: supplierPayments, loading: supplierPaymentsLoading, total: supplierPaymentsTotal, hasMore: supplierPaymentsHasMore, loadMore: loadMoreSupplierPayments, loadingMore: loadingMoreSupplierPayments, refresh: reloadSupplierPayments } = usePaginatedRows<SupplierPayment>({
+  const { rows: supplierPayments, loading: supplierPaymentsLoading, error: supplierPaymentsError, total: supplierPaymentsTotal, hasMore: supplierPaymentsHasMore, loadMore: loadMoreSupplierPayments, loadingMore: loadingMoreSupplierPayments, refresh: reloadSupplierPayments } = usePaginatedRows<SupplierPayment>({
     table: 'supplier_payments',
     select: 'id, amount, payment_method, reference_number, notes, created_at, supplier:suppliers(name)',
     order: { column: 'created_at', ascending: false },
@@ -207,8 +207,8 @@ export function PaymentsPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('receivePayment')} subtitle={t('customerPayments')} />
+    <DesignSurface testId="payments-page">
+      <DesignPageHeader title={t('receivePayment')} subtitle={t('customerPayments')} />
 
       <div className="flex gap-2 mb-6">
         <button onClick={() => setTab('ar')}
@@ -239,13 +239,9 @@ export function PaymentsPage() {
         </div>
       )}
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="payments-search-panel">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+          <DesignSearch value={search} onChange={setSearch} className="flex-1 w-full" label={t('search')} placeholder={t('search')} testId="payments-search" />
           {isAdminRole(user?.role) && branches.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
@@ -257,33 +253,29 @@ export function PaymentsPage() {
             </div>
           )}
         </div>
-      </Card>
+      </DesignPanel>
 
       {tab === 'ar' ? (
         <>
-          <Card className="p-4 mb-6">
-            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('arAging')}</h2>
-            <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-          </Card>
+          <DesignPanel title={t('arAging')} testId="payments-ar-aging-panel">
+            <DataTable columns={columns} data={filtered} loading={loading} error={paymentsError} emptyMessage={t('noData')} />
+          </DesignPanel>
 
-          <Card className="p-4">
-            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('customerPayments')}</h2>
-            <DataTable columns={paymentColumns} data={payments} loading={paymentsLoading} emptyMessage={t('noData')} />
-            <PaginationBar loaded={payments.length} total={paymentsTotal} hasMore={paymentsHasMore} loadingMore={loadingMorePayments} onLoadMore={loadMorePayments} />
-          </Card>
+          <DesignPanel title={t('customerPayments')} testId="payments-ar-table-panel">
+            <DataTable columns={paymentColumns} data={payments} loading={paymentsLoading} error={paymentsError} emptyMessage={t('noData')} />
+            <DesignPagination loaded={payments.length} total={paymentsTotal} hasMore={paymentsHasMore} loadingMore={loadingMorePayments} onLoadMore={loadMorePayments} />
+          </DesignPanel>
         </>
       ) : (
         <>
-          <Card className="p-4 mb-6">
-            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('apAging')}</h2>
-            <DataTable columns={apColumns} data={filteredAp} loading={loading} emptyMessage={t('noData')} />
-          </Card>
+          <DesignPanel title={t('apAging')} testId="payments-ap-aging-panel">
+            <DataTable columns={apColumns} data={filteredAp} loading={loading} error={supplierPaymentsError} emptyMessage={t('noData')} />
+          </DesignPanel>
 
-          <Card className="p-4">
-            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('supplierPayments')}</h2>
-            <DataTable columns={supplierPaymentColumns} data={supplierPayments} loading={supplierPaymentsLoading} emptyMessage={t('noData')} />
-            <PaginationBar loaded={supplierPayments.length} total={supplierPaymentsTotal} hasMore={supplierPaymentsHasMore} loadingMore={loadingMoreSupplierPayments} onLoadMore={loadMoreSupplierPayments} />
-          </Card>
+          <DesignPanel title={t('supplierPayments')} testId="payments-ap-table-panel">
+            <DataTable columns={supplierPaymentColumns} data={supplierPayments} loading={supplierPaymentsLoading} error={supplierPaymentsError} emptyMessage={t('noData')} />
+            <DesignPagination loaded={supplierPayments.length} total={supplierPaymentsTotal} hasMore={supplierPaymentsHasMore} loadingMore={loadingMoreSupplierPayments} onLoadMore={loadMoreSupplierPayments} />
+          </DesignPanel>
         </>
       )}
 
@@ -360,6 +352,6 @@ export function PaymentsPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

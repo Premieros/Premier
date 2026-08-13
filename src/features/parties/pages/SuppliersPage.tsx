@@ -1,9 +1,12 @@
 ﻿import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignSearch } from '@/components/design/DesignSearch';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -17,7 +20,6 @@ import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Supplier } from '@/lib/types';
 
 export function SuppliersPage() {
@@ -92,28 +94,24 @@ export function SuppliersPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('suppliers')} actions={
+    <DesignSurface testId="suppliers-page">
+      <DesignPageHeader title={t('suppliers')} actions={
         <>
           {can('suppliers.manage') && (
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+            <Button variant="outline" size="sm" onClick={handleExport} data-testid="suppliers-export"><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           )}
           {can('suppliers.manage') && (
-            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+            <Button size="sm" onClick={openAdd} data-testid="suppliers-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
           )}
         </>
       } />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
+      <DesignPanel testId="suppliers-search-panel">
+        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="suppliers-search" />
+      </DesignPanel>
+      <DesignPanel testId="suppliers-table-panel">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('suppliers.manage') ? openEdit : undefined} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -138,6 +136,6 @@ export function SuppliersPage() {
         </div>
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

@@ -3,7 +3,9 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -14,7 +16,6 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Category } from '@/lib/types';
 
 export function CategoriesPage() {
@@ -96,24 +97,24 @@ export function CategoriesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('categories')} actions={
+    <DesignSurface testId="categories-page">
+      <DesignPageHeader title={t('categories')} actions={
         <>
           {selectedIds.size > 0 && can('categories.manage') && (
-            <Button variant="danger" size="sm" onClick={() => setDeleteSelectedConfirm(true)}>
+            <Button variant="danger" size="sm" onClick={() => setDeleteSelectedConfirm(true)} data-testid="categories-delete-selected">
               <Trash2 className="w-4 h-4" /> {t('deleteSelected')} ({selectedIds.size})
             </Button>
           )}
           {can('categories.manage') && (
-            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+            <Button size="sm" onClick={openAdd} data-testid="categories-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
           )}
         </>
       } />
-      <Card className="p-4">
+      <DesignPanel testId="categories-table-panel">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')}
           onRowClick={can('categories.manage') ? openEdit : undefined} showCheckbox={can('categories.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <Input label={t('name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -134,6 +135,6 @@ export function CategoriesPage() {
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
       <ConfirmDialog open={deleteSelectedConfirm} onClose={() => setDeleteSelectedConfirm(false)} onConfirm={removeSelected}
         title={t('deleteSelected')} message={t('confirmDeleteAll')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

@@ -1,42 +1,46 @@
 import type { ReactNode } from 'react';
+import clsx from 'clsx';
+import { PageHeader, type BreadcrumbItem } from '@/components/PageHeader';
+
+export type DesignBreadcrumb = BreadcrumbItem;
 
 export function DesignSurface({
   children,
+  className,
   testId,
 }: {
   children: ReactNode;
+  className?: string;
   testId: string;
 }) {
   return (
-    <section data-testid={testId} className="min-w-0 space-y-4">
+    <section data-testid={testId} className={clsx('min-w-0 space-y-4', className)}>
       {children}
     </section>
   );
 }
 
+// Delegates to the canonical 6D page-header surface (PageHeader) so there is a
+// single implementation while the design package keeps its own stable API.
 export function DesignPageHeader({
   title,
+  subtitle,
   description,
   actions,
+  breadcrumbs,
 }: {
   title: ReactNode;
+  subtitle?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  breadcrumbs?: DesignBreadcrumb[];
 }) {
-  return (
-    <header data-testid="design-page-header" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="truncate text-xl font-semibold">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      {actions ? <div data-testid="design-page-actions" className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </header>
-  );
+  return <PageHeader title={title} subtitle={subtitle ?? description} actions={actions} breadcrumbs={breadcrumbs} />;
 }
 
 export function DesignFilterBar({ children }: { children: ReactNode }) {
   return (
-    <div data-testid="design-filter-bar" className="flex flex-col gap-2 rounded-lg border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-center">
+    <div data-testid="design-filter-bar" className="flex flex-col gap-2 rounded-lg border bg-white p-3 dark:border-navy-800 dark:bg-navy-900 sm:flex-row sm:flex-wrap sm:items-center">
       {children}
     </div>
   );

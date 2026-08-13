@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Edit2, Plus, Search, Shield, Trash2 } from 'lucide-react';
+import { Edit2, Plus, Shield, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignSearch } from '@/components/design/DesignSearch';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -17,7 +20,6 @@ import { useRoles } from '@/context/RolesContext';
 import { isAdminRole, ROLE_META } from '@/lib/permissions';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { AppUser, Role } from '@/lib/types';
 
 const ADMIN_ROLES: Role[] = ['super_admin', 'owner'];
@@ -178,21 +180,17 @@ export function UsersPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('users')} actions={
-        <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addUser')}</Button>
+    <DesignSurface testId="users-page">
+      <DesignPageHeader title={t('users')} actions={
+        <Button size="sm" onClick={openAdd} data-testid="users-add"><Plus className="w-4 h-4" /> {t('addUser')}</Button>
       } />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
+      <DesignPanel testId="users-search-panel">
+        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="users-search" />
+      </DesignPanel>
+      <DesignPanel testId="users-table-panel">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       {/* Edit User Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('edit')}>
@@ -250,6 +248,6 @@ export function UsersPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('deleteUser')} message={t('confirmDeleteUser')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

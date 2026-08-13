@@ -5,7 +5,7 @@ import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -18,7 +18,6 @@ import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type {
   BankReconciliation, ReconciliationDetail,
   TreasuryAccount,
@@ -38,7 +37,7 @@ export function ReconciliationPage() {
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
-  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadRecon } = usePaginatedRows<BankReconciliation>({
+  const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadRecon } = usePaginatedRows<BankReconciliation>({
     table: 'bank_reconciliations',
     select: '*, treasury_account:treasury_accounts(account_name, account_type)',
     order: { column: 'created_at', ascending: false },
@@ -172,8 +171,8 @@ export function ReconciliationPage() {
   const availableCandidates = (detail?.book_candidates || []).filter((c) => !(detail?.statement_lines || []).some((l) => l.matched_journal_entry_id === c.id));
 
   return (
-    <div>
-      <PageHeader
+    <DesignSurface testId="reconciliation-page">
+      <DesignPageHeader
         title={t('bankReconciliation')}
         subtitle={t('reconciliation')}
         actions={can('accounts.manage') && (
@@ -182,7 +181,7 @@ export function ReconciliationPage() {
       />
 
       {isAdminRole(user?.role) && branches.length > 0 && (
-        <Card className="mb-4 p-4">
+        <DesignPanel testId="reconciliation-branch-panel">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
             <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
@@ -191,13 +190,13 @@ export function ReconciliationPage() {
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>
           </div>
-        </Card>
+        </DesignPanel>
       )}
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="reconciliation-table-panel">
+        <DataTable columns={columns} data={items} loading={loading} error={error} emptyMessage={t('noData')} />
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('reconciliation')}>
         <div className="space-y-4">
@@ -344,6 +343,6 @@ export function ReconciliationPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

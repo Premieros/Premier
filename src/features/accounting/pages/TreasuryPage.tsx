@@ -5,7 +5,8 @@ import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Card, StatCard } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignPanel, DesignPagination } from '@/components/design';
+import { StatCard } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -18,7 +19,6 @@ import { isAdminRole } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { TreasuryAccount, TreasuryBalance, TreasuryTransaction } from '@/lib/types';
 
 type ModalType = 'transfer' | 'deposit' | 'withdrawal' | null;
@@ -39,7 +39,7 @@ export function TreasuryPage() {
   const [adminBranchFilter, setAdminBranchFilter] = useState('');
   const effectiveBranchFilter = isAdminRole(user?.role) ? (adminBranchFilter || null) : branchFilter;
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
-  const { rows: transactions, loading: txLoading, total: txTotal, hasMore: txHasMore, loadMore: loadMoreTx, loadingMore: loadingMoreTx, refresh: reloadTx } = usePaginatedRows<TreasuryTransaction>({
+  const { rows: transactions, loading: txLoading, error: txError, total: txTotal, hasMore: txHasMore, loadMore: loadMoreTx, loadingMore: loadingMoreTx, refresh: reloadTx } = usePaginatedRows<TreasuryTransaction>({
     table: 'treasury_transactions',
     select: '*, from_account:treasury_accounts!from_account_id(account_name), to_account:treasury_accounts!to_account_id(account_name)',
     order: { column: 'created_at', ascending: false },
@@ -144,8 +144,8 @@ export function TreasuryPage() {
   ];
 
   return (
-    <div>
-      <PageHeader
+    <DesignSurface testId="treasury-page">
+      <DesignPageHeader
         title={t('treasury')}
         subtitle={t('treasuryTransactions')}
         actions={can('accounts.manage') && (
@@ -165,7 +165,7 @@ export function TreasuryPage() {
       </div>
 
       {isAdminRole(user?.role) && branches.length > 0 && (
-        <Card className="mb-4 p-4">
+        <DesignPanel testId="treasury-branch-panel">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
             <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
@@ -174,19 +174,17 @@ export function TreasuryPage() {
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>
           </div>
-        </Card>
+        </DesignPanel>
       )}
 
-      <Card className="p-4 mb-6">
-        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('treasuryBalances')}</h2>
-        <DataTable columns={balanceColumns} data={balances} loading={loading} emptyMessage={t('noData')} />
-      </Card>
+      <DesignPanel title={t('treasuryBalances')} testId="treasury-balances-panel">
+        <DataTable columns={balanceColumns} data={balances} loading={loading} error={txError} emptyMessage={t('noData')} />
+      </DesignPanel>
 
-      <Card className="p-4">
-        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">{t('treasuryTransactions')}</h2>
-        <DataTable columns={txColumns} data={transactions} loading={txLoading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={transactions.length} total={txTotal} hasMore={txHasMore} loadingMore={loadingMoreTx} onLoadMore={loadMoreTx} />
-      </Card>
+      <DesignPanel title={t('treasuryTransactions')} testId="treasury-transactions-panel">
+        <DataTable columns={txColumns} data={transactions} loading={txLoading} error={txError} emptyMessage={t('noData')} />
+        <DesignPagination loaded={transactions.length} total={txTotal} hasMore={txHasMore} loadingMore={loadingMoreTx} onLoadMore={loadMoreTx} />
+      </DesignPanel>
 
       <Modal open={modal === 'transfer'} onClose={() => setModal(null)} title={t('transfer')}>
         <div className="space-y-4">
@@ -236,6 +234,6 @@ export function TreasuryPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

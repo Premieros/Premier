@@ -1,12 +1,12 @@
 ﻿import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -18,7 +18,6 @@ import { logAudit } from '@/lib/audit';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Expense } from '@/lib/types';
 
 const EXPENSE_CATEGORIES = ['rent', 'utilities', 'salaries', 'supplies', 'maintenance', 'marketing', 'transport', 'other'];
@@ -29,7 +28,7 @@ export function ExpensesPage() {
   const branchFilter = useBranchFilter();
   const { show } = useToast();
   const can = useCan();
-  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadExpenses } = usePaginatedRows<Expense>({
+  const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadExpenses } = usePaginatedRows<Expense>({
     table: 'expenses',
     order: { column: 'expense_date', ascending: false },
     branch_id: branchFilter,
@@ -95,8 +94,8 @@ export function ExpensesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('expenses')} actions={
+    <DesignSurface testId="expenses-page">
+      <DesignPageHeader title={t('expenses')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           {can('expenses.manage') && (
@@ -104,17 +103,13 @@ export function ExpensesPage() {
           )}
         </>
       } />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="expenses-search-panel">
+        <DesignSearch value={search} onChange={setSearch} label={t('search')} placeholder={t('search')} testId="expenses-search" />
+      </DesignPanel>
+      <DesignPanel testId="expenses-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} onRowClick={openEdit} />
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -145,6 +140,6 @@ export function ExpensesPage() {
         </div>
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

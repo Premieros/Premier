@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Boxes, Layers, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Boxes, Layers, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -15,7 +15,6 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber, formatDate } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { RawMaterial, RawMaterialInventory, RawMaterialBatch, Unit, Branch, RpcResult } from '@/lib/types';
 
 type Tab = 'materials' | 'stock' | 'batches';
@@ -45,7 +44,7 @@ export function RawMaterialsPage() {
   const branchFilter = useBranchFilter();
 
   const [tab, setTab] = useState<Tab>('materials');
-  const { rows: materials, loading: materialsLoading, total, hasMore, loadMore, loadingMore, refresh: reloadMaterials } = usePaginatedRows<RawMaterial>({
+  const { rows: materials, loading: materialsLoading, error, total, hasMore, loadMore, loadingMore, refresh: reloadMaterials } = usePaginatedRows<RawMaterial>({
     table: 'raw_materials',
     select: '*, unit:units(*)',
     order: { column: 'name', ascending: true },
@@ -243,8 +242,8 @@ export function RawMaterialsPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('rawMaterials')} subtitle={isAr ? 'إدارة المواد الخام وأرصدتها ودفعاتها' : 'Manage raw materials, stock and batches'} actions={
+    <DesignSurface testId="raw-materials-page">
+      <DesignPageHeader title={t('rawMaterials')} subtitle={isAr ? 'إدارة المواد الخام وأرصدتها ودفعاتها' : 'Manage raw materials, stock and batches'} actions={
         can('raw_materials.manage') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addRawMaterial')}</Button>
         ) : undefined
@@ -268,40 +267,36 @@ export function RawMaterialsPage() {
       </div>
 
       {tab !== 'materials' && (
-        <Card className="mb-4 p-4">
+        <DesignPanel testId="raw-materials-branch-panel">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <Select value={stockBranch} onChange={(e) => setStockBranch(e.target.value)} label={t('branch')} className="sm:w-64">
               <option value="">{t('all')} - {t('branches')}</option>
               {branches.map((br) => <option key={br.id} value={br.id}>{br.name}</option>)}
             </Select>
           </div>
-        </Card>
+        </DesignPanel>
       )}
 
       {tab === 'materials' && (
-        <Card className="mb-4 p-4">
-          <div className="relative flex-1">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
-        </Card>
+        <DesignPanel testId="raw-materials-search-panel">
+          <DesignSearch value={search} onChange={setSearch} label={t('search')} placeholder={t('search')} testId="raw-materials-search" />
+        </DesignPanel>
       )}
 
-      <Card className="p-4">
+      <DesignPanel testId="raw-materials-table-panel">
         {tab === 'materials' && (
           <>
-            <DataTable columns={materialColumns} data={filteredMaterials} loading={materialsLoading} emptyMessage={t('noData')} />
-            <PaginationBar loaded={materials.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+            <DataTable columns={materialColumns} data={filteredMaterials} loading={materialsLoading} error={error} emptyMessage={t('noData')} />
+            <DesignPagination loaded={materials.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
           </>
         )}
         {tab === 'stock' && (
-          <DataTable columns={stockColumns} data={filteredStock} loading={loading} emptyMessage={t('noData')} />
+          <DataTable columns={stockColumns} data={filteredStock} loading={loading} error={error} emptyMessage={t('noData')} />
         )}
         {tab === 'batches' && (
-          <DataTable columns={batchColumns} data={filteredBatches} loading={loading} emptyMessage={t('noData')} />
+          <DataTable columns={batchColumns} data={filteredBatches} loading={loading} error={error} emptyMessage={t('noData')} />
         )}
-      </Card>
+      </DesignPanel>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={form.id ? t('editRawMaterial') : t('addRawMaterial')} size="lg">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -351,6 +346,6 @@ export function RawMaterialsPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

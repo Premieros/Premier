@@ -1,12 +1,12 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
-import { Plus, Trash2, Search, Eye, Download } from 'lucide-react';
+import { Plus, Trash2, Eye, Download } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Select } from '@/components/Input';
@@ -18,7 +18,6 @@ import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Purchase, Supplier, Product, Warehouse, RpcResult, RawMaterial } from '@/lib/types';
 
 interface PurchaseFormItem {
@@ -38,7 +37,7 @@ export function PurchasesPage() {
   const branchFilter = useBranchFilter();
   const { show } = useToast();
   const can = useCan();
-  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadPurchases } = usePaginatedRows<Purchase>({
+  const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadPurchases } = usePaginatedRows<Purchase>({
     table: 'purchases',
     select: '*, supplier:suppliers(*)',
     order: { column: 'created_at', ascending: false },
@@ -169,8 +168,8 @@ export function PurchasesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('purchases')} actions={
+    <DesignSurface testId="purchases-page">
+      <DesignPageHeader title={t('purchases')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           {can('purchases.manage') && (
@@ -178,17 +177,13 @@ export function PurchasesPage() {
           )}
         </>
       } />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={viewPurchase} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="purchases-search-panel">
+        <DesignSearch value={search} onChange={setSearch} label={t('search')} placeholder={t('search')} testId="purchases-search" />
+      </DesignPanel>
+      <DesignPanel testId="purchases-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} onRowClick={viewPurchase} />
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       {/* Add Purchase Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('purchaseInvoice')} size="xl">
@@ -295,6 +290,6 @@ export function PurchasesPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }
