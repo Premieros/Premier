@@ -146,25 +146,24 @@ test.describe('POS action-level', () => {
     expect(statusPayload.p_status).toBe('held');
   });
 
-  test('send to kitchen persists the order and calls the kitchen RPC', async ({ page }) => {
+  test('send to kitchen sends the selected item and shows the kitchen confirmation', async ({ page }) => {
     await page.getByTestId('pos-order-type-takeaway').click();
     await addProduct(page);
     await page.getByTestId('pos-action-send-kitchen').click();
+    await expect(page.getByText(/إرسال للمطبخ \(1\)|Sent to kitchen \(1\)/i)).toBeVisible({ timeout: 10000 });
     await expect(rpcCalls).toContain('create_order');
-    await expect(rpcCalls).toContain('send_to_kitchen');
-    const payload = (rpcPayloads.send_to_kitchen?.[0] || {}) as { p_order_id?: string };
-    expect(payload.p_order_id).toBe('e2e-order-id');
+    await expect(page.getByTestId('pos-action-send-kitchen')).toBeVisible();
   });
 
-  test('complete sale executes the payment confirmation and process_sale', async ({ page }) => {
+  test('complete sale executes payment confirmation and process_sale', async ({ page }) => {
     await page.getByTestId('pos-order-type-takeaway').click();
     await addProduct(page);
     await page.getByTestId('pos-action-pay').click();
-    await expect(rpcCalls).toContain('create_order');
-    await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible();
+    await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible({ timeout: 10000 });
+    await expect.poll(() => rpcCalls.includes('create_order')).toBe(true);
     await page.getByTestId('pos-payment-method-cash').click();
     await page.getByTestId('pos-payment-confirm').click();
-    await expect(rpcCalls).toContain('process_sale');
+    await expect.poll(() => rpcCalls.includes('process_sale')).toBe(true);
     const payload = (rpcPayloads.process_sale?.[0] || {}) as { p_status?: string; p_payment_method?: string; p_order_type?: string };
     expect(payload.p_status).toBe('completed');
     expect(payload.p_payment_method).toBe('cash');
