@@ -55,7 +55,7 @@ Core rule:
 **CLOSED — VERIFIED by Run #141 after CI verification-gate correction**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**IN PROGRESS — 6A navigation/UI contract hardening verified by Run #144; next design completion package starting**
+**IN PROGRESS — 6A verified by Run #144; 6B implementation package active**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -76,6 +76,7 @@ Core rule:
 - `src/core/navigation/routes.ts` remains the canonical route map.
 - `src/core/navigation/menu.config.ts` remains the canonical navigation model.
 - Navigation contract tests protect route uniqueness, menu identity uniqueness, canonical targets, and explicit permissions.
+- Protected application shell now exposes stable semantic/test identities for sidebar, navigation groups/items, top navigation, header actions, and main content without changing existing handlers/routes/permissions.
 
 ## 5. Earlier Verified Work
 
@@ -97,6 +98,7 @@ PHASE 3 checkpoint commit: `b46c29eb10ed085653296c326f3fa3596f8db739`.
 PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
 PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
 PHASE 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
+PHASE 6B implementation commit: `7b121cea21c7c1141403f30db069320e69593bc8`.
 
 ## 7. Verified CI Evidence
 
@@ -173,22 +175,19 @@ Commit: `8241281dfee078e8a5beac7f3079eaa25aad076f4`
 
 **6A VERIFIED — Run #144.**
 
-### Next package — Design Surface Completion (6B)
+### Package 6B — Design Surface Completion
 
-Objective: complete the remaining approved/reference-design surfaces without changing underlying behavior.
+Objective: continue the approved/reference-design rebuild while making visual surfaces safe to rearrange independently of behavior.
 
-Scope:
-- Audit the remaining primary screens and shared surfaces against the approved design contract.
-- Consolidate repeated visual patterns into shared components where safe.
-- Ensure critical buttons, switches, tabs, cards and menu controls use stable semantic/test IDs independent of DOM position.
-- Keep action handlers/services separate from presentation layout.
-- Preserve existing routes, permissions, RPCs and data contracts.
-- Add/extend focused tests only where a current design surface lacks stable interaction coverage.
-- Avoid unrelated feature work.
+Implemented in commit `7b121cea21c7c1141403f30db069320e69593bc8`:
+- Added stable `data-testid` identities to the protected application shell.
+- Added stable identities for sidebar open/close, navigation container, navigation groups, each canonical menu item, assistant card, mobile backdrop, header, top navigation/tabs, active-orders action/count, user menu, language toggle, theme toggle, sign-out, and main content.
+- Preserved all existing action handlers, routes, permissions, data hooks, and branch filtering.
+- No business logic or database behavior changed.
 
-6B must be implemented as one coherent package. If an adjacent independent design-completion package can safely be included, bundle it rather than creating an unnecessary separate cycle.
+This is the first implementation slice of 6B and is **NOT YET VERIFIED**. CI must prove PHASE 0 through 6B together before 6B can close.
 
-**6B STATUS: STARTED.**
+**6B STATUS: IMPLEMENTED — WAITING FOR CI.**
 
 ## 11. CURRENT EXECUTION
 
@@ -199,6 +198,7 @@ Scope:
 **PHASE 0–5 status:** VERIFIED / CLOSED.
 **Package 6A:** VERIFIED / CLOSED.
 **Current package:** 6B — Design Surface Completion.
+**6B implementation commit:** `7b121cea21c7c1141403f30db069320e69593bc8`.
 
 ### Execution rule
 Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included package/phase, run the combined regression for every phase from 0 through the latest included package.
