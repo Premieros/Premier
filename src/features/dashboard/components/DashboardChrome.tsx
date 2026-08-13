@@ -1,12 +1,12 @@
 import { type ReactNode } from 'react';
+import { DesignSurface } from '@/components/design/DesignSurface';
 
 /**
  * Dashboard content adapter.
  *
- * The application shell is now provided by Layout so every protected screen
- * shares one navigation/header system. This component intentionally remains
- * as a compatibility wrapper for existing dashboard pages and future
- * dashboard-specific composition without creating a second shell.
+ * The application shell is provided by Layout. This compatibility wrapper
+ * now also establishes one stable, responsive design surface for all
+ * dashboard variants without changing their data fetching or behavior.
  */
 export interface DashboardChromeProps {
   children: ReactNode;
@@ -14,5 +14,5 @@ export interface DashboardChromeProps {
 }
 
 export function DashboardChrome({ children }: DashboardChromeProps) {
-  return <>{children}</>;
+  return <DesignSurface testId="dashboard-surface">{children}</DesignSurface>;
 }
