@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -10,12 +11,16 @@ import { formatCurrency, formatDate, todayISO } from '@/lib/format';
 import { getBrandColor } from '@/lib/brandColor';
 import { exportToExcel } from '@/lib/excel';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { isAdminRole } from '@/lib/permissions';
+import { isAdminRole, useCan } from '@/lib/permissions';
 import { useBranches } from '@/hooks/useBranches';
 import { useSettings } from '@/context/SettingsContext';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 
 type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock';
+
+type FinancialReportType = 'trial_balance' | 'ledger' | 'income' | 'balance_sheet' | 'ar_aging' | 'ap_aging' | 'aging_summary' | 'cash_flow' | 'party_statement';
+
+type PeriodKey = 'custom' | 'today' | 'yesterday' | 'last7' | 'last30' | 'this_month' | 'last_month' | 'this_year';
 
 const PIE_COLORS = [getBrandColor(600), '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', getBrandColor(500)];
 
@@ -23,10 +28,13 @@ export function ReportsPage() {
   /* REPORT-BRANCH-AUDIT-2026 */
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const can = useCan();
+  const navigate = useNavigate();
   const branchFilter = useBranchFilter();
   const [reportType, setReportType] = useState<ReportType>('sales');
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(todayISO());
+  const [period, setPeriod] = useState<PeriodKey>('custom');
   const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
   const [summary, setSummary] = useState({ total: 0, count: 0 });
@@ -36,6 +44,56 @@ export function ReportsPage() {
   const { branches } = useBranches();
   const { effectiveSettings } = useSettings();
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
+
+  const financialTypes: { key: FinancialReportType; label: string }[] = [
+    { key: 'trial_balance', label: t('trialBalance') },
+    { key: 'ledger', label: t('generalLedger') },
+    { key: 'income', label: t('incomeStatement') },
+    { key: 'balance_sheet', label: t('balanceSheet') },
+    { key: 'ar_aging', label: t('arAging') },
+    { key: 'ap_aging', label: t('apAging') },
+    { key: 'aging_summary', label: t('agingSummary') },
+    { key: 'cash_flow', label: t('cashFlow') },
+    { key: 'party_statement', label: t('partyStatement') },
+  ];
+  const canFinancial = can('reports.financial');
+
+  function handleReportTypeSelect(value: string) {
+    if (financialTypes.some((f) => f.key === value)) {
+      navigate(`/financial-reports?view=${value}&from=${from}&to=${to}`);
+      return;
+    }
+    setReportType(value as ReportType);
+  }
+
+  function applyPeriod(key: PeriodKey) {
+    const now = new Date();
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const today = iso(now);
+    let f = from;
+    let t = today;
+    if (key === 'today') {
+      f = today;
+    } else if (key === 'yesterday') {
+      const y = new Date(now.getTime() - 86400000);
+      f = iso(y);
+      t = f;
+    } else if (key === 'last7') {
+      f = iso(new Date(now.getTime() - 6 * 86400000));
+    } else if (key === 'last30') {
+      f = iso(new Date(now.getTime() - 29 * 86400000));
+    } else if (key === 'this_month') {
+      f = iso(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else if (key === 'last_month') {
+      f = iso(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      t = iso(new Date(now.getFullYear(), now.getMonth(), 0));
+    } else if (key === 'this_year') {
+      f = iso(new Date(now.getFullYear(), 0, 1));
+    }
+    setPeriod(key);
+    setFrom(f);
+    setTo(t);
+  }
 
   useEffect(() => {
     loadReport();
@@ -336,45 +394,79 @@ export function ReportsPage() {
     <div>
       <PageHeader title={t('reports')} actions={<Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>} />
 
-      <Card className="mb-4 p-4">
+      <Card className="mb-4 p-4 border-ui-border bg-ui-surface shadow-ui">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            {reportTypes.map((rt) => (
-              <button key={rt.key} data-report-type={rt.key} onClick={() => setReportType(rt.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
-                {rt.icon} {rt.label}
-              </button>
-            ))}
-          </div>
           <div className="flex flex-wrap items-end gap-4">
-            <Input label={t('from')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <Input label={t('to')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <div className="min-w-[220px]">
+              <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('reports')}</label>
+              <select data-testid="report-type-select" value={reportType} onChange={(e) => handleReportTypeSelect(e.target.value)}
+                className="h-10 w-full rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
+                <optgroup label={lang === 'ar' ? 'التقارير التشغيلية' : 'Operational reports'}>
+                  {reportTypes.map((rt) => <option key={rt.key} value={rt.key}>{rt.label}</option>)}
+                </optgroup>
+                {canFinancial && (
+                  <optgroup label={lang === 'ar' ? 'التقارير المالية' : 'Financial reports'}>
+                    {financialTypes.map((ft) => <option key={ft.key} value={ft.key}>{ft.label}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+            <div className="min-w-[200px]">
+              <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('filterByPeriod')}</label>
+              <select data-testid="report-context-filter" value={period} onChange={(e) => applyPeriod(e.target.value as PeriodKey)}
+                className="h-10 w-full rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
+                <option value="custom">{lang === 'ar' ? 'مخصص' : 'Custom'}</option>
+                <option value="today">{lang === 'ar' ? 'اليوم' : 'Today'}</option>
+                <option value="yesterday">{lang === 'ar' ? 'أمس' : 'Yesterday'}</option>
+                <option value="last7">{lang === 'ar' ? 'آخر 7 أيام' : 'Last 7 days'}</option>
+                <option value="last30">{lang === 'ar' ? 'آخر 30 يومًا' : 'Last 30 days'}</option>
+                <option value="this_month">{lang === 'ar' ? 'هذا الشهر' : 'This month'}</option>
+                <option value="last_month">{lang === 'ar' ? 'الشهر الماضي' : 'Last month'}</option>
+                <option value="this_year">{lang === 'ar' ? 'هذه السنة' : 'This year'}</option>
+              </select>
+            </div>
+            <Input label={t('from')} type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPeriod('custom'); }} />
+            <Input label={t('to')} type="date" value={to} onChange={(e) => { setTo(e.target.value); setPeriod('custom'); }} />
             {isAdminRole(user?.role) && branches.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('filterByBranch')}</label>
+                <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('filterByBranch')}</label>
                 <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  className="h-10 min-w-[180px] rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
                   <option value="">{t('allBranches')}</option>
                   {branches.map((b) => <option key={b.id} value={b.id}>{lang === 'ar' ? b.name : (b.name_en || b.name)}</option>)}
                 </select>
               </div>
             )}
             <div className="flex gap-4 text-sm">
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-2">
-                <span className="text-slate-500">{t('total')}: </span>
-                <span className="font-bold text-brand-600 dark:text-brand-400">{reportType === 'inventory' || reportType === 'detailed_invoices' ? formatCurrency(summary.total, currency, lang) : formatCurrency(summary.total, currency, lang)}</span>
+              <div className="rounded-ui-lg bg-ui-page-alt px-4 py-2 border border-ui-border">
+                <span className="text-ui-muted">{t('total')}: </span>
+                <span className="font-bold text-ui-accent">{formatCurrency(summary.total, currency, lang)}</span>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-2">
-                <span className="text-slate-500">{t('count')}: </span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{summary.count}</span>
+              <div className="rounded-ui-lg bg-ui-page-alt px-4 py-2 border border-ui-border">
+                <span className="text-ui-muted">{t('count')}: </span>
+                <span className="font-bold text-ui-text">{summary.count}</span>
               </div>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-ui-border pt-3">
+            {reportTypes.map((rt) => (
+              <button key={rt.key} data-report-type={rt.key} onClick={() => setReportType(rt.key)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-ui-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-ui-primary text-ui-primary-fg shadow-ui-sm' : 'bg-ui-page-alt text-ui-muted border border-ui-border hover:bg-ui-primary-soft hover:text-ui-primary'}`}>
+                {rt.icon} {rt.label}
+              </button>
+            ))}
+            {canFinancial && financialTypes.map((ft) => (
+              <button key={ft.key} data-report-type={ft.key} onClick={() => handleReportTypeSelect(ft.key)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-ui-lg text-sm font-medium transition-colors bg-ui-page-alt text-ui-muted border border-ui-border hover:bg-ui-primary-soft hover:text-ui-primary`}>
+                {ft.label}
+              </button>
+            ))}
           </div>
         </div>
       </Card>
 
       {chartData.length > 0 && (
-        <Card className="mb-4 p-5">
+        <Card className="mb-4 p-5 border-ui-border bg-ui-surface shadow-ui">
           <ResponsiveContainer width="100%" height={300}>
             {isPie ? (
               <PieChart>
@@ -397,26 +489,26 @@ export function ReportsPage() {
         </Card>
       )}
 
-      <Card className="p-4">
+      <Card className="p-4 border-ui-border bg-ui-surface shadow-ui">
         {loading ? (
           <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div>
         ) : data.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-sm">{t('noData')}</div>
+          <div className="text-center py-12 text-ui-subtle text-sm">{t('noData')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
+                <tr className="border-b border-ui-border">
                   {Object.keys(data[0]).map((key) => (
-                    <th key={key} className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{key}</th>
+                    <th key={key} className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{key}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {data.map((row, i) => (
-                  <tr key={i} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <tr key={i} className="border-b border-ui-border/60 hover:bg-ui-page-alt">
                     {Object.entries(row).map(([key, val], j) => (
-                      <td key={j} className="px-4 py-3 text-slate-700 dark:text-slate-200">
+                      <td key={j} className="px-4 py-3 text-ui-text">
                         {typeof val === 'number' && moneyKeys.includes(key)
                           ? formatCurrency(val, currency, lang)
                           : String(val)}

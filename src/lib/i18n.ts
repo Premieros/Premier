@@ -350,6 +350,7 @@ export const translations = {
     // Branch Filter
     allBranches: 'كل الفروع',
     filterByBranch: 'تصفية حسب الفرع',
+    filterByPeriod: 'تصفية حسب الفترة',
     // Selection
     deleteSelected: 'حذف المحدد',
     selectItems: 'حدد العناصر للحذف',
@@ -1023,6 +1024,7 @@ export const translations = {
     // Branch Filter
     allBranches: 'All Branches',
     filterByBranch: 'Filter by Branch',
+    filterByPeriod: 'Filter by Period',
     // Selection
     deleteSelected: 'Delete Selected',
     selectItems: 'Select items to delete',
