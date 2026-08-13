@@ -34,8 +34,46 @@ jobs:
       - run: npm run test:unit
       - run: npm run build
 
-  browser-smoke:
+  db:
     needs: verify
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply auth stub (CI only, never on real Supabase)
+        run: node scripts/db/apply-migration.js --file supabase/ci/stub_auth.sql
+      - name: Apply canonical migrations
+        run: node scripts/db/apply-migration.js --dir supabase/migrations
+      - name: Verify schema
+        run: node scripts/db/verify-schema.js
+      - name: Isolate subscription guard for order integration fixtures
+        run: node scripts/db/apply-migration.js --file supabase/ci/disable_subscription_guard.sql
+      - name: Seed raw-material branch helper (CI only, never on real Supabase)
+        run: node scripts/db/apply-migration.js --file supabase/ci/seed_raw_material_branch.sql
+      - name: Run integration and security/RLS regression tests
+        run: npm run test:integration
+
+  browser-smoke:
+    needs: [verify, db]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
