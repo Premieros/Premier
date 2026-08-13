@@ -52,7 +52,7 @@ Core rule:
 **CLOSED — VERIFIED 2026-08-13 by combined Regression Run #136**
 
 ### PHASE 5 — Final Stabilization / Regression
-**NEXT — EXECUTION STARTED AS A SINGLE PACKAGE**
+**CURRENT — EXECUTION STARTED AS A SINGLE PACKAGE**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
 **PENDING — may be bundled when dependencies allow**
@@ -109,6 +109,12 @@ PHASE 4 rollback point:
 `ui-rebuild-phase4-checkpoint-2026-08-13`
 
 PHASE 4 checkpoint is the last fully verified PHASE 3 state before PHASE 4 changes. Use it only if a later change causes regression or unsafe divergence.
+
+PHASE 5 rollback point:
+`ui-rebuild-phase5-checkpoint-2026-08-13`
+
+PHASE 5 checkpoint commit:
+`e416f4bf34fc9cf985fa77fe6ad177f852fbda03`
 
 ## 8. Failure Analysis
 
@@ -192,35 +198,31 @@ Relevant commits:
 
 **Conclusion:** PHASE 0–4 all passed the same CI verification cycle with no observed regression. PHASE 4 is officially CLOSED.
 
-## 13. CURRENT EXECUTION PACKAGE — PHASE 5
+## 13. PHASE 5 — FINAL STABILIZATION / REGRESSION PACKAGE
 
-### PHASE 5 objective
-Final stabilization package before final UI/design completion and merge preparation.
+### Objective
+Make the verification gate stricter and finish stabilization without changing verified business behavior or reopening earlier phases unnecessarily.
 
-This package must consolidate:
-- regression hardening;
-- critical route/action coverage;
-- stable interaction identity audit;
-- UI/service separation checks;
-- removal of fragile DOM-position selectors from critical flows;
-- final smoke coverage for dashboard/navigation/POS;
-- build/typecheck/lint/unit/integration/browser gates;
-- full PHASE 0–4 regression.
+### Package actions
+1. Create a rollback checkpoint before risky work. **DONE:** `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf...`.
+2. Audit the verification contract for application code **and test suites**. **DONE:** repository already exposes `typecheck:all` for app + tests but the PR verify job only ran application typecheck.
+3. Strengthen the mandatory Verify gate so test-suite TypeScript is checked in CI. **DONE:** `.github/workflows/verify-main.yml` now runs `npm run typecheck:all`.
+4. Preserve DB/RLS and Browser E2E as required downstream gates. **DONE:** existing dependencies remain `db → browser-smoke` and `verify → db`.
+5. Run one comprehensive PHASE 0–5 regression cycle. **PENDING CI RESULT.**
 
-### Phase 5 rules
-- Implement as one coherent package where possible.
-- Do not alter working business logic unless a verified defect is found.
-- Do not reopen PHASE 0–4 unless a regression or proven defect requires it.
-- Create a PHASE 5 checkpoint before risky modifications.
-- Close PHASE 5 only after a single comprehensive CI cycle proves PHASE 0–5.
+Commit:
+`89f913e7ee50ae710191709f4048cb3b497ab1ca`
 
-## 14. Current State
+This is intentionally a verification-hardening change. No business logic or security policy was altered.
+
+## 14. CURRENT STATE
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Latest fully verified commit:** `e416f4bf34fc9cf985fa77fe6ad177f852fbda03` (Run #136 — SUCCESS).
 **Current phase:** PHASE 5 — Final Stabilization / Regression.
-**Rollback checkpoint:** `ui-rebuild-phase4-checkpoint-2026-08-13`.
+**Latest PHASE 5 package commit:** `89f913e7ee50ae710191709f4048cb3b497ab1ca` (CI pending).
+**Rollback checkpoint:** `ui-rebuild-phase5-checkpoint-2026-08-13`.
 
 ## 15. Session Update Rule
 
