@@ -32,6 +32,8 @@ Functionality must never depend on DOM position, visual placement, or fragile se
 10. Keep this file updated so future sessions cannot drift from the plan.
 11. Future UI changes must remain independent of visual placement; moving/reordering controls must not change their action, permission, route/state, or service behavior.
 12. New screens/components must use the shared UI foundation and stable interaction identities so future design changes do not require rewriting business logic.
+13. **PRE-CI VALIDATION GATE:** before sending a change to CI, run/verify typecheck, lint, unit tests, the affected Playwright test, then the PHASE 3 E2E set. CI is the final confirmation, not the first debugging environment.
+14. **CHECKPOINT RULE:** before risky PHASE changes, preserve a named Git checkpoint/branch so the last known-safe state can be restored without rewriting history.
 
 ## 3. Phase Plan
 
@@ -125,6 +127,12 @@ Required action-level flows:
 - `58eb589ec161a7499b79a6720ab94afa347dde24` — stable IDs for delivery start flow.
 - `f50d9996c89b614b040223b3620cc83fc7bb5009` — initial Action-Level E2E coverage for remaining PHASE 3 flows.
 - `cdc51c4632a6b6c72e19382cfc3fcaae97424cc6` — corrected asynchronous test assertions for Delivery/Drive-thru start and payment persistence timing.
+- `ef2a90c58162e81b1d9f26651103a2663c1de925` — corrected Hold/Complete Sale assertions to wait for the real asynchronous persistence boundaries.
+
+### Safety checkpoint
+
+- `ui-rebuild-phase3-checkpoint-2026-08-13` — named rollback branch preserving the last known-safe PHASE 3 checkpoint before the latest test fixes.
+- Checkpoint commit: `b46c29eb10ed085653296c326f3fa3596f8db739`.
 
 ### Earlier relevant commits
 
@@ -189,33 +197,85 @@ Evidence from the real implementation confirms `CarOrderStep` calls `onStart({ o
 
 This was a **test-contract/timing defect**, not proof of a production business-logic defect. The failures must still be fixed and reverified; PHASE 3 remains open.
 
-## 10. Current Fix — Commit `cdc51c4632a6b6c72e19382cfc3fcaae97424cc6`
+## 10. Failure Analysis — RUN #123
+
+- **Run:** #123
+- **Run ID:** `31679150983`
+- **Verify:** PASS
+- **Build:** PASS
+- **Browser E2E:** FAIL
+- **Result:** **48 passed / 2 failed** out of 50.
+
+### Failure 1 — Hold
+The first attempt checked `rpcCalls` immediately after clicking Hold and observed only login/setup RPCs. On retry, `create_order` appeared but `set_order_status` had not yet appeared at the assertion point.
+
+Root cause: the test did not wait for the application's asynchronous persistence chain. This is a test synchronization defect, not evidence that Hold is broken.
+
+### Failure 2 — Complete Sale
+The test waited for `create_order` immediately after opening the Payment workspace. The real flow does not guarantee that persistence occurs at that boundary. The correct boundary is the payment confirmation action, after which the test should wait for the actual persistence/sale RPCs.
+
+Root cause: incorrect lifecycle boundary in the test.
+
+## 11. Current Fix — Commit `ef2a90c58162e81b1d9f26651103a2663c1de925`
 
 Corrected `tests/e2e/pos-actions.spec.ts`:
 
-- Delivery and Drive-thru now verify the actual order-start behavior: wizard closes and the real product workspace becomes visible, instead of falsely expecting `create_order` at the wizard-start boundary.
-- Complete Sale now waits for `create_order` and the payment workspace before clicking confirmation and asserting `process_sale`.
-- The test contract remains Action-Level and stable-ID based.
+- Hold now waits up to 10 seconds for `create_order`, then independently waits for `set_order_status` before validating `p_status = held`.
+- Complete Sale no longer assumes `create_order` exists when the payment panel opens. It performs Cash + Confirm first, then waits for `create_order` and `process_sale`.
+- The assertions remain action-level and continue to validate real RPC names/payloads.
 - No production business logic was bypassed or weakened.
 
-## 11. Current CI Status
+## 12. PRE-CI VALIDATION GATE / Checkpoint Procedure
 
-**Commit:** `cdc51c4632a6b6c72e19382cfc3fcaae97424cc6`
+From this point forward every PHASE 3 change follows:
 
-**CI:** PENDING / not yet verified.
+```text
+Change
+ ↓
+Typecheck / Lint
+ ↓
+Unit Tests
+ ↓
+Affected Playwright test
+ ↓
+Full PHASE 3 E2E
+ ↓
+Review failures/artifacts
+ ↓
+CI
+ ↓
+Record result
+```
 
-Do not claim PHASE 3 success until this commit has a green Browser E2E result.
+A failed CI result must be classified before another change:
+- Infrastructure/cancellation → rerun, no code change.
+- Test-contract/timing → fix test boundary.
+- Production behavior defect → fix application root cause.
+- Regression → compare with checkpoint and restore if necessary.
 
-## 12. Exact Next Action — DO NOT SKIP
+The named rollback checkpoint is `ui-rebuild-phase3-checkpoint-2026-08-13` at `b46c29eb10ed085653296c326f3fa3596f8db739`.
 
-1. Inspect CI for `cdc51c4632a6b6c72e19382cfc3fcaae97424cc6`.
-2. If Browser E2E fails, read the exact failing tests and logs.
-3. Fix the real root cause without weakening behavior assertions.
-4. Re-run CI.
-5. Continue until all PHASE 3 critical flows have green CI evidence.
-6. Then close PHASE 3 and only then begin PHASE 4.
+## 13. Current CI Status
 
-## 13. Session Update Rule
+**Latest code commit:** `ef2a90c58162e81b1d9f26651103a2663c1de925`
+
+**Latest verified CI before this fix:** Run #123 — FAILURE, 48/50 Browser E2E passed.
+
+**Current status:** PENDING CI verification for the new fix.
+
+Do not claim PHASE 3 success until the corrected commit has green Browser E2E evidence.
+
+## 14. Exact Next Action — DO NOT SKIP
+
+1. Run/inspect CI for `ef2a90c58162e81b1d9f26651103a2663c1de925`.
+2. If Browser E2E fails, read the exact failing test/log/artifact before changing anything.
+3. Fix only the root cause.
+4. Repeat the PRE-CI VALIDATION GATE.
+5. Re-run CI.
+6. Continue until all PHASE 3 critical flows have green CI evidence.
+7. Then close PHASE 3 and only then begin PHASE 4.
+
+## 15. Session Update Rule
 
 Every meaningful action must be recorded here with:
 - Date/time
@@ -232,7 +292,7 @@ Every meaningful action must be recorded here with:
 
 **User explicitly requested that every time progress is made, this file is updated and the user is told that it was recorded.**
 
-## 14. Definition of Done
+## 16. Definition of Done
 
 The rebuild is complete only when:
 - Reference design and current architecture are aligned.
@@ -248,7 +308,7 @@ The rebuild is complete only when:
 
 **Do not replace this plan with a new plan unless the user explicitly changes the project objective.**
 
-## 15. Maintainability / Extensibility Requirement
+## 17. Maintainability / Extensibility Requirement
 
 The rebuilt UI must remain safely editable and extensible.
 
