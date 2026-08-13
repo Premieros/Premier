@@ -32,6 +32,18 @@ After pushing P3 (`ea801f1`, 6H-C dashboard contract) on top of P0+P1+P2:
 | Redirect rules | ✅ success |
 | Header rules / Pages changed | neutral |
 
+## CI Checkpoint — P4 (green)
+
+After pushing P4 (`9fb9d5d`, reports center with two dropdowns):
+
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
+
 Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
 
 ## Deployment & Branch Workflow (locked decision — user approved)
@@ -99,7 +111,7 @@ Audited gaps (from the completed branch-isolation audit):
 - Removed unused lucide imports (`Activity`, `CalendarDays`, `Package`).
 - Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 144/144 (fixed one contract assertion: `data-testid={testId}` is rendered as `<Metric testId="…">`), build pass. Two earlier test timeouts (`brandColor` / `pages.smoke`) were parallel-load artifacts — pass in isolation and in full sequential run.
 
-### P4 — Reports Center (two dropdowns) — DONE (local gates green; not pushed)
+### P4 (6H-P4) — Reports Center — DONE (pushed, CI green)
 - Dropdown 1 = report type: `data-testid="report-type-select"` grouping all 14 operational + 9 financial types (`optgroup` Operational / Financial). Financial options render only with the `reports.financial` permission; selecting one navigates to `/financial-reports?view=<key>&from=<from>&to=<to>`.
 - Dropdown 2 = contextual period filter: `data-testid="report-context-filter"` with presets (today / yesterday / last7 / last30 / this month / last month / this year / custom) driving `from`/`to`; manual date edits reset to custom. New i18n key `filterByPeriod`.
 - **Preserved the contract:** compact quick-access chip row keeps `button[data-report-type="<key>"]` for all 14 operational + 9 financial keys, and `/reports?reportType=…` deep links still resolve via `ReportDeepLinkPage`.
@@ -146,11 +158,11 @@ Audited gaps (from the completed branch-isolation audit):
 - **P1 (design tokens) done** — expanded `--ui-*` tokens + `.dark` overrides in `src/index.css`, `ui` color namespace + shadow/radius scales in `tailwind.config.js`. Local gates green (lint 0 errors, typecheck:all, 139 unit tests, build).
 - **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
 - **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
-- **P4 (reports center, two dropdowns) done locally** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build).
+- **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
 
 ### Pending
-- P4 push + PR #4 CI; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P3 pushed and green — verify, db, browser-smoke all success).
+- P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P4 pushed and green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note
 
