@@ -19,7 +19,7 @@ export function DesignSearch({ value, onChange, placeholder, label, testId = 'de
   const id = useId();
   return (
     <div className={`relative min-w-0 ${className}`}>
-      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ui-subtle" aria-hidden="true" />
       <input
         id={label ? id : undefined}
         type="search"
@@ -30,7 +30,7 @@ export function DesignSearch({ value, onChange, placeholder, label, testId = 'de
         placeholder={placeholder}
         aria-label={label || placeholder}
         data-testid={testId}
-        className="w-full rounded-xl border border-slate-200 bg-white ps-10 pe-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-ui border border-ui-border bg-ui-surface-raised ps-10 pe-4 py-2.5 text-sm text-ui-text placeholder-ui-subtle shadow-ui-sm focus:outline-none focus:border-ui-border-strong focus:ring-2 focus:ring-ui-ring"
       />
     </div>
   );

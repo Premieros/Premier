@@ -26,18 +26,18 @@ export function PageHeader({ title, subtitle, actions, breadcrumbs }: PageHeader
               return (
                 <span key={crumb.label + i} className="flex items-center gap-1">
                   {crumb.href && !last ? (
-                    <Link to={crumb.href} className="font-medium text-slate-400 hover:text-brand-600 dark:text-slate-500 dark:hover:text-brand-400">{crumb.label}</Link>
+                    <Link to={crumb.href} className="font-medium text-ui-subtle hover:text-ui-primary">{crumb.label}</Link>
                   ) : (
-                    <span className={clsx(last ? 'font-semibold text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500')}>{crumb.label}</span>
+                    <span className={clsx(last ? 'font-semibold text-ui-muted' : 'text-ui-subtle')}>{crumb.label}</span>
                   )}
-                  {!last && <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600 [dir='rtl']:rotate-180" />}
+                  {!last && <ChevronRight className="h-3 w-3 text-ui-subtle [dir='rtl']:rotate-180" />}
                 </span>
               );
             })}
           </nav>
         )}
-        <h1 data-testid="page-title" className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h1>
-        {subtitle && <p data-testid="page-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{subtitle}</p>}
+        <h1 data-testid="page-title" className="text-2xl font-bold text-ui-text tracking-tight">{title}</h1>
+        {subtitle && <p data-testid="page-description" className="text-sm text-ui-muted mt-1.5">{subtitle}</p>}
       </div>
       {actions && <div data-testid="page-actions" className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>
@@ -52,7 +52,7 @@ export function Card({ children, className = '', ...rest }: CardProps) {
   return (
     <div
       className={clsx(
-        'bg-white dark:bg-navy-900 rounded-2xl shadow-soft border border-slate-100 dark:border-navy-800/70',
+        'bg-ui-surface rounded-ui-xl shadow-ui border border-ui-border',
         className
       )}
       {...rest}

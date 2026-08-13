@@ -10,13 +10,13 @@ export function Input({ label, error, className = '', id, ...props }: InputProps
   const inputId = id ?? generatedId;
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label htmlFor={inputId} className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
+      {label && <label htmlFor={inputId} className="text-sm font-medium text-ui-text">{label}</label>}
       <input
         id={inputId}
-        className={`rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-brand-500 transition-all ${error ? 'border-red-500 focus-visible:ring-red-500' : ''} ${className}`}
+        className={`rounded-ui border border-ui-border bg-ui-surface-raised px-3.5 py-2.5 text-sm text-ui-text placeholder-ui-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring focus-visible:border-ui-border-strong transition-all ${error ? 'border-ui-danger focus-visible:ring-ui-danger' : ''} ${className}`}
         {...props}
       />
-      {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
+      {error && <span className="text-xs text-ui-danger font-medium">{error}</span>}
     </div>
   );
 }
@@ -31,10 +31,10 @@ export function Select({ label, className = '', id, children, ...props }: Select
   const selectId = id ?? generatedId;
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label htmlFor={selectId} className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
+      {label && <label htmlFor={selectId} className="text-sm font-medium text-ui-text">{label}</label>}
       <select
         id={selectId}
-        className={`rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-brand-500 transition-all ${className}`}
+        className={`rounded-ui border border-ui-border bg-ui-surface-raised px-3.5 py-2.5 text-sm text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring focus-visible:border-ui-border-strong transition-all ${className}`}
         {...props}
       >
         {children}
@@ -52,10 +52,10 @@ export function Textarea({ label, className = '', id, ...props }: TextareaProps)
   const textareaId = id ?? generatedId;
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label htmlFor={textareaId} className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
+      {label && <label htmlFor={textareaId} className="text-sm font-medium text-ui-text">{label}</label>}
       <textarea
         id={textareaId}
-        className={`rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-brand-500 transition-all ${className}`}
+        className={`rounded-ui border border-ui-border bg-ui-surface-raised px-3.5 py-2.5 text-sm text-ui-text placeholder-ui-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring focus-visible:border-ui-border-strong transition-all ${className}`}
         {...props}
       />
     </div>

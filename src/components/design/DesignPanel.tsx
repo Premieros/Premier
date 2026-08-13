@@ -30,12 +30,12 @@ export function DesignPanel({
   return (
     <Card className={className}>
       {hasHeader ? (
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 dark:border-navy-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-ui-border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             {icon ? <span className="shrink-0">{icon}</span> : null}
             <div className="min-w-0">
-              {title ? <h2 className="font-bold text-slate-900 dark:text-white">{title}</h2> : null}
-              {description ? <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{description}</p> : null}
+              {title ? <h2 className="font-bold text-ui-text">{title}</h2> : null}
+              {description ? <p className="mt-0.5 text-xs text-ui-subtle">{description}</p> : null}
             </div>
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

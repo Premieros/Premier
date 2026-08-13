@@ -21,8 +21,8 @@ export function DesignLoadingState({
   return (
     <div data-testid={testId} className={clsx('flex items-center justify-center py-12', className)}>
       <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-        {message ? <p className="text-sm text-slate-400 dark:text-slate-500">{message}</p> : null}
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-ui-primary border-t-transparent" />
+        {message ? <p className="text-sm text-ui-muted">{message}</p> : null}
       </div>
     </div>
   );
@@ -44,12 +44,12 @@ export function DesignEmptyState({
   testId?: string;
 }) {
   return (
-    <div data-testid={testId} className={clsx('flex flex-col items-center justify-center py-16 text-center text-slate-400 dark:text-slate-500', className)}>
-      <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-navy-800">
+    <div data-testid={testId} className={clsx('flex flex-col items-center justify-center py-16 text-center text-ui-muted', className)}>
+      <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-ui-page-alt">
         {icon}
       </div>
-      {title ? <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p> : null}
-      {description ? <p className="mt-1 max-w-sm text-xs text-slate-400 dark:text-slate-500">{description}</p> : null}
+      {title ? <p className="text-sm font-medium text-ui-muted">{title}</p> : null}
+      {description ? <p className="mt-1 max-w-sm text-xs text-ui-subtle">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -70,8 +70,8 @@ export function DesignErrorState({
 }) {
   return (
     <div data-testid={testId} className={clsx('flex flex-col items-center justify-center py-12 text-center', className)}>
-      <AlertCircle aria-hidden="true" className="mb-3 h-10 w-10 text-red-500" />
-      <p className="text-sm text-red-600 dark:text-red-400">{message}</p>
+      <AlertCircle aria-hidden="true" className="mb-3 h-10 w-10 text-ui-danger" />
+      <p className="text-sm text-ui-danger">{message}</p>
       {onRetry ? (
         <div className="mt-4">
           <Button size="sm" variant="outline" onClick={onRetry} data-testid={`${testId}-retry`}>

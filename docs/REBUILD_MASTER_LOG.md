@@ -120,9 +120,17 @@ Audited gaps (from the completed branch-isolation audit):
 - New contract test `tests/unit/reportsCenterContract.test.ts` (dropdowns, financial gating, `button[data-report-type]`, deep links, financial navigation, period presets).
 - Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 150/150, build.
 
-### P5 (6H-D) — Shared Components + Full Sweep
-- New visual treatment for cards, buttons, inputs, search, filters, tables, states, modals and drawers (no business logic inside presentation components).
-- **Interaction-Identity Registry:** central list of every stable `data-testid`/handler contract + a contract test that fails if any registered identity or its function is removed/renamed.
+### P5 (6H-D) — Shared Components + Full Sweep — DONE (local gates green; not pushed)
+- **Interaction-Identity Registry** `src/lib/interactionIdentity.ts`: central list of every stable `data-testid`/handler contract (shell, dashboard KPIs, reports center, deep links, financial views, data-table, design primitives, POS bottom bar — 60+ contracts) with its owning file + required behavior marker.
+- New contract test `tests/unit/interactionIdentity.test.ts`: fails if any registered identity or its documented behavior marker is removed/renamed from the source.
+- Swept shared components onto `ui-*` tokens (auto dark-mode via token overrides):
+  - `Card` (`PageHeader.tsx`) → `bg-ui-surface border-ui-border rounded-ui-xl shadow-ui`; header title/subtitle/breadcrumbs → `ui-text`/`ui-muted`/`ui-subtle`.
+  - `Button` variants → `bg-ui-primary`/`bg-ui-page-alt`/`border-ui-border-strong`, `focus-visible:ring-ui-ring`, `rounded-ui*` scale, `shadow-ui-sm`.
+  - `Input`/`Select`/`Textarea` → `bg-ui-surface-raised`, `border-ui-border`, `placeholder-ui-subtle`, error → `text-ui-danger`.
+  - `Modal` → `bg-ui-surface rounded-ui-xl shadow-ui-xl ring-ui-border` + `ui-*` header/close.
+  - Design package: `DesignSearch`, `DesignStates` (loading/empty/error), `DesignFilterBar`, `DesignPanel` header, `PaginationBar` → `ui-*` tokens.
+- No business logic touched; all stable testids unchanged.
+- Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 213/213, build.
 
 ### P6 (6I-A..D) — POS Visual
 - 6I-A POS Workspace layout; 6I-B Product Browser / Order Panel; 6I-C Order Types / Tables (Table, Delivery, Takeaway, Car, Quick); 6I-D Active Orders / Kitchen integration UI.
@@ -159,9 +167,10 @@ Audited gaps (from the completed branch-isolation audit):
 - **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
 - **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
 - **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
+- **P5 (shared components + identity registry) done locally** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build).
 
 ### Pending
-- P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- P5 push + PR #4 CI; P6 POS visual; P7 safe removal + final CI + PR.
 - Verify PR #4 CI after each pushed batch (last check: P4 pushed and green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note

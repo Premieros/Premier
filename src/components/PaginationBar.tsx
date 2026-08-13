@@ -23,7 +23,7 @@ export function PaginationBar({ loaded, total, hasMore, loadingMore, onLoadMore,
 
   return (
     <div data-testid="pagination-bar" className={`flex items-center justify-between gap-2 px-1 pt-3 ${className || ''}`}>
-      <span className="text-xs text-slate-400">
+      <span className="text-xs text-ui-muted">
         {isAr ? 'تم عرض' : 'Showing'} {loaded}
         {total !== null && <span> / {total}</span>}
       </span>
@@ -38,7 +38,7 @@ export function PaginationBar({ loaded, total, hasMore, loadingMore, onLoadMore,
           )}
         </Button>
       ) : (
-        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+        <span className="flex items-center gap-1 text-xs text-ui-success">
           <Check className="w-3.5 h-3.5" /> {isAr ? 'تم عرض الكل' : 'Showing all'}
         </span>
       )}
