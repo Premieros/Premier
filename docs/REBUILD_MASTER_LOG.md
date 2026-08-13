@@ -44,6 +44,18 @@ After pushing P4 (`9fb9d5d`, reports center with two dropdowns):
 | Redirect rules | ✅ success |
 | Header rules / Pages changed | neutral |
 
+## CI Checkpoint — P5 (green)
+
+After pushing P5 (`8152eb7`, shared components on ui tokens + interaction-identity registry):
+
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
+
 Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
 
 ## Deployment & Branch Workflow (locked decision — user approved)
@@ -120,7 +132,7 @@ Audited gaps (from the completed branch-isolation audit):
 - New contract test `tests/unit/reportsCenterContract.test.ts` (dropdowns, financial gating, `button[data-report-type]`, deep links, financial navigation, period presets).
 - Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 150/150, build.
 
-### P5 (6H-D) — Shared Components + Full Sweep — DONE (local gates green; not pushed)
+### P5 (6H-D) — Shared Components + Full Sweep — DONE (pushed, CI green)
 - **Interaction-Identity Registry** `src/lib/interactionIdentity.ts`: central list of every stable `data-testid`/handler contract (shell, dashboard KPIs, reports center, deep links, financial views, data-table, design primitives, POS bottom bar — 60+ contracts) with its owning file + required behavior marker.
 - New contract test `tests/unit/interactionIdentity.test.ts`: fails if any registered identity or its documented behavior marker is removed/renamed from the source.
 - Swept shared components onto `ui-*` tokens (auto dark-mode via token overrides):
@@ -167,11 +179,11 @@ Audited gaps (from the completed branch-isolation audit):
 - **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
 - **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
 - **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
-- **P5 (shared components + identity registry) done locally** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build).
+- **P5 (shared components + identity registry) done** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build). Pushed `8152eb7`; PR #4 CI green (verify, db, browser-smoke).
 
 ### Pending
-- P5 push + PR #4 CI; P6 POS visual; P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P4 pushed and green — verify, db, browser-smoke all success).
+- P6 POS visual; P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P5 pushed and green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note
 
