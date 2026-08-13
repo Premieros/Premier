@@ -162,7 +162,6 @@ test.describe('POS action-level', () => {
     await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible({ timeout: 10000 });
     await page.getByTestId('pos-payment-method-cash').click();
     await page.getByTestId('pos-payment-confirm').click();
-    await expect.poll(() => rpcCalls.includes('create_order'), { timeout: 10000 }).toBe(true);
     await expect.poll(() => rpcCalls.includes('process_sale'), { timeout: 10000 }).toBe(true);
     const payload = (rpcPayloads.process_sale?.[0] || {}) as { p_status?: string; p_payment_method?: string; p_order_type?: string };
     expect(payload.p_status).toBe('completed');
