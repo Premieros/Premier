@@ -110,32 +110,49 @@ Required action-level flows:
 - `9cf28849332fb079d823a8e8c2f853139a30cef7` — POS quantity test uses stable IDs and verifies `1 → 2`.
 - `80cdb01a5d28ba41333b53c0c946979f0501875d` — master-log update / CI state.
 
-## 7. Latest Verification — RUN #103
+## 7. Latest Verification — RUN #106
 
-Run #103 completed against PR #3 merge ref.
+Run #106 completed against the PR #3 merge ref and **FAILED**.
 
-- **Run:** #103
-- **Run ID:** `31645073329`
-- **Merge ref tested:** `732d337374de51f88f10a82e0a3ea171e3116780`
+- **Run:** #106
+- **Run ID:** `31648584834`
+- **Commit tested:** `c3b107f08042faeacd4902a55b90518a318b0510`
+- **PR merge ref actually executed:** `c3f76e9a665b0d726ef380611b834aefc6eaa210`
 - **Workflow:** Verify main
 - **Verify job:** PASS
 - **Build:** PASS
 - **Browser E2E:** FAIL
 - **Browser E2E:** **42 passed / 1 failed**
 
-The failure is now specifically at the end of the Quick Pickup flow: after clicking the enabled Pay button, the test expects `/طريقة الدفع|Payment method/`, but no such text exists in the rendered UI. The test failure is at `tests/e2e/pos-actions.spec.ts:83`.
+### Exact failure
 
-### Root cause status
+The only Browser E2E failure is:
 
-The previous cart selector problem is no longer the reported blocker. The current blocker is an incorrect/unstable expectation about the payment UI. We must inspect the actual payment component/flow before changing the test or application.
+`tests/e2e/pos-actions.spec.ts:83`
 
-### Important evidence
+Test:
+`POS action-level › starts quick pickup, adds product, changes quantity, and opens payment`
 
-- Order-type test passes.
-- Public protected-route smoke tests pass.
-- Build passes.
-- The remaining failure is only the payment assertion in the Quick Pickup action test.
-- Do **not** weaken the assertion or bypass payment behavior merely to get green CI.
+After the test clicks the enabled Pay button, it expects:
+`/طريقة الدفع|Payment method/i`
+
+but the actual rendered UI does not contain that text. The failure repeated on both retries. The Playwright run executed 43 tests total: **42 passed, 1 failed**.
+
+### Verified successful parts of Run #106
+
+- `npm ci` PASS
+- `npm run lint` PASS
+- `npm run typecheck` PASS
+- `npm run test:unit` PASS
+- `npm run build` PASS
+- Browser dashboard/navigation actions PASS
+- POS order-type actions/back navigation PASS
+- Public protected-route smoke suite PASS
+- Cart quantity flow reaches the Pay button; the earlier quantity-selector blocker is resolved.
+
+### Current root-cause status
+
+The remaining blocker is specifically the payment-flow assertion. We must inspect the real payment component/state after clicking Pay. Do not assume the UI uses a visible `Payment method` heading and do not weaken the assertion just to make CI green.
 
 ## 8. Exact Next Action — DO NOT SKIP
 
@@ -195,3 +212,16 @@ The rebuild is complete only when:
 - Confirmed and recorded: the final rebuild must remain safely editable and extensible. Future visual rearrangement, component replacement, menu reordering, or addition of controls must not require rewriting the underlying business logic solely because the UI changed position.
 - Stable IDs, centralized navigation, shared UI components, and separation of UI/action/route/permission/service are mandatory mechanisms for this goal.
 - This clarification does not change the original plan; it explicitly records an existing requirement of the rebuild.
+
+### Run #106 — latest verification
+- Result: **FAILED**
+- Verify: PASS
+- Build: PASS
+- Browser E2E: **42 PASS / 1 FAIL**
+- Run ID: `31648584834`
+- Tested commit: `c3b107f08042faeacd4902a55b90518a318b0510`
+- Executed PR merge ref: `c3f76e9a665b0d726ef380611b834aefc6eaa210`
+- Failure: Quick Pickup payment assertion at `tests/e2e/pos-actions.spec.ts:83` expects `طريقة الدفع|Payment method`, but no such element exists after Pay is clicked.
+- Quantity-selector issue remains resolved.
+- No phase transition: PHASE 3 remains open.
+- Next action: inspect actual payment UI/state and correct either the application root cause or the test expectation, then rerun CI.
