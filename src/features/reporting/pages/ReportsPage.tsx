@@ -256,10 +256,13 @@ export function ReportsPage() {
         setChartData(rows.slice(0, 10).map((p) => ({ name: String(p.name), value: Number(p.quantity) })));
         setSummary({ total: rows.length, count: rows.length });
       } else if (reportType === 'recipe_costs') {
-        const [rec, prod] = await Promise.all([
-          supabase.from('product_components').select('product_id, component_product_id, quantity'),
-          supabase.from('products').select('id, name, sale_price, cost_price, product_type'),
-        ]);
+        let compQuery = supabase.from('product_components').select('product_id, component_product_id, quantity, product:products(branch_id)');
+        let prodQuery = supabase.from('products').select('id, name, sale_price, cost_price, product_type');
+        if (effectiveBranchFilter) {
+          compQuery = compQuery.eq('product.branch_id', effectiveBranchFilter);
+          prodQuery = prodQuery.eq('branch_id', effectiveBranchFilter);
+        }
+        const [rec, prod] = await Promise.all([compQuery, prodQuery]);
         const productsById = new Map<string, Record<string, unknown>>();
         (prod.data || []).forEach((p) => productsById.set(p.id as string, p));
         const costMap = new Map<string, number>();
