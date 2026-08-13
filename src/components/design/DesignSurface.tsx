@@ -1,28 +1,10 @@
 import type { ReactNode } from 'react';
 
-export function DesignSurface({
-  children,
-  testId,
-}: {
-  children: ReactNode;
-  testId: string;
-}) {
-  return (
-    <section data-testid={testId} className="min-w-0 space-y-4">
-      {children}
-    </section>
-  );
+export function DesignSurface({ children, testId }: { children: ReactNode; testId: string }) {
+  return <section data-testid={testId} className="min-w-0 space-y-4">{children}</section>;
 }
 
-export function DesignPageHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-}) {
+export function DesignPageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
     <header data-testid="design-page-header" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -35,9 +17,5 @@ export function DesignPageHeader({
 }
 
 export function DesignFilterBar({ children }: { children: ReactNode }) {
-  return (
-    <div data-testid="design-filter-bar" className="flex flex-col gap-2 rounded-lg border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-center">
-      {children}
-    </div>
-  );
+  return <div data-testid="design-filter-bar" className="flex flex-col gap-2 rounded-lg border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-center">{children}</div>;
 }
