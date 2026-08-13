@@ -52,10 +52,10 @@ Core rule:
 **CLOSED — VERIFIED 2026-08-13 by combined Regression Run #136**
 
 ### PHASE 5 — Final Stabilization / Regression
-**CLOSED — VERIFIED by Run #141 after CI verification-gate correction**
+**CLOSED — VERIFIED by Run #141**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**IN PROGRESS — 6A verified by Run #144; 6B implementation package active**
+**IN PROGRESS — 6A verified by Run #144; 6B implementation verified by Run #147; next design completion package starting**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -76,7 +76,6 @@ Core rule:
 - `src/core/navigation/routes.ts` remains the canonical route map.
 - `src/core/navigation/menu.config.ts` remains the canonical navigation model.
 - Navigation contract tests protect route uniqueness, menu identity uniqueness, canonical targets, and explicit permissions.
-- Protected application shell now exposes stable semantic/test identities for sidebar, navigation groups/items, top navigation, header actions, and main content without changing existing handlers/routes/permissions.
 
 ## 5. Earlier Verified Work
 
@@ -99,6 +98,7 @@ PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
 PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
 PHASE 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
 PHASE 6B implementation commit: `7b121cea21c7c1141403f30db069320e69593bc8`.
+PHASE 6B verification commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
 
 ## 7. Verified CI Evidence
 
@@ -133,6 +133,16 @@ PHASE 6B implementation commit: `7b121cea21c7c1141403f30db069320e69593bc8`.
 
 **Conclusion:** Package 6A is VERIFIED. Run #143 was cancelled and is not treated as a code failure; Run #144 is the authoritative successful verification for 6A.
 
+### PHASE 6B — Run #147
+**Commit:** `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`
+**Run ID:** `31695256665`
+**Overall:** SUCCESS
+- Verify — SUCCESS: lint, application typecheck, Playwright test-suite typecheck, unit tests, build.
+- DB — SUCCESS: PostgreSQL, auth stub, canonical migrations, schema verification, integration/security/RLS regression.
+- Browser Smoke — SUCCESS: Chromium install, build, Playwright E2E.
+
+**Conclusion:** Package 6B is VERIFIED and officially CLOSED. Run #146 was cancelled and is not treated as a code failure; Run #147 is the authoritative successful verification for 6B.
+
 ## 8. PHASE 5 — FINAL STABILIZATION / REGRESSION
 
 Objective: strengthen the verification contract and finish stabilization without changing verified business behavior.
@@ -143,11 +153,6 @@ Completed package actions:
 3. `.github/workflows/verify-main.yml` strengthened to install `@playwright/test@1.55.0` before `npm run typecheck:all`.
 4. DB/RLS and Browser E2E remain mandatory downstream gates.
 5. Comprehensive verification passed in Run #141.
-
-Relevant commits:
-- `89f913e7ee50ae710191709f4048cb3b497ab1ca` — PHASE 5 verification hardening.
-- `dc6b0e03f3ee03c487b2f22a44e87822e9b9d81d` — CI Playwright dependency correction.
-- `5e02ee1e26b7e888b9ad411515e02841f3fcc67d` — final PHASE 5 gate record.
 
 **PHASE 5 OFFICIALLY CLOSED.**
 
@@ -185,20 +190,38 @@ Implemented in commit `7b121cea21c7c1141403f30db069320e69593bc8`:
 - Preserved all existing action handlers, routes, permissions, data hooks, and branch filtering.
 - No business logic or database behavior changed.
 
-This is the first implementation slice of 6B and is **NOT YET VERIFIED**. CI must prove PHASE 0 through 6B together before 6B can close.
+Run #146 was cancelled during Playwright setup and did not execute a complete regression.
 
-**6B STATUS: IMPLEMENTED — WAITING FOR CI.**
+Run #147 subsequently verified the 6B implementation and the complete verification pipeline successfully.
+
+**6B OFFICIALLY CLOSED — Run #147 SUCCESS.**
+
+### Next package — Design Surface Completion 6C
+
+Objective: continue the actual reference-design rebuild on the next set of primary application surfaces without changing underlying behavior.
+
+Scope:
+- Audit and implement the next highest-impact shared visual surfaces after the application shell.
+- Prioritize dashboard/content workspace, reusable cards/panels, page headers, filters, action toolbars, and responsive states where they are still inconsistent with the approved design.
+- Keep critical controls on stable semantic/test IDs.
+- Preserve routes, permissions, RPCs, service/data contracts and existing business behavior.
+- Extract repeated presentation patterns into shared components only when this reduces duplication without changing behavior.
+- Add focused regression coverage for any newly stabilized critical interaction.
+
+6C must be implemented as one coherent package where practical. If an adjacent independent design surface can safely be included, bundle it rather than creating an unnecessary separate cycle.
+
+**6C STATUS: STARTED.**
 
 ## 11. CURRENT EXECUTION
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 6+ — Remaining rebuild/design completion packages.
-**Latest verified gate:** Run #144 — SUCCESS.
+**Latest verified gate:** Run #147 — SUCCESS.
 **PHASE 0–5 status:** VERIFIED / CLOSED.
 **Package 6A:** VERIFIED / CLOSED.
-**Current package:** 6B — Design Surface Completion.
-**6B implementation commit:** `7b121cea21c7c1141403f30db069320e69593bc8`.
+**Package 6B:** VERIFIED / CLOSED.
+**Current package:** 6C — Design Surface Completion.
 
 ### Execution rule
 Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included package/phase, run the combined regression for every phase from 0 through the latest included package.
