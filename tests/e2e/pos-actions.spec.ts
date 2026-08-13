@@ -5,9 +5,11 @@ const TEST_USER_ID = '00000000-0000-0000-0000-000000000001';
 const BRANCH_ID = '00000000-0000-0000-0000-000000000010';
 const PRODUCT_ID = '00000000-0000-0000-0000-000000000020';
 const WAREHOUSE_ID = '00000000-0000-0000-0000-000000000030';
+const TABLE_ID = '00000000-0000-0000-0000-000000000040';
 
 const fakeUser = { id: TEST_USER_ID, email: 'e2e@example.test', full_name: 'E2E Admin', role: 'super_admin', is_active: true, branch_id: BRANCH_ID, created_at: new Date().toISOString() };
 const product = { id: PRODUCT_ID, branch_id: BRANCH_ID, name: 'E2E Burger', name_en: 'E2E Burger', sku: 'E2E-001', barcode: '628000000020', sale_price: 100, product_type: 'simple', category_id: null, is_active: true, low_stock_threshold: 5 };
+const diningTable = { id: TABLE_ID, branch_id: BRANCH_ID, area_id: null, name: 'Table 1', capacity: 4, status: 'vacant', shape: 'square', layout: { x: 0, y: 0, w: 120, h: 120 }, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 
 function base64Url(value: unknown) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
 function makeSession() {
@@ -33,7 +35,7 @@ async function mockPosBackend(page: Page) {
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/warehouses**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: WAREHOUSE_ID, branch_id: BRANCH_ID, is_active: true }]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/inventory**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ product_id: PRODUCT_ID, quantity: 20 }]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/product_components**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-  await page.route(`${SUPABASE_ORIGIN}/rest/v1/dining_tables**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.route(`${SUPABASE_ORIGIN}/rest/v1/dining_tables**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([diningTable]) }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/orders**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_items**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route(`${SUPABASE_ORIGIN}/rest/v1/order_kitchen_sends**`, async (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -82,6 +84,19 @@ test.describe('POS action-level', () => {
     await pay.click();
     await expect(page.getByTestId('pos-payment-confirm')).toBeVisible();
     await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible();
+  });
+
+  test('dine-in opens floorplan, selects a table, sets guests, and starts the table order', async ({ page }) => {
+    await page.getByTestId('pos-order-type-dine_in').click();
+    await expect(page.getByTestId(`pos-table-${TABLE_ID}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('pos-table-filter-vacant')).toBeVisible();
+    await page.getByTestId(`pos-table-${TABLE_ID}`).click();
+    const guestCount = page.getByTestId(`pos-table-${TABLE_ID}-guest-count`);
+    await expect(guestCount).toBeVisible();
+    await guestCount.fill('3');
+    await page.getByTestId(`pos-table-${TABLE_ID}-start`).click();
+    await expect(page.getByText('E2E Burger', { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('pos-order-type-picker')).toBeHidden();
   });
 
   test('order-type actions expose supported flows and back navigation', async ({ page }) => {
