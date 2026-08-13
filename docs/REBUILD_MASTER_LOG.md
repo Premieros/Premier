@@ -10,6 +10,18 @@
 **Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site always reflects green `main` only.
 **Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created.
 
+## CI Checkpoint — P0 + P1 (green)
+
+PR #4 (`https://github.com/Premieros/Premier/pull/4`, head `ui-visual-rebuild-6h`) — after pushing P0 (`690eb71`) + P1 (`82f59a8`):
+
+| Check | Result |
+|-------|--------|
+| verify (lint / typecheck:all / unit / build) | ✅ success |
+| db (Postgres migrations + RLS + integration/security tests incl. P0) | ✅ success |
+| browser-smoke | ✅ success |
+
+Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
+
 ## Deployment & Branch Workflow (locked decision — user approved)
 
 1. All visual + security work happens **ONLY** on `ui-visual-rebuild-6h` (the trial branch). **Never** develop directly against the published site (production Supabase data).
@@ -57,10 +69,12 @@ Audited gaps (from the completed branch-isolation audit):
 - Brand linkage: primary stays violet by default (approved identity); `--ui-accent` follows the brand engine (`--brand-600`), so merchant brand still drives highlights/charts. Decision recorded for future phases.
 - Keep semantic identities and interaction behavior unchanged.
 
-### P2 (6H-B) — App Shell
-- Rebuild Sidebar, Header, navigation hierarchy, content surface and responsive shell.
-- Add a global **active-branch indicator** (and branch switcher for admins) in the shell.
-- Preserve all route guards, permissions, active navigation behavior, existing handlers, and the stable IDs (`app-sidebar`, `nav-item-{id}`, `nav-group-{group}`, `mobile-sidebar-backdrop`, `design-content-surface`).
+### P2 (6H-B) — App Shell — DONE
+- Rebuilt Sidebar, Header, navigation hierarchy, content surface and responsive shell on the new `ui-*` tokens (`Layout.tsx`).
+- Added a global **active-branch indicator** + **admin branch switcher** in the header: `data-testid="branch-indicator"`, dropdown `branch-menu` with `branch-option-all` and `branch-option-{id}`. Non-admins see a read-only chip pinned to their branch; admins pick "All branches" or any branch.
+- New lightweight global store `src/lib/activeBranch.ts` (`getActiveBranchId` / `setActiveBranchId` / `useActiveBranchId`, persisted to `localStorage`) — the shell indicator uses it now; P3 wires the dashboard to it.
+- Preserved ALL stable IDs: `app-shell`, `app-sidebar`, `app-navigation`, `nav-group-{group}`, `nav-group-toggle-{group}`, `nav-item-{id}`, `sidebar-close`, `sidebar-open`, `mobile-sidebar-backdrop`, `assistant-card`, `app-header`, `top-navigation`, `top-tab-{key}`, `active-orders-button`, `active-orders-count`, `user-menu-button`, `language-toggle`, `theme-toggle`, `sign-out-button`, `app-main`, `design-content-surface`.
+- Route guards, permissions, active-navigation behavior, `navigate('/floor-plan')` active-orders handler, and all existing handlers unchanged.
 
 ### P3 (6H-C) — Dashboard
 - Complete the `VisualDashboardPage` contract, restoring everything the old `DashboardFoodicsPage` had:
@@ -112,9 +126,10 @@ Audited gaps (from the completed branch-isolation audit):
 - Fixed local git fetch refspec so all remote branches are visible.
 - **P0 (security) done & pushed** — migration `068_security_harden_audit_gaps.sql` (revoke `process_sale` from anon/public, restrict `subscription_status`, branch-scope `product_components` SELECT via parent product), `ReportsPage.tsx` `recipe_costs` branch filter, integration tests `tests/integration/p0_security_hardening.test.ts`. Local gates green; pushed to PR #4 for CI. Commit `690eb71`.
 - **P1 (design tokens) done** — expanded `--ui-*` tokens + `.dark` overrides in `src/index.css`, `ui` color namespace + shadow/radius scales in `tailwind.config.js`. Local gates green (lint 0 errors, typecheck:all, 139 unit tests, build).
+- **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
 
 ### Pending
-- P2 app shell; P3 dashboard contract; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- P3 dashboard contract; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
 - Verify PR #4 CI after each pushed batch (last check: P0 pushed).
 
 ## Relationship Audit Note
