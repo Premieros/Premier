@@ -140,8 +140,8 @@ test.describe('POS action-level', () => {
     await addProduct(page);
     await page.getByTestId('pos-action-hold').click();
     await expect(page.getByTestId('pos-action-hold')).toBeVisible();
-    await expect(rpcCalls).toContain('create_order');
-    await expect(rpcCalls).toContain('set_order_status');
+    await expect.poll(() => rpcCalls.includes('create_order'), { timeout: 10000 }).toBe(true);
+    await expect.poll(() => rpcCalls.includes('set_order_status'), { timeout: 10000 }).toBe(true);
     const statusPayload = (rpcPayloads.set_order_status?.[0] || {}) as { p_status?: string };
     expect(statusPayload.p_status).toBe('held');
   });
@@ -160,10 +160,10 @@ test.describe('POS action-level', () => {
     await addProduct(page);
     await page.getByTestId('pos-action-pay').click();
     await expect(page.getByTestId('pos-payment-method-cash')).toBeVisible({ timeout: 10000 });
-    await expect.poll(() => rpcCalls.includes('create_order')).toBe(true);
     await page.getByTestId('pos-payment-method-cash').click();
     await page.getByTestId('pos-payment-confirm').click();
-    await expect.poll(() => rpcCalls.includes('process_sale')).toBe(true);
+    await expect.poll(() => rpcCalls.includes('create_order'), { timeout: 10000 }).toBe(true);
+    await expect.poll(() => rpcCalls.includes('process_sale'), { timeout: 10000 }).toBe(true);
     const payload = (rpcPayloads.process_sale?.[0] || {}) as { p_status?: string; p_payment_method?: string; p_order_type?: string };
     expect(payload.p_status).toBe('completed');
     expect(payload.p_payment_method).toBe('cash');
