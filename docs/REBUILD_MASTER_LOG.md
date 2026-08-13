@@ -55,7 +55,7 @@ Core rule:
 **CLOSED — VERIFIED by Run #141 after CI verification-gate correction**
 
 ### PHASE 6+ — Remaining rebuild/design completion packages
-**NEXT**
+**IN PROGRESS — first package: navigation/UI contract hardening**
 
 ### FINAL — PR Review / Merge
 **PENDING**
@@ -64,7 +64,7 @@ Core rule:
 
 - Unified application shell and centralized navigation.
 - Stable IDs for critical interactions and E2E tests.
-- POS order-type selectors: `pos-order-type-picker`, `pos-order-type-dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, `pos-order-type-takeaway`.
+- POS order-type selectors: `pos-order-type-picker`, `pos-order-type_dine_in`, `pos-order-type-drive_thru`, `pos-order-type-delivery`, `pos-order-type-takeaway`.
 - Cart quantity IDs are product-specific.
 - Payment IDs: `pos-payment-method-{method}`, `pos-payment-confirm`.
 - Table IDs: `pos-table-{tableId}`, table filter/search/guest/start IDs.
@@ -73,6 +73,9 @@ Core rule:
 - Delivery IDs: phone/address/notes/start.
 - UI layout is independent from action/service logic.
 - Shared components and stable action identities make future visual rearrangement safe.
+- `src/core/navigation/routes.ts` remains the canonical route map.
+- `src/core/navigation/menu.config.ts` remains the canonical navigation model.
+- Navigation contract tests protect route uniqueness, menu identity uniqueness, canonical targets, and explicit permissions.
 
 ## 5. Earlier Verified Work
 
@@ -145,24 +148,46 @@ Per user decision, the independent Relationship Integrity Gate is intentionally 
 
 After the rebuild plan, perform a dedicated final database/relationship audit covering Foreign Keys, relationship paths, orphan records, constraints, delete/update behavior, RLS through relationships, branch isolation, and RPC dependencies.
 
-## 10. CURRENT EXECUTION
+## 10. PHASE 6+ — CURRENT REBUILD/DESIGN COMPLETION PACKAGE
+
+### Package 6A — Navigation/UI contract hardening
+
+Objective: make the remaining UI rebuild safer to continue by locking the canonical navigation contract independently of visual placement.
+
+Completed in this package:
+- Added `tests/unit/navigation-contract.test.ts`.
+- Verifies canonical route values are unique.
+- Verifies menu item IDs are unique and stable.
+- Verifies every menu target belongs to `APP_ROUTES`.
+- Verifies protected navigation items carry explicit permissions.
+- No business logic, permissions, routes, or visual behavior were changed.
+
+Commit:
+`8241281dfee078e8a5beac7f3079eaa25aad076f`
+
+Status: **IMPLEMENTED — CI verification pending.**
+
+Next within PHASE 6+: audit remaining reference-design surfaces and bundle compatible UI completion work before another full regression gate. Do not declare this package/phase closed until PHASE 0 through the latest included package all pass together.
+
+## 11. CURRENT EXECUTION
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 6+ — Remaining rebuild/design completion packages.
 **Latest verified gate:** Run #141 — SUCCESS.
 **PHASE 0–5 status:** VERIFIED / CLOSED.
+**Current package:** 6A — Navigation/UI contract hardening.
 
-### Next execution rule
-Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive phases are independent, bundle them. Before closing any included phase, run the combined regression for every phase from 0 through the latest included phase.
+### Execution rule
+Implement the next remaining design/rebuild work as the largest safe coherent package. If consecutive packages are independent, bundle them. Before closing any included phase/package, run the combined regression for every phase from 0 through the latest included package.
 
-## 11. Session Update Rule
+## 12. Session Update Rule
 
 Every meaningful action must be recorded here with date/time, branch, phase, previous verified CI, root cause, files changed, fix, commit(s), new CI status/result, remaining blockers, and exact next action.
 
 User explicitly requested to be told every time progress is recorded.
 
-## 12. Definition of Done
+## 13. Definition of Done
 
 The rebuild is complete only when the reference design is the intended production UI, critical controls have stable identities independent of layout, dashboard/navigation and POS/FloorPlan/Kitchen/payment flows are verified, RBAC/branch isolation is verified, build/typecheck/lint/unit/browser/regression checks pass, no critical blocker remains, the deferred relationship audit passes, and PR #3 is reviewed before merge to `main`.
 
