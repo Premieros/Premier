@@ -49,8 +49,12 @@ Audited gaps (from the completed branch-isolation audit):
 
 ## 6H + 6I — Full Visual Rebuild Bundle
 
-### P1 (6H-A) — Design Tokens
-- Establish the new visual language: color (violet `#5b2bd8` family), typography (Inter/Cairo), spacing, radius, shadows, density, RTL/LTR and dark mode via CSS variables + Tailwind config, linked to the brand-color engine.
+### P1 (6H-A) — Design Tokens — DONE
+- Established the new visual language via CSS variables + Tailwind config, linked to the brand-color engine.
+- `src/index.css`: expanded `--ui-*` token set (primary violet `#5b2bd8` + hover/active/soft/fg, `--ui-accent` = `var(--brand-600)` so accents/charts follow the merchant brand engine, surface/raised, page/page-alt, border/strong, text/muted/subtle, success/warning/danger/info, radius scale `sm/…/2xl`, shadow scale `sm/xl`, focus ring) + `.dark` token overrides for neutrals.
+- `tailwind.config.js`: new `ui` color namespace (`bg-ui-page`, `text-ui-text`, `bg-ui-primary`, `text-ui-muted`, …), `shadow-ui-*` scale, `rounded-ui*` scale.
+- `body` now uses `bg-ui-page text-ui-text`; `.ui-surface` uses `var(--ui-shadow)`.
+- Brand linkage: primary stays violet by default (approved identity); `--ui-accent` follows the brand engine (`--brand-600`), so merchant brand still drives highlights/charts. Decision recorded for future phases.
 - Keep semantic identities and interaction behavior unchanged.
 
 ### P2 (6H-B) — App Shell
@@ -106,10 +110,12 @@ Audited gaps (from the completed branch-isolation audit):
 - Baseline gates green locally: lint (0 errors), typecheck:all, test:unit (139 passed), build.
 - Rollback tag `rb-6h-base` created.
 - Fixed local git fetch refspec so all remote branches are visible.
+- **P0 (security) done & pushed** — migration `068_security_harden_audit_gaps.sql` (revoke `process_sale` from anon/public, restrict `subscription_status`, branch-scope `product_components` SELECT via parent product), `ReportsPage.tsx` `recipe_costs` branch filter, integration tests `tests/integration/p0_security_hardening.test.ts`. Local gates green; pushed to PR #4 for CI. Commit `690eb71`.
+- **P1 (design tokens) done** — expanded `--ui-*` tokens + `.dark` overrides in `src/index.css`, `ui` color namespace + shadow/radius scales in `tailwind.config.js`. Local gates green (lint 0 errors, typecheck:all, 139 unit tests, build).
 
 ### Pending
-- P0 security migration (`050_*`) + RLS/integration tests.
-- P1 design tokens; P2 app shell; P3 dashboard contract; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- P2 app shell; P3 dashboard contract; P4 reports center; P5 shared components + identity registry; P6 POS visual; P7 safe removal + final CI + PR.
+- Verify PR #4 CI after each pushed batch (last check: P0 pushed).
 
 ## Relationship Audit Note
 
