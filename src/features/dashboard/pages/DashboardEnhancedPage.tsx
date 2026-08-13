@@ -1,18 +1,10 @@
-import { DashboardFoodicsPage } from './DashboardFoodicsPage';
+import { VisualDashboardPage } from './VisualDashboardPage';
 
 /**
- * Dashboard surface contract.
- *
- * Keep the dashboard's business/data implementation in DashboardFoodicsPage while
- * giving the visual surface a stable semantic boundary. This lets the reference
- * layout evolve without coupling actions/data hooks to DOM placement.
+ * 6H visual rebuild entry point.
+ * Business/data concerns remain isolated in the existing hooks/API layer;
+ * this component owns the new visual dashboard surface.
  */
 export function DashboardEnhancedPage() {
-  return (
-    <div data-testid="dashboard-surface" className="min-w-0">
-      <div data-testid="dashboard-content" className="mx-auto w-full max-w-[1500px]">
-        <DashboardFoodicsPage />
-      </div>
-    </div>
-  );
+  return <VisualDashboardPage />;
 }
