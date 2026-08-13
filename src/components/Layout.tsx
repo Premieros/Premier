@@ -133,7 +133,11 @@ export function Layout({ children }: { children: ReactNode }) {
             <button data-testid="sign-out-button" type="button" onClick={signOut} className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={ar ? 'تسجيل الخروج' : 'Sign out'}><LogOut className="h-5 w-5" /></button>
           </div>
         </header>
-        <main data-testid="app-main" className="min-h-[calc(100vh-76px)] bg-[#fafafa] p-4 sm:p-6 lg:p-7 dark:bg-navy-950">{children}</main>
+        <main data-testid="app-main" className="min-h-[calc(100vh-76px)] bg-[#fafafa] p-4 sm:p-6 lg:p-7 dark:bg-navy-950">
+          <div data-testid="design-content-surface" className="min-w-0 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-5">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
