@@ -107,15 +107,18 @@ Required action-level flows verified:
 - `ef2a90c58162e81b1d9f26651103a2663c1de925` — corrected Hold/Complete Sale persistence boundaries.
 - `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c` — Complete Sale test corrected to assert the actual payment completion boundary and `process_sale`.
 
-## 7. Safety Checkpoint
+## 7. Safety Checkpoints
 
-Named rollback point:
+PHASE 3 rollback point:
 `ui-rebuild-phase3-checkpoint-2026-08-13`
 
-Checkpoint commit:
+PHASE 3 checkpoint commit:
 `b46c29eb10ed085653296c326f3fa3596f8db739`
 
-Use it only if a later change causes regression or unsafe divergence.
+PHASE 4 rollback point:
+`ui-rebuild-phase4-checkpoint-2026-08-13`
+
+PHASE 4 checkpoint is the last fully verified PHASE 3 state before PHASE 4 changes. Use it only if a later change causes regression or unsafe divergence.
 
 ## 8. Failure Analysis
 
@@ -198,8 +201,8 @@ Required gate:
 - **Full regression of all previously closed phases is mandatory before PHASE 4 closes.**
 
 ### PHASE 4 workflow
-1. Create a PHASE 4 checkpoint from the last fully verified state.
-2. Inventory auth/RBAC/RLS policies, helper functions, protected routes, and relevant tests.
+1. Create a PHASE 4 checkpoint from the last fully verified state. **DONE:** `ui-rebuild-phase4-checkpoint-2026-08-13`.
+2. Inventory auth/RBAC/RLS policies, helper functions, protected routes, and relevant tests. **IN PROGRESS.**
 3. Identify gaps/unsafe assumptions before changing code.
 4. Add Action-Level security tests for the gaps.
 5. Fix root causes only where evidence requires it.
@@ -209,14 +212,26 @@ Required gate:
 9. Close PHASE 4 only when security tests and all earlier regression tests are green.
 10. Record checkpoint, findings, fixes, commits, CI and next action here.
 
+### PHASE 4 finding — CI coverage gap identified
+
+The repository already contains a substantial RLS branch-isolation integration suite (`tests/integration/rls_branch_isolation.test.ts`) covering cross-branch reads/writes, role modes, child-table isolation and deny-by-default behavior. However, the PR verification workflow previously ran only typecheck/lint/unit/build plus Playwright; the DB/RLS integration suite existed in the deploy workflow but was not a required PR gate.
+
+**Action taken:** `.github/workflows/verify-main.yml` was upgraded so PR verification now provisions PostgreSQL, applies the CI auth stub and canonical migrations, verifies the schema, applies the existing CI fixture helpers, and runs `npm run test:integration`. Browser E2E now depends on both application verification and the DB/security integration gate.
+
+Commit:
+`0fc866a806a8b536e02ca26eeb57928f1178aabc`
+
+This is a **test/verification infrastructure hardening change**, not a claim that PHASE 4 security is already proven. The new CI gate must run and pass before we close any PHASE 4 security item.
+
 ## 12. Current State
 
 **Branch:** `ui-rebuild-foodics-2026`
 **PR #3:** Open, not merged.
 **Current phase:** PHASE 4 — Security / RBAC / Branch Isolation.
-**Latest verified commit:** `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c`.
-**Latest CI:** Run #126 — SUCCESS, 50/50 E2E.
-**Rollback checkpoint:** `ui-rebuild-phase3-checkpoint-2026-08-13` / `b46c29e...`.
+**Latest fully verified commit:** `9db50b6b8e4d59a62f2faa394db8b3c8003fff3c`.
+**Latest fully verified CI:** Run #126 — SUCCESS, 50/50 E2E.
+**Latest PHASE 4 verification-infrastructure commit:** `0fc866a806a8b536e02ca26eeb57928f1178aabc` (CI pending).
+**Rollback checkpoint:** `ui-rebuild-phase4-checkpoint-2026-08-13`.
 
 ## 13. Session Update Rule
 
