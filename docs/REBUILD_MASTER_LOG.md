@@ -6,18 +6,18 @@
 
 **Branch:** `ui-rebuild-foodics-2026`  
 **PR #3:** Open, not merged.  
-**Latest verified gate:** Run #151 — SUCCESS.  
+**Latest verified gate:** Run #160 — SUCCESS.  
 **PHASE 0–5:** VERIFIED / CLOSED.  
 **6A:** VERIFIED / CLOSED.  
 **6B:** VERIFIED / CLOSED.  
 **6C:** VERIFIED / CLOSED — Run #151.  
-**6D–6G:** IMPLEMENTED — commit pending, CI verification pending.
+**6D–6G:** VERIFIED / CLOSED — Run #160.
 
 ## Next Bundle: PHASE 6D–6G
 
 The user approved bundling multiple independent design-completion stages to reduce unnecessary CI cycles, provided each stage remains behavior-preserving and the combined regression passes.
 
-**Status: IMPLEMENTED (pending commit + CI).** All list/filter/table pages now use the unified `Design*` surface package (`DesignSurface`, `DesignPageHeader`, `DesignFilterBar`, `DesignSearch`, `DesignPanel`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, `DesignErrorState`). Canonical primitives gained stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`, `pagination-bar`, `design-*`), and `DataTable` accepts an `error` prop wired from `usePaginatedRows`. Local gates green: lint (0 errors), typecheck, `typecheck:all`, `test:unit` (139 tests incl. 17-page design-surface contract + 31 page smoke tests), `build`.
+**Status: VERIFIED / CLOSED — Run #160.** All list/filter/table pages use the unified `Design*` surface package (`DesignSurface`, `DesignPageHeader`, `DesignFilterBar`, `DesignSearch`, `DesignPanel`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, `DesignErrorState`). Canonical primitives gained stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`, `pagination-bar`, `design-*`), and `DataTable` accepts an `error` prop wired from `usePaginatedRows`. The parallel run's Layout/Login/dashboard changes were merged in; `DashboardChrome` keeps its passthrough form so the nav/shell contract test is untouched. Local gates: lint (0 errors), typecheck, `typecheck:all`, `test:unit` (139 tests incl. 17-page design-surface contract + 31 page smoke tests), build.
 
 ### 6D — Page Headers & Action Toolbars
 - Standardize page headers, titles, breadcrumbs and primary action areas.
@@ -59,9 +59,18 @@ Completed:
 - Login consumes the shared `DesignSurface` with stable identities for the login surface, language toggle, mode toggle, form, and submit action.
 - Added `tests/components/design-surfaces.test.tsx` locking primitives' test IDs and page-surface wiring for 17 pages.
 
-**Status:** implementation complete. No 6D–6G stage is closed yet; CI verification is required before closure.
+**Status:** 6D–6G is closed. See Run #160 below for verification evidence.
 
 ## Verified CI Evidence
+
+### Run #160 — 6D–6G Final Verification
+**Run ID:** `31730936820`  
+**Overall:** SUCCESS
+- Verify: SUCCESS — lint, typecheck, Playwright suite typecheck, unit tests, build.
+- DB: SUCCESS — migrations, schema verification, integration, security/RLS regression.
+- Browser Smoke: SUCCESS — Chromium, build, Playwright E2E.
+
+**Conclusion:** 6D–6G is officially verified and closed. (The parallel run's Run #159 failed on the nav/shell contract because its `DashboardChrome` change replaced the passthrough; reconciled in the merge commit `dc6fda9`.)
 
 ### Run #151 — 6C Final Verification
 **Run ID:** `31698574739`  
@@ -80,6 +89,7 @@ Completed:
 - 6A — Run #144 — SUCCESS.
 - 6B — Run #147 — SUCCESS.
 - 6C — Run #151 — SUCCESS.
+- 6D–6G — Run #160 — SUCCESS.
 
 ## Safety Checkpoints
 
@@ -91,6 +101,9 @@ Completed:
 - 6C implementation commit: `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
 - 6C verified gate: Run #151 / `31698574739`.
 - 6D–6G base checkpoint: `e455295372aa20b5552aed511ee80a463130d8ca`.
+- 6D–6G implementation commit: `1f3f24d`.
+- 6D–6G reconciliation merge: `dc6fda9`.
+- 6D–6G verified gate: Run #160 / `31730936820`.
 
 ## Deferred Relationship Audit
 
