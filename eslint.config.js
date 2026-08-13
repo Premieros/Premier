@@ -44,17 +44,6 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      'src/features/dashboard/pages/DashboardControlCenterPage.tsx',
-      'src/features/dashboard/pages/DashboardFinalPage.tsx',
-      'src/features/dashboard/pages/DashboardModernPage.tsx',
-    ],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-    },
-  },
-  {
     files: ['src/features/admin/pages/SystemControlCenterPage.tsx'],
     rules: {
       'no-extra-boolean-cast': 'off',

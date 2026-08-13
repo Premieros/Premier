@@ -8,7 +8,7 @@
 **Base:** `main` after PR #3 merge (`15847d1`)
 **Bundle:** 6H + 6I — Full Visual Rebuild (Security + App Shell + Design System + Dashboard + Reports Center + POS)
 **Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site always reflects green `main` only.
-**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created. P0–P6 pushed and CI green on PR #4 (last: P6 POS visual).
+**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created. P0–P7 pushed and CI green on PR #4 (last: P7 legacy removal + final gate). PR stays Draft until the full-bundle merge checkpoint.
 
 ## CI Checkpoint — P0 + P1 (green)
 
@@ -59,6 +59,18 @@ After pushing P5 (`8152eb7`, shared components on ui tokens + interaction-identi
 ## CI Checkpoint — P6 (green)
 
 After pushing P6 (`POS visual on ui tokens`, on top of P5):
+
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
+
+## CI Checkpoint — P7 (green)
+
+After pushing P7 (`legacy removal + final gate`, on top of P6):
 
 | Check | Result |
 |-------|--------|
@@ -160,7 +172,7 @@ Audited gaps (from the completed branch-isolation audit):
 - 6I-A POS Workspace layout; 6I-B Product Browser / Order Panel; 6I-C Order Types / Tables (Table, Delivery, Takeaway, Car, Quick); 6I-D Active Orders / Kitchen integration UI.
 - Presentation only — preserve every existing handler, data contract, table availability, occupied-table, guest-count and order-selection logic.
 
-### P7 — Safe Legacy Removal + Final CI + PR
+### P7 — Safe Legacy Removal + Final CI + PR — DONE
 1. Consumer audit: identify every import/route of `DashboardFoodicsPage`, orphan POS components (`TypeChangePicker`, `OrderTypeQuickPicker`, unused `src/ui`), and any legacy surfaces.
 2. Remove them only after the replacement is fully verified by tests.
 3. Full gate: lint, typecheck:all, unit/smoke, build, DB/RLS integration/security, browser e2e.
@@ -193,10 +205,10 @@ Audited gaps (from the completed branch-isolation audit):
 - **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
 - **P5 (shared components + identity registry) done** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build). Pushed `8152eb7`; PR #4 CI green (verify, db, browser-smoke).
 - **P6 (POS visual) done** — swept the entire POS feature onto `ui-*` design tokens, presentation-only (no logic/props/handlers/testids changed; all `pos-*` data attributes, bottom-bar `onClick={() => setOrdersOpen(true)}`, and its aria-label preserved): `PosWorkspacePage` (workspace shell, loading/error screens, receipt modal), `PosTopBar`, `ProductBrowser` (search, category chips, cards, stock badges), `CurrentOrderPanel` (chips, cart rows, steppers, totals, pay = `bg-ui-success`, discount editor), `PaymentPanel` (method cards, paid input, change banner, confirm), `OrderTypeBottomBar` (drawer + bottom nav pill), `ActiveOrdersDrawer` (backdrop/aside/filters/cards/actions), `KitchenPanel` (sends, status badges), `TablesPanel` + `TableFloorPlan` (floor canvases, table cards), `OrderStartWizard` + `OrderTypePicker` + `CarOrderStep` + `DeliveryOrderStep` + `TablePickerStep` + `TableActionModal` + `OrderTypeQuickPicker` + `TypeChangePicker`, `ActiveOrdersPage` (StatCard color map via shared `PageHeader.tsx`, branch select, filters, order cards, table form inputs). Utility style maps tokenized: `orderTypes.ts` `STATUS_STYLES`, `orderStage.ts`, `orderState.ts` (+ `OrderStateDot`), `orderLabels.ts` `ORDER_TYPE_META` pill. `shadow-pos`/`hover:shadow-card-hover` → `shadow-ui-*`. No hardcoded slate/navy/gold/brand/emerald/amber/red/sky/blue/orange/green color classes remain under `src/features/pos`. Local gates green (lint 0 errors, typecheck:all, test:unit 213/213, build).
+- **P7 (safe legacy removal) done** — full consumer audit completed first, then only proven orphans removed. **Replacement proof:** `VisualDashboardPage` (live via route `/dashboard` → `DashboardEnhancedPage`) contains every marker the legacy contract pinned (`reportType=sales|sales_by_payment|sales_by_product|detailed_invoices`, `to="/inventory"`, `setCompareEnabled`, `setFilterOpen`; no `sales_by_branch`, no `/pos/active`), and the `interactionIdentity` registry pins dashboard testids (`dashboard-surface`, `dashboard-branch-filter`, …) to `VisualDashboardPage`; POS bottom-bar nav + aria contracts remain pinned to `OrderTypeBottomBar`. **Contract tests before deletion: 117/117 green; after deletion: 117/117 green** (7 files: interactionIdentity, navigationRegression, dashboardContract, navigation-contract, navigationRegistry, reportsCenterContract, pages.smoke). **Deleted (11, all zero-consumer after audit):** `DashboardFoodicsPage.tsx`, `DashboardPage.tsx`, `DashboardControlCenterPage.tsx`, `DashboardFinalPage.tsx`, `DashboardModernPage.tsx` (legacy dashboard + compat wrappers), `DashboardChrome.tsx` (legacy shell adapter, only consumer was the deleted legacy page), `TypeChangePicker.tsx`, `OrderTypeQuickPicker.tsx` (orphan POS pickers, no import anywhere), `src/ui/AppCard.tsx`, `src/ui/AppStatCard.tsx`, `src/ui/index.ts` (orphan package, zero consumers in src/tests). **Kept:** `VisualDashboardPage.tsx`, `DashboardEnhancedPage.tsx` (live route), `OrderTypePill.tsx`, `OrderStageBadge.tsx`, `OrderStatusBadge.tsx`, `CurrentOrderPanel.tsx`, all start-wizard/table/orders/kitchen components (live consumers), `orderLabels.ts`/`orderStage.ts`/`orderState.ts`/`orderTypes.ts` (used by live components). **Test/config re-points (no contracts weakened):** `navigationRegression.test.ts` now reads `VisualDashboardPage.tsx` (same 9 assertions) and dropped the obsolete `DashboardChrome` read; `pages.smoke.test.tsx` renders `DashboardEnhancedPage` (the real route component); `eslint.config.js` removed the deleted-wrappers exception block. **Full gate green:** lint 0 errors (16 pre-existing warnings), typecheck:all, test:unit 213/213, build; DB/RLS integration 153 tests self-skip locally (no DB URL — runs in CI `db` job); browser-smoke runs in CI. **Observation (not deleted):** `src/features/pos/hooks/usePosSummary.ts` is unused but is a hook, not a listed legacy surface — flagged for a future cleanup decision. No business logic, RBAC/RLS, schema, routes, or POS behavior changed. Pushed; PR #4 CI green (verify, db, browser-smoke).
 
 ### Pending
-- P7 safe removal + final CI + PR.
-- Verify PR #4 CI after each pushed batch (last check: P6 pushed and green — verify, db, browser-smoke all success).
+- P7 pushed and CI green; PR #4 stays in Draft — merge into `main` only at the final full-bundle green checkpoint per workflow rule 3 (last check: P7 green — verify, db, browser-smoke all success).
 
 ## Relationship Audit Note
 
