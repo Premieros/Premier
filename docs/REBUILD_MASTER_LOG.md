@@ -11,7 +11,7 @@
 **6A:** VERIFIED / CLOSED.  
 **6B:** VERIFIED / CLOSED.  
 **6C:** VERIFIED / CLOSED — Run #151.  
-**Next bundled package:** **6D–6G — Design Surface Completion Bundle.**
+**Current package:** **6D–6G — Design Surface Completion Bundle — IMPLEMENTATION IN PROGRESS.**
 
 ## Next Bundle: PHASE 6D–6G
 
@@ -43,6 +43,19 @@ The user approved bundling multiple independent design-completion stages to redu
 6. Before closure, run Verify + DB/RLS + Browser E2E and the full regression from PHASE 0 through 6G.
 7. If a regression appears, stop, identify the responsible stage, fix the root cause, and rerun the affected and full regression gates.
 8. Close only the stages whose implementation and evidence are both complete.
+
+## 6D–6G Implementation Progress — Current Session
+
+The previously stalled local OpenCode process was stopped to prevent concurrent working-tree writes. Implementation is now being continued directly from the latest GitHub branch state.
+
+Completed so far:
+- Shared `DesignSurface`, `DesignPageHeader`, and `DesignFilterBar` stabilized in `src/components/design/DesignSurface.tsx`.
+- Added shared `DesignPanel`, `DesignEmptyState`, `DesignLoadingState`, and `DesignErrorState` in `src/components/design/DesignStates.tsx`.
+- Dashboard variants now consume the shared `DesignSurface` through `DashboardChrome` with stable `dashboard-surface` identity.
+- Protected application content now has a stable responsive `design-content-surface` wrapper in `Layout` without changing routing, permissions, data fetching, or business logic.
+- Login now consumes the shared `DesignSurface` and has stable identities for the login surface, language toggle, mode toggle, form, and submit action.
+
+**Status:** implementation in progress. No 6D–6G stage is closed yet. CI verification is required before closure.
 
 ## Verified CI Evidence
 
