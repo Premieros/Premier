@@ -1,10 +1,13 @@
 ﻿import { useEffect, useState, useRef } from 'react';
-import { Plus, Edit2, Trash2, Search, Download, Upload, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, Upload, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignSearch } from '@/components/design/DesignSearch';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -19,7 +22,6 @@ import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Product, Category, ProductUnit, ProductComponentInput } from '@/lib/types';
 
 const UNIT_NAMES = ['piece', 'carton', 'box', 'pack', 'kg', 'liter', 'meter', 'gram'];
@@ -288,44 +290,35 @@ export function ProductsPage() {
   ];
 
   return (
-    <div>
-      <PageHeader
+    <DesignSurface testId="products-page">
+      <DesignPageHeader
         title={t('products')}
         actions={
           <>
             {can('products.import') && (
-              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} data-testid="products-import" />
             )}
             {can('products.import') && (
-              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
+              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} data-testid="products-import-button"><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
             )}
             {can('products.export') && (
-              <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+              <Button variant="outline" size="sm" onClick={handleExport} data-testid="products-export"><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
             )}
             {can('products.manage') && (
-              <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+              <Button size="sm" onClick={openAdd} data-testid="products-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
             )}
           </>
         }
       />
 
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-      </Card>
+      <DesignPanel testId="products-search-panel">
+        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="products-search" />
+      </DesignPanel>
 
-      <Card className="p-4">
+      <DesignPanel testId="products-table-panel">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('products.manage') ? openEdit : undefined} />
-        <PaginationBar loaded={products.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={products.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       {/* Add/Edit Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')} size="xl">
@@ -472,6 +465,6 @@ export function ProductsPage() {
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
       />
-    </div>
+    </DesignSurface>
   );
 }

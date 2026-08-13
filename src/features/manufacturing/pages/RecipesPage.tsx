@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, ChefHat } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChefHat } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
 import { useAuth } from '@/context/AuthContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -15,7 +15,6 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatNumber } from '@/lib/format';
 import { logAudit } from '@/lib/audit';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Recipe, RecipeItem, RawMaterial, Product, Branch, RecipeItemInput } from '@/lib/types';
 
 interface ItemForm {
@@ -34,7 +33,7 @@ export function RecipesPage() {
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
 
-  const { rows: recipes, loading, total, hasMore, loadMore, loadingMore, refresh: reloadRecipes } = usePaginatedRows<Recipe>({
+  const { rows: recipes, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadRecipes } = usePaginatedRows<Recipe>({
     table: 'recipes',
     select: '*, product:products(*), branch:branches(*)',
     order: { column: 'created_at', ascending: false },
@@ -193,25 +192,21 @@ export function RecipesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('recipes')} subtitle={isAr ? 'ربط المنتجات المصنّعة بمكوناتها من المواد الخام' : 'Link manufactured products to their raw material components'} actions={
+    <DesignSurface testId="recipes-page">
+      <DesignPageHeader title={t('recipes')} subtitle={isAr ? 'ربط المنتجات المصنّعة بمكوناتها من المواد الخام' : 'Link manufactured products to their raw material components'} actions={
         can('recipes.manage') ? (
           <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('addRecipe')}</Button>
         ) : undefined
       } />
 
-      <Card className="mb-4 p-4">
-        <div className="relative flex-1">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
+      <DesignPanel testId="recipes-search-panel">
+        <DesignSearch value={search} onChange={setSearch} label={t('search')} placeholder={t('search')} testId="recipes-search" />
+      </DesignPanel>
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={recipes.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+      <DesignPanel testId="recipes-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} />
+        <DesignPagination loaded={recipes.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('editRecipe') : t('addRecipe')} size="2xl">
         <div className="space-y-5">
@@ -264,6 +259,6 @@ export function RecipesPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

@@ -1,9 +1,12 @@
 ﻿import { useState } from 'react';
-import { Search, ScrollText } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignSearch } from '@/components/design/DesignSearch';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
+import { DesignLoadingState, DesignEmptyState } from '@/components/design/DesignStates';
 import { DataTable, type Column } from '@/components/DataTable';
-import { PaginationBar } from '@/components/PaginationBar';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { formatDateTime } from '@/lib/format';
 import type { AuditLog } from '@/lib/types';
@@ -35,28 +38,21 @@ export function AuditLogPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('auditLog')} subtitle={t('auditLog')} />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
+    <DesignSurface testId="audit-log-page">
+      <DesignPageHeader title={t('auditLog')} description={t('auditLog')} />
+      <DesignPanel testId="audit-log-search-panel">
+        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="audit-log-search" />
+      </DesignPanel>
+      <DesignPanel testId="audit-log-table-panel">
         {loading ? (
-          <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div>
+          <DesignLoadingState />
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            <ScrollText className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">{t('noData')}</p>
-          </div>
+          <DesignEmptyState title={t('noData')} icon={<ScrollText className="h-8 w-8" />} />
         ) : (
           <DataTable columns={columns} data={filtered} emptyMessage={t('noData')} />
         )}
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
-    </div>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
+    </DesignSurface>
   );
 }

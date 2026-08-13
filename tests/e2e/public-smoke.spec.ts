@@ -1,37 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 const protectedRoutes = [
-  '/dashboard',
-  '/pos',
-  '/floor-plan',
-  '/products',
-  '/inventory',
-  '/warehouses',
-  '/raw-materials',
-  '/recipes',
-  '/production',
-  '/transfers',
-  '/inventory-ledger',
-  '/branches',
-  '/purchases',
-  '/customers',
-  '/suppliers',
-  '/expenses',
-  '/sales',
-  '/shifts',
-  '/reports',
-  '/financial-reports',
-  '/accounts',
-  '/payments',
-  '/journal',
-  '/treasury',
-  '/reconciliation',
-  '/users',
-  '/audit-log',
-  '/settings',
-  '/settings/basic',
-  '/system-health',
-  '/subscriptions',
+  '/dashboard', '/pos', '/floor-plan', '/kitchen', '/tables', '/products', '/inventory',
+  '/warehouses', '/raw-materials', '/recipes', '/production', '/transfers', '/inventory-ledger',
+  '/branches', '/purchases', '/customers', '/suppliers', '/expenses', '/sales', '/shifts',
+  '/reports', '/financial-reports', '/accounting', '/accounts', '/payments', '/journal',
+  '/treasury', '/reconciliation', '/users', '/employees', '/audit-log', '/settings',
+  '/settings/basic', '/system-health', '/subscription', '/subscriptions',
 ];
 
 test.describe('public application smoke', () => {
@@ -48,12 +23,12 @@ test.describe('public application smoke', () => {
 
     await page.getByRole('button', { name: /English|العربية/i }).click();
     await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-    await expect(page.locator('form button[type="submit"]')).toHaveText(/Sign in/);
+    await expect(page.locator('form button[type="submit"]')).toHaveText(/Sign in/i);
 
     expect(consoleErrors).toEqual([]);
   });
 
-  test('login validation blocks invalid PIN without network navigation', async ({ page }) => {
+  test('login validation blocks invalid PIN without leaving login', async ({ page }) => {
     await page.goto('/#/login');
     await page.locator('#login-username').fill('smoke-test');
     await page.locator('#login-pin').fill('12');

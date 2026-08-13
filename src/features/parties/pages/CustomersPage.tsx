@@ -1,9 +1,12 @@
 import { useState, useRef } from 'react';
-import { Plus, Edit2, Trash2, Search, Download, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, Upload } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignSearch } from '@/components/design/DesignSearch';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
@@ -17,7 +20,6 @@ import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Customer } from '@/lib/types';
 
 export function CustomersPage() {
@@ -105,34 +107,30 @@ export function CustomersPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('customers')} actions={
+    <DesignSurface testId="customers-page">
+      <DesignPageHeader title={t('customers')} actions={
         <>
           {can('customers.manage') && (
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} data-testid="customers-import" />
           )}
           {can('customers.manage') && (
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} data-testid="customers-import-button"><Upload className="w-4 h-4" /> {t('importExcel')}</Button>
           )}
           {can('customers.manage') && (
-            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+            <Button variant="outline" size="sm" onClick={handleExport} data-testid="customers-export"><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           )}
           {can('customers.manage') && (
-            <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+            <Button size="sm" onClick={openAdd} data-testid="customers-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
           )}
         </>
       } />
-      <Card className="mb-4 p-4">
-        <div className="relative">
-          <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-            className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        </div>
-      </Card>
-      <Card className="p-4">
+      <DesignPanel testId="customers-search-panel">
+        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="customers-search" />
+      </DesignPanel>
+      <DesignPanel testId="customers-table-panel">
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={openEdit} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -157,6 +155,6 @@ export function CustomersPage() {
         </div>
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

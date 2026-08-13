@@ -27,7 +27,7 @@ const sizes: Record<Size, string> = {
   xl: 'px-8 py-4 text-lg rounded-2xl',
 };
 
-export function Button({ variant = 'primary', size = 'md', children, className = '', ripple = true, onClick, ...props }: ButtonProps) {
+export function Button({ variant = 'primary', size = 'md', children, className = '', ripple = true, type = 'button', onClick, ...props }: ButtonProps) {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
@@ -50,7 +50,8 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   return (
     <button
       ref={btnRef}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      type={type}
+      className={`relative overflow-hidden inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       onClick={handleClick}
       {...props}
     >

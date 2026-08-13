@@ -1,11 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
-import { Search, Eye, Scale, Plus, Trash2 } from 'lucide-react';
+import { Eye, Scale, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card, StatCard } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel } from '@/components/design';
+import { StatCard } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Input, Select } from '@/components/Input';
 import { Modal } from '@/components/Modal';
@@ -171,8 +172,8 @@ export function JournalPage() {
   };
 
   return (
-    <div>
-      <PageHeader
+    <DesignSurface testId="journal-page">
+      <DesignPageHeader
         title={t('journalEntries')}
         subtitle={t('journal')}
         actions={can('accounts.manage') && (
@@ -187,13 +188,9 @@ export function JournalPage() {
         <StatCard title={t('balance')} value={formatCurrency(items.reduce((s, e) => s + Number(e.debit_total) - Number(e.credit_total), 0), currency, lang)} icon={<Scale className="w-5 h-5" />} color="green" />
       </div>
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="journal-search-panel">
         <div className="flex flex-col sm:flex-row gap-4 items-end justify-between">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+          <DesignSearch value={search} onChange={setSearch} className="flex-1 w-full" label={t('search')} placeholder={t('search')} testId="journal-search" />
           <div className="flex flex-wrap items-end gap-3">
             <Select label={t('referenceType')} value={refType} onChange={(e) => setRefType(e.target.value)}>
               <option value="">{t('allTypes')}</option>
@@ -213,11 +210,11 @@ export function JournalPage() {
             )}
           </div>
         </div>
-      </Card>
+      </DesignPanel>
 
-      <Card className="p-4">
+      <DesignPanel testId="journal-table-panel">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
-      </Card>
+      </DesignPanel>
 
       <Modal open={!!viewing} onClose={() => setViewing(null)} title={viewing ? `${viewing.entry_number} - ${viewing.description || ''}` : ''} size="lg">
         {viewing && (
@@ -306,6 +303,6 @@ export function JournalPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </DesignSurface>
   );
 }

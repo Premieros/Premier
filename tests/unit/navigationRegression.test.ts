@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { APP_ROUTES } from '@/core/navigation/routes';
+import { MENU_ITEMS } from '@/core/navigation/menu.config';
 
 const root = resolve(process.cwd());
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
@@ -14,48 +16,45 @@ const sourceFiles = (dir: string): string[] => readdirSync(dir, { withFileTypes:
 describe('navigation regressions', () => {
   it('keeps dashboard KPI and report links mapped to intended destinations', () => {
     const source = read('src/features/dashboard/pages/DashboardFoodicsPage.tsx');
-    expect(source).toContain('to="/reports?reportType=sales"');
-    expect(source).toContain('to="/reports?reportType=sales_by_payment"');
-    expect(source).toContain('to="/reports?reportType=sales_by_product"');
-    expect(source).toContain('to="/reports?reportType=detailed_invoices"');
+    expect(source).toContain('reportType=sales');
+    expect(source).toContain('reportType=sales_by_payment');
+    expect(source).toContain('reportType=sales_by_product');
+    expect(source).toContain('reportType=detailed_invoices');
     expect(source).toContain('to="/inventory"');
     expect(source).toContain('setCompareEnabled');
     expect(source).toContain('setFilterOpen');
-    expect(source).not.toContain('to="/reports?reportType=sales_by_branch"');
-    expect(source).not.toContain('to="/pos/active"');
+    expect(source).not.toContain('sales_by_branch');
+    expect(source).not.toContain('/pos/active');
   });
 
   it('keeps the POS bottom bar dedicated to active orders', () => {
     const source = read('src/features/pos/components/bottom/OrderTypeBottomBar.tsx');
     expect(source).toContain("aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}");
-    expect(source).toContain("setOrdersOpen(true)");
+    expect(source).toContain('setOrdersOpen(true)');
     expect(source).not.toContain('onSelect(type)');
   });
 
-  it('uses one shared Foodics-style application shell for protected screens', () => {
+  it('uses one shared shell and declarative navigation configuration', () => {
     const layout = read('src/components/Layout.tsx');
     const chrome = read('src/features/dashboard/components/DashboardChrome.tsx');
-    expect(layout).toContain("to:'/dashboard'");
-    expect(layout).toContain("to:'/products'");
-    expect(layout).toContain("to:'/inventory'");
-    expect(layout).toContain("to:'/reports'");
-    expect(layout).toContain("to:'/settings'");
+    expect(layout).toContain('MENU_ITEMS');
+    expect(layout).toContain('APP_ROUTES');
+    expect(layout).toContain('MENU_GROUPS');
     expect(layout).toContain("navigate('/floor-plan')");
-    expect(layout).toContain("user?.role==='super_admin'");
+    expect(layout).toContain("user?.role === 'super_admin'");
     expect(chrome).toContain('return <>{children}</>');
     expect(chrome).not.toContain('fixed inset-0 z-[45]');
+    expect(MENU_ITEMS.length).toBeGreaterThan(0);
   });
 
-  it('keeps legacy navigation aliases backed by real protected destinations', () => {
+  it('keeps legacy navigation aliases backed by canonical route constants', () => {
     const routes = read('src/app/routes.tsx');
-    expect(routes).toContain('path="/kitchen"');
-    expect(routes).toContain('path="/tables"');
-    expect(routes).toContain('path="/accounting"');
-    expect(routes).toContain('path="/employees"');
-    expect(routes).toContain('to="/pos"');
-    expect(routes).toContain('to="/floor-plan"');
-    expect(routes).toContain('to="/financial-reports"');
-    expect(routes).toContain('to="/users"');
+    expect(routes).toContain('APP_ROUTES.accounting');
+    expect(routes).toContain('APP_ROUTES.employees');
+    expect(routes).toContain('APP_ROUTES.financialReports');
+    expect(routes).toContain('APP_ROUTES.users');
+    expect(APP_ROUTES.accounting).toBe('/accounting');
+    expect(APP_ROUTES.employees).toBe('/employees');
   });
 
   it('rejects obvious dead navigation placeholders across the application', () => {

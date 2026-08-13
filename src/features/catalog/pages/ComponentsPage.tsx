@@ -5,7 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignPanel } from '@/components/design';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
 import { Modal } from '@/components/Modal';
@@ -109,10 +109,10 @@ export function ComponentsPage() {
   }, 0);
 
   return (
-    <div>
-      <PageHeader title={t('components')} />
+    <DesignSurface testId="components-page">
+      <DesignPageHeader title={t('components')} />
 
-      <Card>
+      <DesignPanel testId="components-panel">
         <div className="mb-4">
           <Select
             label={t('manufacturedOnly')}
@@ -217,7 +217,7 @@ export function ComponentsPage() {
             <p className="text-sm">{isAr ? 'اختر منتجاً مصنّعاً لإدارة مكوناته' : 'Select a manufactured product to manage its components'}</p>
           </div>
         )}
-      </Card>
+      </DesignPanel>
 
       {/* Edit Quantity Modal */}
       <Modal open={!!editModal} onClose={() => setEditModal(null)} title={t('editComponentQty')} size="sm">
@@ -266,6 +266,6 @@ export function ComponentsPage() {
         title={t('delete')}
         message={isAr ? 'هل أنت متأكد من حذف هذا المكون؟' : 'Are you sure you want to delete this component?'}
       />
-    </div>
+    </DesignSurface>
   );
 }

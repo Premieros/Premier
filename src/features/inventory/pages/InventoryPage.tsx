@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
+import { Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useCan } from '@/lib/permissions';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -15,7 +15,6 @@ import { formatNumber } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Inventory, Warehouse } from '@/lib/types';
 
 export function InventoryPage() {
@@ -23,7 +22,7 @@ export function InventoryPage() {
   const isAr = lang === 'ar';
   const { show } = useToast();
   const can = useCan();
-  const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadInventory } = usePaginatedRows<Inventory>({
+  const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadInventory } = usePaginatedRows<Inventory>({
     table: 'inventory',
     select: '*, product:products(*), warehouse:warehouses(*)',
     order: { column: 'updated_at', ascending: false },
@@ -171,8 +170,8 @@ export function InventoryPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('inventory')} actions={
+    <DesignSurface testId="inventory-page">
+      <DesignPageHeader title={t('inventory')} actions={
         <>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           {can('inventory.manage') && selectedIds.size > 0 && (
@@ -183,13 +182,9 @@ export function InventoryPage() {
         </>
       } />
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="inventory-search-panel">
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+          <DesignSearch value={search} onChange={setSearch} className="flex-1" label={t('search')} placeholder={t('search')} testId="inventory-search" />
           <Select value={filterWarehouse} onChange={(e) => setFilterWarehouse(e.target.value)} className="sm:w-48">
             <option value="">{t('all')} - {t('warehouses')}</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -200,13 +195,13 @@ export function InventoryPage() {
             <option value="components">{t('component')}</option>
           </Select>
         </div>
-      </Card>
+      </DesignPanel>
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')}
+      <DesignPanel testId="inventory-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')}
           onRowClick={can('inventory.manage') ? openAdjust : undefined} showCheckbox={can('inventory.manage')} selectedIds={selectedIds} onSelectionChange={setSelectedIds} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
 
       <Modal open={!!adjustModal} onClose={() => setAdjustModal(null)} title={t('adjustStock')} size="sm">
         {adjustModal && (
@@ -231,6 +226,6 @@ export function InventoryPage() {
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
       <ConfirmDialog open={deleteSelectedConfirm} onClose={() => setDeleteSelectedConfirm(false)} onConfirm={removeSelected}
         title={t('deleteSelected')} message={t('confirmDeleteAll')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

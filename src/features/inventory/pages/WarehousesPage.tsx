@@ -3,7 +3,9 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -14,7 +16,6 @@ import { useBranchFilter } from '@/lib/useBranchFilter';
 import { useCan } from '@/lib/permissions';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Warehouse, Branch } from '@/lib/types';
 
 export function WarehousesPage() {
@@ -86,14 +87,14 @@ export function WarehousesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('warehouses')} actions={
-        can('warehouses.manage') && <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>
+    <DesignSurface testId="warehouses-page">
+      <DesignPageHeader title={t('warehouses')} actions={
+        can('warehouses.manage') && <Button size="sm" onClick={openAdd} data-testid="warehouses-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
       } />
-      <Card className="p-4">
+      <DesignPanel testId="warehouses-table-panel">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} onRowClick={can('warehouses.manage') ? openEdit : undefined} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <Input label={t('name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -115,6 +116,6 @@ export function WarehousesPage() {
         </div>
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

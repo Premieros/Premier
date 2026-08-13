@@ -3,7 +3,9 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
+import { DesignPanel } from '@/components/design/DesignPanel';
+import { DesignPagination } from '@/components/design/DesignPagination';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
 import { Input, Select } from '@/components/Input';
@@ -11,7 +13,6 @@ import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { logAudit } from '@/lib/audit';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import { PaginationBar } from '@/components/PaginationBar';
 import type { Branch } from '@/lib/types';
 
 export function BranchesPage() {
@@ -75,12 +76,12 @@ export function BranchesPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('branches')} actions={<Button size="sm" onClick={openAdd}><Plus className="w-4 h-4" /> {t('add')}</Button>} />
-      <Card className="p-4">
+    <DesignSurface testId="branches-page">
+      <DesignPageHeader title={t('branches')} actions={<Button size="sm" onClick={openAdd} data-testid="branches-add"><Plus className="w-4 h-4" /> {t('add')}</Button>} />
+      <DesignPanel testId="branches-table-panel">
         <DataTable columns={columns} data={items} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
+        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <Input label={t('name')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -98,6 +99,6 @@ export function BranchesPage() {
         </div>
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title={t('delete')} message={t('confirmDelete')} confirmLabel={t('delete')} cancelLabel={t('cancel')} />
-    </div>
+    </DesignSurface>
   );
 }

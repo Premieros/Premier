@@ -1,11 +1,10 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Search, BookOpenText } from 'lucide-react';
+import { BookOpenText } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
-import { PageHeader, Card } from '@/components/PageHeader';
+import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel, DesignPagination } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
-import { PaginationBar } from '@/components/PaginationBar';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
 import { Select } from '@/components/Input';
 import { formatNumber, formatDateTime } from '@/lib/format';
@@ -21,7 +20,7 @@ export function InventoryLedgerPage() {
   const { t, lang } = useLanguage();
   const branchFilter = useBranchFilter();
 
-  const { rows: rawRows, loading, total, hasMore, loadMore, loadingMore } = usePaginatedRows<InventoryLedgerEntry>({
+  const { rows: rawRows, loading, error, total, hasMore, loadMore, loadingMore } = usePaginatedRows<InventoryLedgerEntry>({
     table: 'inventory_ledger',
     select: '*, product:products(*), raw_material:raw_materials(*), warehouse:warehouses(*)',
     order: { column: 'created_at', ascending: false },
@@ -126,20 +125,16 @@ export function InventoryLedgerPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title={t('inventoryLedger')} subtitle={lang === 'ar' ? 'ط³ط¬ظ„ ظƒط§ظ…ظ„ ظ„ط­ط±ظƒط§طھ ط§ظ„ظ…ط®ط²ظˆظ† (ظ…ظ†طھط¬ط§طھ ظˆظ…ظˆط§ط¯ ط®ط§ظ…)' : 'Full movement log for inventory (products and raw materials)'} actions={
+    <DesignSurface testId="inventory-ledger-page">
+      <DesignPageHeader title={t('inventoryLedger')} subtitle={lang === 'ar' ? 'سجل كامل لحركات المخزون (منتجات ومواد خام)' : 'Full movement log for inventory (products and raw materials)'} actions={
         <button onClick={handleExport} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all">
           {t('exportExcel')}
         </button>
       } />
 
-      <Card className="mb-4 p-4">
+      <DesignPanel testId="inventory-ledger-search-panel">
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
-              className="w-full ps-10 pe-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+          <DesignSearch value={search} onChange={setSearch} className="flex-1" label={t('search')} placeholder={t('search')} testId="inventory-ledger-search" />
           <Select value={entryType} onChange={(e) => setEntryType(e.target.value)} className="sm:w-48">
             <option value="all">{t('all')}</option>
             {entryTypes.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
@@ -149,12 +144,12 @@ export function InventoryLedgerPage() {
             {branches.map((br) => <option key={br.id} value={br.id}>{br.name}</option>)}
           </Select>
         </div>
-      </Card>
+      </DesignPanel>
 
-      <Card className="p-4">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} />
-        <PaginationBar loaded={rows.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </Card>
-    </div>
+      <DesignPanel testId="inventory-ledger-table-panel">
+        <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} />
+        <DesignPagination loaded={rows.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+      </DesignPanel>
+    </DesignSurface>
   );
 }
