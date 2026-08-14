@@ -4,15 +4,31 @@
 
 ## Current Execution
 
-**Branch:** `ui-visual-rebuild-6h`
+**Branch:** `main` (production baseline after PR #4 merge)
+**Former working branch:** `ui-visual-rebuild-6h`
 **Base:** `main` after PR #3 merge (`15847d1`)
 **Bundle:** 6H + 6I — Full Visual Rebuild (Security + App Shell + Design System + Dashboard + Reports Center + POS)
-**Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site always reflects green `main` only.
-**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created. P0–P7 pushed and CI green on PR #4 (last: P7 legacy removal + final gate). PR stays Draft until the full-bundle merge checkpoint.
+**Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site reflects green `main` only.
+**Status:** **MERGED + DEPLOYED / COMPLETE.** Final PR #4 head `88606d9`; merge commit `d390c47`. Final main verification and GitHub Pages deployment passed on `d390c47`. Rollback tag `rb-6h-base` remains available.
+
+## Final Merge & Production Checkpoint
+
+PR #4 (`https://github.com/Premieros/Premier/pull/4`, head `ui-visual-rebuild-6h`) was completed and merged into `main` after the full P7 gate.
+
+| Check | Result |
+|-------|--------|
+| PR #4 final HEAD `88606d9` — verify | ✅ success |
+| PR #4 final HEAD — db | ✅ success |
+| PR #4 final HEAD — browser-smoke | ✅ success |
+| Merge commit `d390c47` | ✅ merged to `main` |
+| Verify main on `d390c47` | ✅ success |
+| Deploy to GitHub Pages on `d390c47` | ✅ success |
+
+PR #4 is now **closed + merged**, not Draft. This is the production baseline for the completed 6H + 6I visual rebuild.
 
 ## CI Checkpoint — P0 + P1 (green)
 
-PR #4 (`https://github.com/Premieros/Premier/pull/4`, head `ui-visual-rebuild-6h`) — after pushing P0 (`690eb71`) + P1 (`82f59a8`):
+PR #4 after pushing P0 (`690eb71`) + P1 (`82f59a8`):
 
 | Check | Result |
 |-------|--------|
@@ -79,8 +95,6 @@ After pushing P7 (`legacy removal + final gate`, on top of P6):
 | browser-smoke | ✅ success |
 | Redirect rules | ✅ success |
 | Header rules / Pages changed | neutral |
-
-Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
 
 ## Deployment & Branch Workflow (locked decision — user approved)
 
@@ -176,7 +190,7 @@ Audited gaps (from the completed branch-isolation audit):
 1. Consumer audit: identify every import/route of `DashboardFoodicsPage`, orphan POS components (`TypeChangePicker`, `OrderTypeQuickPicker`, unused `src/ui`), and any legacy surfaces.
 2. Remove them only after the replacement is fully verified by tests.
 3. Full gate: lint, typecheck:all, unit/smoke, build, DB/RLS integration/security, browser e2e.
-4. Merge PR into `main` → auto-deploy. Update this log.
+4. Merge PR into `main` → auto-deploy. **Completed:** PR #4 merged as `d390c47`; Verify main and GitHub Pages deployment passed.
 
 ## 6H–6I Execution Rules
 
@@ -206,9 +220,11 @@ Audited gaps (from the completed branch-isolation audit):
 - **P5 (shared components + identity registry) done** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build). Pushed `8152eb7`; PR #4 CI green (verify, db, browser-smoke).
 - **P6 (POS visual) done** — swept the entire POS feature onto `ui-*` design tokens, presentation-only (no logic/props/handlers/testids changed; all `pos-*` data attributes, bottom-bar `onClick={() => setOrdersOpen(true)}`, and its aria-label preserved): `PosWorkspacePage` (workspace shell, loading/error screens, receipt modal), `PosTopBar`, `ProductBrowser` (search, category chips, cards, stock badges), `CurrentOrderPanel` (chips, cart rows, steppers, totals, pay = `bg-ui-success`, discount editor), `PaymentPanel` (method cards, paid input, change banner, confirm), `OrderTypeBottomBar` (drawer + bottom nav pill), `ActiveOrdersDrawer` (backdrop/aside/filters/cards/actions), `KitchenPanel` (sends, status badges), `TablesPanel` + `TableFloorPlan` (floor canvases, table cards), `OrderStartWizard` + `OrderTypePicker` + `CarOrderStep` + `DeliveryOrderStep` + `TablePickerStep` + `TableActionModal` + `OrderTypeQuickPicker` + `TypeChangePicker`, `ActiveOrdersPage` (StatCard color map via shared `PageHeader.tsx`, branch select, filters, order cards, table form inputs). Utility style maps tokenized: `orderTypes.ts` `STATUS_STYLES`, `orderStage.ts`, `orderState.ts` (+ `OrderStateDot`), `orderLabels.ts` `ORDER_TYPE_META` pill. `shadow-pos`/`hover:shadow-card-hover` → `shadow-ui-*`. No hardcoded slate/navy/gold/brand/emerald/amber/red/sky/blue/orange/green color classes remain under `src/features/pos`. Local gates green (lint 0 errors, typecheck:all, test:unit 213/213, build).
 - **P7 (safe legacy removal) done** — full consumer audit completed first, then only proven orphans removed. **Replacement proof:** `VisualDashboardPage` (live via route `/dashboard` → `DashboardEnhancedPage`) contains every marker the legacy contract pinned (`reportType=sales|sales_by_payment|sales_by_product|detailed_invoices`, `to="/inventory"`, `setCompareEnabled`, `setFilterOpen`; no `sales_by_branch`, no `/pos/active`), and the `interactionIdentity` registry pins dashboard testids (`dashboard-surface`, `dashboard-branch-filter`, …) to `VisualDashboardPage`; POS bottom-bar nav + aria contracts remain pinned to `OrderTypeBottomBar`. **Contract tests before deletion: 117/117 green; after deletion: 117/117 green** (7 files: interactionIdentity, navigationRegression, dashboardContract, navigation-contract, navigationRegistry, reportsCenterContract, pages.smoke). **Deleted (11, all zero-consumer after audit):** `DashboardFoodicsPage.tsx`, `DashboardPage.tsx`, `DashboardControlCenterPage.tsx`, `DashboardFinalPage.tsx`, `DashboardModernPage.tsx` (legacy dashboard + compat wrappers), `DashboardChrome.tsx` (legacy shell adapter, only consumer was the deleted legacy page), `TypeChangePicker.tsx`, `OrderTypeQuickPicker.tsx` (orphan POS pickers, no import anywhere), `src/ui/AppCard.tsx`, `src/ui/AppStatCard.tsx`, `src/ui/index.ts` (orphan package, zero consumers in src/tests). **Kept:** `VisualDashboardPage.tsx`, `DashboardEnhancedPage.tsx` (live route), `OrderTypePill.tsx`, `OrderStageBadge.tsx`, `OrderStatusBadge.tsx`, `CurrentOrderPanel.tsx`, all start-wizard/table/orders/kitchen components (live consumers), `orderLabels.ts`/`orderStage.ts`/`orderState.ts`/`orderTypes.ts` (used by live components). **Test/config re-points (no contracts weakened):** `navigationRegression.test.ts` now reads `VisualDashboardPage.tsx` (same 9 assertions) and dropped the obsolete `DashboardChrome` read; `pages.smoke.test.tsx` renders `DashboardEnhancedPage` (the real route component); `eslint.config.js` removed the deleted-wrappers exception block. **Full gate green:** lint 0 errors (16 pre-existing warnings), typecheck:all, test:unit 213/213, build; DB/RLS integration 153 tests self-skip locally (no DB URL — runs in CI `db` job); browser-smoke runs in CI. **Observation (not deleted):** `src/features/pos/hooks/usePosSummary.ts` is unused but is a hook, not a listed legacy surface — flagged for a future cleanup decision. No business logic, RBAC/RLS, schema, routes, or POS behavior changed. Pushed; PR #4 CI green (verify, db, browser-smoke).
+- **Final production checkpoint** — P7 report committed as `88606d9`; PR #4 merged into `main` as `d390c47`; Verify main and Deploy to GitHub Pages both passed on `d390c47`. Master log synchronized to `main` in this docs-only update.
 
 ### Pending
-- P7 pushed and CI green; PR #4 stays in Draft — merge into `main` only at the final full-bundle green checkpoint per workflow rule 3 (last check: P7 green — verify, db, browser-smoke all success).
+- **6H + 6I visual rebuild: COMPLETE.** No further work in this bundle. Next work must be explicitly requested and isolated from the production baseline.
+- `src/features/pos/hooks/usePosSummary.ts` remains flagged as future technical debt; do not remove without a separate cleanup decision.
 
 ## Relationship Audit Note
 
@@ -216,4 +232,4 @@ The production Supabase schema had a duplicate FK on `users.branch_id`. The dupl
 
 ## Definition of Done — 6H + 6I
 
-The bundle is complete only when the new App Shell + Dashboard + Reports Center + POS visual surfaces are clearly distinguishable from the old design, all existing functionality remains intact (contract tests green), legacy consumers are audited, P0 security gaps are closed with passing RLS tests, focused tests and full CI pass, DB/RLS/security/browser checks pass, and the work is ready for a dedicated PR into `main`.
+**COMPLETE.** The bundle reached the required state: new App Shell + Dashboard + Reports Center + POS visual surfaces are clearly distinguishable from the old design, existing functionality contracts remained intact, legacy consumers were audited and safe orphans removed, P0 security gaps were closed with passing RLS tests, focused tests and full CI passed, DB/RLS/security/browser checks passed, PR #4 was merged into `main`, and GitHub Pages deployment succeeded on merge commit `d390c47`.
