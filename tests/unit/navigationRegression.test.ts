@@ -15,7 +15,7 @@ const sourceFiles = (dir: string): string[] => readdirSync(dir, { withFileTypes:
 
 describe('navigation regressions', () => {
   it('keeps dashboard KPI and report links mapped to intended destinations', () => {
-    const source = read('src/features/dashboard/pages/DashboardFoodicsPage.tsx');
+    const source = read('src/features/dashboard/pages/VisualDashboardPage.tsx');
     expect(source).toContain('reportType=sales');
     expect(source).toContain('reportType=sales_by_payment');
     expect(source).toContain('reportType=sales_by_product');
@@ -36,14 +36,11 @@ describe('navigation regressions', () => {
 
   it('uses one shared shell and declarative navigation configuration', () => {
     const layout = read('src/components/Layout.tsx');
-    const chrome = read('src/features/dashboard/components/DashboardChrome.tsx');
     expect(layout).toContain('MENU_ITEMS');
     expect(layout).toContain('APP_ROUTES');
     expect(layout).toContain('MENU_GROUPS');
     expect(layout).toContain("navigate('/floor-plan')");
     expect(layout).toContain("user?.role === 'super_admin'");
-    expect(chrome).toContain('return <>{children}</>');
-    expect(chrome).not.toContain('fixed inset-0 z-[45]');
     expect(MENU_ITEMS.length).toBeGreaterThan(0);
   });
 

@@ -111,7 +111,7 @@ vi.mock('@/context/ThemeContext', () => ({ useTheme: () => appMocks.theme }));
 vi.mock('@/components/Toast', () => ({ useToast: () => ({ show: () => {} }) }));
 
 import { LoginPage } from '@/features/auth/pages/LoginPage';
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
+import { DashboardEnhancedPage } from '@/features/dashboard/pages/DashboardEnhancedPage';
 import { PosWorkspacePage } from '@/features/pos/pages/PosWorkspacePage';
 import { ActiveOrdersPage } from '@/features/pos/pages/ActiveOrdersPage';
 import { ProductsPage } from '@/features/catalog/pages/ProductsPage';
@@ -144,7 +144,7 @@ import { ReconciliationPage } from '@/features/accounting/pages/ReconciliationPa
 
 const pages: Array<[string, React.ComponentType]> = [
   ['LoginPage', LoginPage],
-  ['DashboardPage', DashboardPage],
+  ['DashboardEnhancedPage', DashboardEnhancedPage],
   ['PosWorkspacePage', PosWorkspacePage],
   ['ActiveOrdersPage', ActiveOrdersPage],
   ['ProductsPage', ProductsPage],

@@ -18,8 +18,8 @@ export interface TableStatusStyle {
 }
 
 export const STATUS_STYLES: Record<DiningTableStatus, TableStatusStyle> = {
-  vacant: { label: 'vacant', card: 'border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/70 dark:bg-emerald-900/20', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', dot: 'bg-emerald-500' },
-  occupied: { label: 'occupied', card: 'border-amber-400 dark:border-amber-700/60 bg-amber-50/70 dark:bg-amber-900/20', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', dot: 'bg-amber-500' },
-  reserved: { label: 'reserved', card: 'border-blue-300 dark:border-blue-700/60 bg-blue-50/70 dark:bg-blue-900/20', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', dot: 'bg-blue-500' },
-  closed: { label: 'closed', card: 'border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-navy-800/60', badge: 'bg-slate-200 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300', dot: 'bg-slate-400' },
+  vacant: { label: 'vacant', card: 'border-ui-success/50 bg-ui-success/10', badge: 'bg-ui-success/15 text-ui-success', dot: 'bg-ui-success' },
+  occupied: { label: 'occupied', card: 'border-ui-warning/60 bg-ui-warning/10', badge: 'bg-ui-warning/15 text-ui-warning', dot: 'bg-ui-warning' },
+  reserved: { label: 'reserved', card: 'border-ui-info/50 bg-ui-info/10', badge: 'bg-ui-info/15 text-ui-info', dot: 'bg-ui-info' },
+  closed: { label: 'closed', card: 'border-ui-border bg-ui-page-alt', badge: 'bg-ui-page-alt text-ui-muted', dot: 'bg-ui-subtle' },
 };

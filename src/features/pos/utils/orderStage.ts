@@ -34,23 +34,23 @@ export function deriveOrderStage(order: Order, items: OrderItem[], sends: OrderK
 export const ORDER_STAGE_STYLES: Record<OrderStage, OrderStageStyle> = {
   open: {
     label: 'open',
-    badge: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300',
-    dot: 'bg-brand-500',
+    badge: 'bg-ui-primary-soft text-ui-accent',
+    dot: 'bg-ui-accent',
   },
   kitchen: {
     label: 'inKitchen',
-    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-    dot: 'bg-orange-500',
+    badge: 'bg-ui-warning/15 text-ui-warning',
+    dot: 'bg-ui-warning',
   },
   ready: {
     label: 'readyForPayment',
-    badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-    dot: 'bg-purple-500',
+    badge: 'bg-ui-info/15 text-ui-info',
+    dot: 'bg-ui-info',
   },
   hold: {
     label: 'holdOrder',
-    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-    dot: 'bg-amber-500',
+    badge: 'bg-ui-warning/15 text-ui-warning',
+    dot: 'bg-ui-warning',
   },
 };
 

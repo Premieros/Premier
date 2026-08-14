@@ -25,8 +25,8 @@ export function OrderTypePicker({ onSelect, onActiveOrders }: OrderTypePickerPro
     <div data-testid="pos-order-type-picker" className="flex-1 overflow-y-auto p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-6">
-          <p className="text-2xl font-black text-slate-900 dark:text-white">{t('chooseOrderType')}</p>
-          <p data-testid="pos-order-type-question" className="text-sm text-slate-400 mt-1">
+          <p className="text-2xl font-black text-ui-text">{t('chooseOrderType')}</p>
+          <p data-testid="pos-order-type-question" className="text-sm text-ui-subtle mt-1">
             {isAr ? 'كيف سيتم تقديم هذا الطلب؟' : 'How will this order be served?'}
           </p>
         </div>
@@ -40,15 +40,15 @@ export function OrderTypePicker({ onSelect, onActiveOrders }: OrderTypePickerPro
                 key={c.type}
                 data-testid={`pos-order-type-${c.type}`}
                 onClick={() => onSelect(c.type)}
-                className="group relative flex items-center gap-4 p-5 rounded-2xl border-2 border-slate-200 dark:border-navy-800 bg-white dark:bg-navy-900 hover:border-brand-400 dark:hover:border-gold-500/60 hover:shadow-card-hover transition-all active:scale-[0.98]"
+                className="group relative flex items-center gap-4 p-5 rounded-2xl border-2 border-ui-border bg-ui-surface hover:border-ui-primary hover:shadow-ui-lg transition-all active:scale-[0.98]"
               >
                 <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center border ${meta.pill}`}>
                   <span className="absolute -top-2.5 -start-2.5 text-xl drop-shadow-sm" aria-hidden>{c.emoji}</span>
                   <Icon className="w-7 h-7" />
                 </div>
                 <div className="text-start min-w-0">
-                  <p className="text-base font-black text-slate-900 dark:text-white">{t(meta.label)}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{isAr ? c.descAr : c.descEn}</p>
+                  <p className="text-base font-black text-ui-text">{t(meta.label)}</p>
+                  <p className="text-xs text-ui-subtle mt-0.5">{isAr ? c.descAr : c.descEn}</p>
                 </div>
               </button>
             );
@@ -58,7 +58,7 @@ export function OrderTypePicker({ onSelect, onActiveOrders }: OrderTypePickerPro
         <button
           data-testid="pos-active-orders"
           onClick={onActiveOrders}
-          className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-slate-200 dark:border-navy-800 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors"
+          className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-ui-border text-sm font-bold text-ui-muted hover:bg-ui-page-alt transition-colors"
         >
           <ListOrdered className="w-4 h-4" />
           {t('openActiveOrders')}

@@ -244,16 +244,16 @@ export function ActiveOrdersPage() {
       {isAdmin && (
         <DesignPanel testId="active-orders-branch-panel">
           <div className="flex items-center gap-3 flex-wrap">
-            <Tag className="w-4 h-4 text-slate-400" />
+            <Tag className="w-4 h-4 text-ui-subtle" />
             <select
               value={effectiveBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+              className="px-3 py-2 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
             >
               <option value="">{isAr ? 'اختر الفرع' : 'Select Branch'}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
+            <span className="text-sm text-ui-muted">
               {isAr ? `${counts.active} طلب نشط` : `${counts.active} active orders`}
             </span>
           </div>
@@ -268,20 +268,20 @@ export function ActiveOrdersPage() {
       </div>
 
       {!effectiveBranch ? (
-        <DesignPanel testId="active-orders-placeholder" bodyClassName="p-16 text-center text-slate-400">
+        <DesignPanel testId="active-orders-placeholder" bodyClassName="p-16 text-center text-ui-subtle">
           <UtensilsCrossed className="w-16 h-16 mx-auto mb-4 opacity-30" />
           <p className="text-lg font-medium">{isAr ? 'اختر الفرع لعرض مركز الطلبات' : 'Select a branch to view the active orders'}</p>
         </DesignPanel>
       ) : loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600" />
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ui-primary" />
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* ===== FLOOR CANVAS ===== */}
           <div className="xl:col-span-2 space-y-5">
             {error && (
-              <DesignPanel className="text-sm text-red-500 border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10" bodyClassName="p-3">
+              <DesignPanel className="text-sm text-ui-danger border-ui-danger/30 bg-ui-danger/10" bodyClassName="p-3">
                 {error}
               </DesignPanel>
             )}
@@ -301,11 +301,11 @@ export function ActiveOrdersPage() {
           <div className="space-y-3">
             <DesignPanel testId="active-orders-list">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-brand-500 dark:text-gold-400" />
+                <h3 className="text-sm font-bold text-ui-text flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-ui-accent" />
                   {t('openOrders')}
                 </h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-ui-primary-soft text-ui-accent font-bold">
                   {orders.length}
                 </span>
               </div>
@@ -316,8 +316,8 @@ export function ActiveOrdersPage() {
                     onClick={() => setOrderTypeFilter(ot)}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       orderTypeFilter === ot
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
+                        ? 'bg-ui-primary text-ui-primary-fg'
+                        : 'bg-ui-page-alt text-ui-muted'
                     }`}
                   >
                     {ot === '' ? (isAr ? 'الكل' : 'All') : orderTypeLabel(t, ot)}
@@ -331,8 +331,8 @@ export function ActiveOrdersPage() {
                     onClick={() => setStatusFilter(s)}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       statusFilter === s
-                        ? 'bg-navy-700 text-gold-400'
-                        : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300'
+                        ? 'bg-ui-accent text-ui-primary-fg'
+                        : 'bg-ui-page-alt text-ui-muted'
                     }`}
                   >
                     {s === 'all' ? (isAr ? 'الكل' : 'All') : t(s)}
@@ -341,28 +341,28 @@ export function ActiveOrdersPage() {
               </div>
               <div className="space-y-2 max-h-[520px] overflow-y-auto">
                 {filteredOrders.length === 0 ? (
-                  <div className="text-center py-10 text-slate-400">
+                  <div className="text-center py-10 text-ui-subtle">
                     <UtensilsCrossed className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">{t('noOpenOrders')}</p>
                   </div>
                 ) : (
                   filteredOrders.map((order) => (
-                    <div key={order.id} className="p-3 rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 space-y-2">
+                    <div key={order.id} className="p-3 rounded-xl border border-ui-border bg-ui-page-alt space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-bold text-slate-700 dark:text-white truncate">{order.order_number}</span>
-                          <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300">
+                          <span className="text-xs font-bold text-ui-text truncate">{order.order_number}</span>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-ui-page-alt text-ui-muted">
                             {orderTypeLabel(t, order.order_type)}
                           </span>
-                          <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-ui-warning/15 text-ui-warning">
                             {t(order.status === 'held' ? 'holdOrder' : 'open')}
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-brand-600 dark:text-gold-400 shrink-0">
+                        <span className="text-sm font-bold text-ui-accent shrink-0">
                           {formatCurrency(order.total, 'EGP', lang)}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400">
+                      <div className="text-[11px] text-ui-subtle">
                         {order.table ? `${order.table.name} · ` : ''}{formatDateTime(order.created_at, lang)}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -396,25 +396,25 @@ export function ActiveOrdersPage() {
               <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full ${st.dot}`} />
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${st.badge}`}>{t(st.label)}</span>
-                {area && <span className="text-xs text-slate-400">{area.name}</span>}
-                <span className="text-xs text-slate-400 flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {tableTarget.capacity}</span>
+                {area && <span className="text-xs text-ui-subtle">{area.name}</span>}
+                <span className="text-xs text-ui-subtle flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {tableTarget.capacity}</span>
               </div>
 
               {tableOrders.length > 0 ? (
                 <div className="space-y-2">
                   {tableOrders.map((order) => (
-                    <div key={order.id} className="rounded-xl border border-slate-100 dark:border-navy-800 bg-slate-50 dark:bg-navy-800/50 p-3 space-y-2">
+                    <div key={order.id} className="rounded-xl border border-ui-border bg-ui-page-alt p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-800 dark:text-white">{order.order_number}</span>
-                        <span className="text-sm font-bold text-brand-600 dark:text-gold-400">{formatCurrency(order.total, 'EGP', lang)}</span>
+                        <span className="text-sm font-bold text-ui-text">{order.order_number}</span>
+                        <span className="text-sm font-bold text-ui-accent">{formatCurrency(order.total, 'EGP', lang)}</span>
                       </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 font-bold">{orderTypeLabel(t, order.order_type)}</span>
+                      <div className="text-[11px] text-ui-subtle flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded-full bg-ui-page-alt text-ui-muted font-bold">{orderTypeLabel(t, order.order_type)}</span>
                         <span>{formatDateTime(order.created_at, lang)}</span>
                       </div>
                       <div className="space-y-1">
                         {orderItemsOf(order).map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
+                          <div key={item.id} className="flex justify-between text-sm text-ui-muted">
                             <span className="truncate">{productName[item.product_id || ''] || '—'} × {Number(item.quantity)}</span>
                             <span className="shrink-0 font-medium">{formatCurrency(item.total, 'EGP', lang)}</span>
                           </div>
@@ -433,7 +433,7 @@ export function ActiveOrdersPage() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+                  <p className="text-sm text-ui-muted mb-3">
                     {isAr ? 'لا يوجد طلب مفتوح على هذه الطاولة.' : 'No open order on this table.'}
                   </p>
                   <Button size="lg" className="w-full" onClick={() => { startOrder(tableTarget); }}>
@@ -444,15 +444,15 @@ export function ActiveOrdersPage() {
 
               {canManage && (
                 <>
-                  <div className="border-t border-slate-100 dark:border-navy-800 pt-3">
-                    <p className="text-xs font-bold text-slate-400 mb-2">{isAr ? 'حالة الطاولة' : 'Table status'}</p>
+                  <div className="border-t border-ui-border pt-3">
+                    <p className="text-xs font-bold text-ui-subtle mb-2">{isAr ? 'حالة الطاولة' : 'Table status'}</p>
                     <div className="grid grid-cols-4 gap-1.5">
                       {(['vacant', 'reserved', 'closed'] as const).map((s) => (
                         <button
                           key={s}
                           disabled={busy || tableTarget.status === s}
                           onClick={() => setStatus(tableTarget.id, s)}
-                          className={`px-2 py-2 rounded-xl border text-xs font-medium transition-all disabled:opacity-40 ${STATUS_STYLES[s].badge} border-slate-200 dark:border-navy-700`}
+                          className={`px-2 py-2 rounded-xl border text-xs font-medium transition-all disabled:opacity-40 ${STATUS_STYLES[s].badge} border-ui-border`}
                         >
                           {t(s)}
                         </button>
@@ -478,12 +478,12 @@ export function ActiveOrdersPage() {
       <Modal open={areaModal} onClose={() => setAreaModal(false)} title={t('addArea')} size="sm">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('areaName')}</label>
+            <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('areaName')}</label>
             <input
               value={areaName}
               onChange={(e) => setAreaName(e.target.value)}
               placeholder={isAr ? 'مثال: التراس' : 'e.g. Terrace'}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+              className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
             />
           </div>
           <Button className="w-full" onClick={createArea}>{t('saveSuccess')}</Button>
@@ -495,30 +495,30 @@ export function ActiveOrdersPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('tableName')}</label>
+              <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('tableName')}</label>
               <input
                 value={tableForm.name}
                 onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+                className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('capacity')}</label>
+              <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('capacity')}</label>
               <input
                 type="number"
                 value={tableForm.capacity}
                 min={1}
                 onChange={(e) => setTableForm({ ...tableForm, capacity: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+                className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{isAr ? 'المنطقة' : 'Area'}</label>
+            <label className="block text-sm font-medium text-ui-muted mb-1.5">{isAr ? 'المنطقة' : 'Area'}</label>
             <select
               value={tableForm.area_id}
               onChange={(e) => setTableForm({ ...tableForm, area_id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+              className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
             >
               <option value="">{isAr ? 'بدون منطقة' : 'No area'}</option>
               {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -527,12 +527,12 @@ export function ActiveOrdersPage() {
           <div className="grid grid-cols-4 gap-3">
             {(['x', 'y', 'w', 'h'] as const).map((k) => (
               <div key={k}>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 uppercase">{k}</label>
+                <label className="block text-sm font-medium text-ui-muted mb-1.5 uppercase">{k}</label>
                 <input
                   type="number"
                   value={tableForm[k]}
                   onChange={(e) => setTableForm({ ...tableForm, [k]: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-gold-500/50"
+                  className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-surface-raised text-sm text-ui-text focus:ring-2 focus:ring-ui-ring"
                 />
               </div>
             ))}

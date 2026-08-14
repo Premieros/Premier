@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Scale, BookOpen, TrendingUp, PieChart, Clock, Download, BadgeCheck, BadgeAlert, Landmark, ArrowLeftRight, Receipt } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -28,10 +29,15 @@ export function FinancialReportsPage() {
   const { user } = useAuth();
   const branchFilter = useBranchFilter();
   const isAr = lang === 'ar';
+  const [searchParams] = useSearchParams();
 
-  const [view, setView] = useState<View>('trial_balance');
-  const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
-  const [to, setTo] = useState(todayISO());
+  const requestedView = searchParams.get('view');
+  const validViews: View[] = ['trial_balance', 'ledger', 'income', 'balance_sheet', 'ar_aging', 'ap_aging', 'aging_summary', 'cash_flow', 'party_statement'];
+  const initialView = validViews.includes(requestedView as View) ? (requestedView as View) : 'trial_balance';
+
+  const [view, setView] = useState<View>(initialView);
+  const [from, setFrom] = useState(() => searchParams.get('from') || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
+  const [to, setTo] = useState(() => searchParams.get('to') || todayISO());
   const [loading, setLoading] = useState(false);
   const { effectiveSettings } = useSettings();
   const { branches } = useBranches();
@@ -182,7 +188,7 @@ export function FinancialReportsPage() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
             {views.map((v) => (
-              <button key={v.key} onClick={() => setView(v.key)}
+              <button key={v.key} data-report-type={v.key} onClick={() => setView(v.key)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === v.key ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
                 {v.icon} {v.label}
               </button>

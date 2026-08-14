@@ -52,12 +52,12 @@ export function OrderStartWizard({
   const StepIcon = STEP_ICONS[step === 'table' ? 'table' : step === 'car' ? 'car' : step === 'delivery' ? 'bike' : 'zap'];
 
   return (
-    <div className="fixed inset-0 top-16 z-40 bg-white dark:bg-navy-900 flex flex-col animate-fade-in">
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-slate-100 dark:border-navy-800 flex-shrink-0">
+    <div className="fixed inset-0 top-16 z-40 bg-ui-surface flex flex-col animate-fade-in">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-ui-border flex-shrink-0">
         {showBack ? (
           <button
             onClick={onBack}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors active:scale-95"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-ui-page-alt text-ui-muted text-xs font-bold hover:bg-ui-page-alt transition-colors active:scale-95"
           >
             <ArrowRight className={`w-3.5 h-3.5 ${isAr ? '' : 'rotate-180'}`} />
             {isAr ? 'رجوع' : 'Back'}
@@ -66,14 +66,14 @@ export function OrderStartWizard({
           <div className="w-20" />
         )}
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
-            <StepIcon className="w-4.5 h-4.5 text-brand-600 dark:text-brand-400" />
+          <div className="w-9 h-9 rounded-xl bg-ui-primary-soft flex items-center justify-center">
+            <StepIcon className="w-4.5 h-4.5 text-ui-accent" />
           </div>
-          <h2 className="text-sm font-black text-slate-900 dark:text-white truncate">{title}</h2>
+          <h2 className="text-sm font-black text-ui-text truncate">{title}</h2>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
-          <span className={`w-2 h-2 rounded-full ${step === 'type' ? 'bg-brand-500' : 'bg-slate-300 dark:bg-navy-700'}`} />
-          <span className={`w-2 h-2 rounded-full ${step !== 'type' ? 'bg-brand-500' : 'bg-slate-300 dark:bg-navy-700'}`} />
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-ui-subtle">
+          <span className={`w-2 h-2 rounded-full ${step === 'type' ? 'bg-ui-accent' : 'bg-ui-border-strong'}`} />
+          <span className={`w-2 h-2 rounded-full ${step !== 'type' ? 'bg-ui-accent' : 'bg-ui-border-strong'}`} />
         </div>
       </div>
 

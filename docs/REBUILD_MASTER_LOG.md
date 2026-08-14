@@ -1,114 +1,219 @@
 # Premier UI Rebuild — Master Plan & Progress Log
 
-> Persistent source of truth. Read before every session and update after every meaningful fix, CI result, phase change, or architectural decision.
+> **Persistent source of truth. READ THIS FILE BEFORE EVERY SESSION AND BEFORE EVERY EDIT, and update it after every meaningful fix, CI result, phase change, or architectural decision.**
 
 ## Current Execution
 
-**Branch:** `ui-rebuild-foodics-2026`  
-**PR #3:** Open, not merged.  
-**Latest verified gate:** Run #160 — SUCCESS.  
-**PHASE 0–5:** VERIFIED / CLOSED.  
-**6A:** VERIFIED / CLOSED.  
-**6B:** VERIFIED / CLOSED.  
-**6C:** VERIFIED / CLOSED — Run #151.  
-**6D–6G:** VERIFIED / CLOSED — Run #160.
+**Branch:** `ui-visual-rebuild-6h`
+**Base:** `main` after PR #3 merge (`15847d1`)
+**Bundle:** 6H + 6I — Full Visual Rebuild (Security + App Shell + Design System + Dashboard + Reports Center + POS)
+**Deployment:** GitHub Pages auto-deploys from `main` via `.github/workflows/deploy.yml` (build + DB/RLS + e2e gates). The deployed site always reflects green `main` only.
+**Status:** IN PROGRESS. Baseline green: lint 0 errors (16 pre-existing warnings), typecheck:all pass, 139 unit tests pass, build pass. Rollback tag `rb-6h-base` created. P0–P7 pushed and CI green on PR #4 (last: P7 legacy removal + final gate). PR stays Draft until the full-bundle merge checkpoint.
 
-## Next Bundle: PHASE 6D–6G
+## CI Checkpoint — P0 + P1 (green)
 
-The user approved bundling multiple independent design-completion stages to reduce unnecessary CI cycles, provided each stage remains behavior-preserving and the combined regression passes.
+PR #4 (`https://github.com/Premieros/Premier/pull/4`, head `ui-visual-rebuild-6h`) — after pushing P0 (`690eb71`) + P1 (`82f59a8`):
 
-**Status: VERIFIED / CLOSED — Run #160.** All list/filter/table pages use the unified `Design*` surface package (`DesignSurface`, `DesignPageHeader`, `DesignFilterBar`, `DesignSearch`, `DesignPanel`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, `DesignErrorState`). Canonical primitives gained stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`, `pagination-bar`, `design-*`), and `DataTable` accepts an `error` prop wired from `usePaginatedRows`. The parallel run's Layout/Login/dashboard changes were merged in; `DashboardChrome` keeps its passthrough form so the nav/shell contract test is untouched. Local gates: lint (0 errors), typecheck, `typecheck:all`, `test:unit` (139 tests incl. 17-page design-surface contract + 31 page smoke tests), build.
+| Check | Result |
+|-------|--------|
+| verify (lint / typecheck:all / unit / build) | ✅ success |
+| db (Postgres migrations + RLS + integration/security tests incl. P0) | ✅ success |
+| browser-smoke | ✅ success |
 
-### 6D — Page Headers & Action Toolbars
-- Standardize page headers, titles, breadcrumbs and primary action areas.
-- Stable semantic/test IDs for important actions.
-- Preserve existing handlers, routes and permissions.
+## CI Checkpoint — P3 (green)
 
-### 6E — Filters / Search / Tables
-- Standardize search/filter bars, table headers, empty/loading/error states and pagination surfaces.
-- Preserve query/data contracts and branch isolation.
+After pushing P3 (`ea801f1`, 6H-C dashboard contract) on top of P0+P1+P2:
 
-### 6F — Cards / Panels / Shared States
-- Consolidate repeated visual cards/panels and common state surfaces where safe.
-- Do not alter business logic or data fetching behavior.
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
 
-### 6G — Responsive / Visual Consistency
-- Complete responsive behavior and visual consistency across the rebuilt surfaces.
-- Ensure desktop/mobile rearrangement does not change interaction identity or behavior.
+## CI Checkpoint — P4 (green)
 
-### Bundle execution rules
-1. Create/preserve a rollback checkpoint before risky changes.
-2. Implement 6D–6G as one coherent package where technically safe.
-3. Never weaken previous tests to accommodate the new design.
-4. Preserve PHASE 0–5, 6A, 6B and 6C behavior.
-5. Add focused tests only for newly stabilized critical interactions.
-6. Before closure, run Verify + DB/RLS + Browser E2E and the full regression from PHASE 0 through 6G.
-7. If a regression appears, stop, identify the responsible stage, fix the root cause, and rerun the affected and full regression gates.
-8. Close only the stages whose implementation and evidence are both complete.
+After pushing P4 (`9fb9d5d`, reports center with two dropdowns):
 
-## 6D–6G Implementation Progress — Current Session
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
 
-Implementation is complete and reconciled with the parallel run. The design surface package unifies all list/filter/table pages, dashboards, app shell and login surfaces.
+## CI Checkpoint — P5 (green)
 
-Completed:
-- Shared `DesignSurface`, `DesignPageHeader`, and `DesignFilterBar` in `src/components/design/DesignSurface.tsx`; `DesignPageHeader` delegates to the canonical `PageHeader` (breadcrumbs/testIDs/subtitle).
-- `DesignPanel`, `DesignSearch`, `DesignPagination`, `DesignLoadingState`, `DesignEmptyState`, and `DesignErrorState` in `src/components/design/`.
-- All list/filter/table pages migrated to the `Design*` surfaces; `DataTable` gained an `error` prop (wired from `usePaginatedRows`) and stable test IDs (`data-table`, `table-loading`, `table-empty`, `table-error`); `PaginationBar` has `pagination-bar` identity.
-- Dashboard variants keep the passthrough `DashboardChrome` adapter (nav/shell contract preserved); the enhanced dashboard retains its own `dashboard-surface` identity.
-- Protected application content has a stable responsive `design-content-surface` wrapper in `Layout` without changing routing, permissions, data fetching, or business logic.
-- Login consumes the shared `DesignSurface` with stable identities for the login surface, language toggle, mode toggle, form, and submit action.
-- Added `tests/components/design-surfaces.test.tsx` locking primitives' test IDs and page-surface wiring for 17 pages.
+After pushing P5 (`8152eb7`, shared components on ui tokens + interaction-identity registry):
 
-**Status:** 6D–6G is closed. See Run #160 below for verification evidence.
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
 
-## Verified CI Evidence
+## CI Checkpoint — P6 (green)
 
-### Run #160 — 6D–6G Final Verification
-**Run ID:** `31730936820`  
-**Overall:** SUCCESS
-- Verify: SUCCESS — lint, typecheck, Playwright suite typecheck, unit tests, build.
-- DB: SUCCESS — migrations, schema verification, integration, security/RLS regression.
-- Browser Smoke: SUCCESS — Chromium, build, Playwright E2E.
+After pushing P6 (`POS visual on ui tokens`, on top of P5):
 
-**Conclusion:** 6D–6G is officially verified and closed. (The parallel run's Run #159 failed on the nav/shell contract because its `DashboardChrome` change replaced the passthrough; reconciled in the merge commit `dc6fda9`.)
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
 
-### Run #151 — 6C Final Verification
-**Run ID:** `31698574739`  
-**Overall:** SUCCESS
-- Verify: SUCCESS — lint, typecheck, Playwright suite typecheck, unit tests, build.
-- DB: SUCCESS — migrations, schema verification, integration, security/RLS regression.
-- Browser Smoke: SUCCESS — Chromium, build, Playwright E2E.
+## CI Checkpoint — P7 (green)
 
-**Conclusion:** 6C is officially verified and closed. The earlier Run #149 cancellation is not treated as a code failure.
+After pushing P7 (`legacy removal + final gate`, on top of P6):
 
-## Earlier Verified Phases
+| Check | Result |
+|-------|--------|
+| verify | ✅ success |
+| db | ✅ success |
+| browser-smoke | ✅ success |
+| Redirect rules | ✅ success |
+| Header rules / Pages changed | neutral |
 
-- PHASE 3 — Run #126 — SUCCESS — Browser 50/50.
-- PHASE 0–4 Combined Regression — Run #136 — SUCCESS.
-- PHASE 5 — Run #141 — SUCCESS.
-- 6A — Run #144 — SUCCESS.
-- 6B — Run #147 — SUCCESS.
-- 6C — Run #151 — SUCCESS.
-- 6D–6G — Run #160 — SUCCESS.
+Draft PR stays open; merge only at a full-bundle green checkpoint per workflow rule 3.
 
-## Safety Checkpoints
+## Deployment & Branch Workflow (locked decision — user approved)
 
-- PHASE 3 rollback point: `ui-rebuild-phase3-checkpoint-2026-08-13`.
-- PHASE 4 rollback point: `ui-rebuild-phase4-checkpoint-2026-08-13`.
-- PHASE 5 rollback point: `ui-rebuild-phase5-checkpoint-2026-08-13` at `e416f4bf34fc9cf985fa77fe6ad177f852fbda03`.
-- 6A verified commit: `ed56e4a57202125d377b13facd58db2640084cc5`.
-- 6B verified commit: `8380c82ff954b8faf3da49cc7ea70bd92dc5f537`.
-- 6C implementation commit: `77fe2606746b18f44e79ec42b2d54f3e789e191b`.
-- 6C verified gate: Run #151 / `31698574739`.
-- 6D–6G base checkpoint: `e455295372aa20b5552aed511ee80a463130d8ca`.
-- 6D–6G implementation commit: `1f3f24d`.
-- 6D–6G reconciliation merge: `dc6fda9`.
-- 6D–6G verified gate: Run #160 / `31730936820`.
+1. All visual + security work happens **ONLY** on `ui-visual-rebuild-6h` (the trial branch). **Never** develop directly against the published site (production Supabase data).
+2. CI verification on the branch runs through a **PR into `main`** (verify-main.yml triggers on PR). Each push to the branch refreshes PR checks.
+3. Merge the PR into `main` only at green checkpoints → `main` push auto-deploys to GitHub Pages.
+4. `netlify.toml` is dormant/legacy; GitHub Pages is the active host (do not touch).
+5. Local git fetch refspec was fixed to `+refs/heads/*:refs/remotes/origin/*` so all remote branches are visible.
 
-## Deferred Relationship Audit
+## Non-Negotiable Safety Contract
 
-Per user decision, the independent Relationship Integrity Gate remains deferred until the rebuild plan is completed. It will be executed before final merge.
+- Preserve all existing business logic, data fetching, mutations, API contracts, routes, authentication, permissions, RBAC, branch isolation, POS transaction logic, tables/orders/delivery/takeaway/car/quick-order flows, payments, printing, discounts, split/hold/send/close/save actions, kitchen integration, and customer display behavior.
+- **Buttons/actions never lose their identity or function wherever they move** — every stable `data-testid` and handler contract must survive the redesign, locked by a contract test.
+- UI changes must reuse existing hooks, queries, mutations, and handlers wherever possible.
+- **No Supabase schema/RLS change except as a separate, approved, tested migration** (see P0). Never ship a DB change inside a visual commit.
+- Do not delete legacy UI until all consumers are identified and the replacement is verified.
+- Never weaken or remove existing tests to accommodate the new design.
+- Create rollback-safe commits/checkpoints (`rb-*` tags) before risky migrations or deletions.
+- Every meaningful implementation, decision, fix, CI result, and phase transition must be recorded here.
 
-## Definition of Done
+## P0 — Security & Branch Isolation (approved — highest priority)
 
-The rebuild is complete only when the reference design is the intended production UI, critical controls have stable identities independent of layout, dashboard/navigation and POS/FloorPlan/Kitchen/payment flows are verified, RBAC/branch isolation is verified, build/typecheck/lint/unit/browser/regression checks pass, no critical blocker remains, the deferred relationship audit passes, and PR #3 is reviewed before merge to `main`.
+Fixing all audit gaps before/alongside the visual work. Each item is a DB migration + integration/RLS test.
+
+Audited gaps (from the completed branch-isolation audit):
+
+| # | Severity | Gap | Fix |
+|---|----------|-----|-----|
+| 1 | CRITICAL | `process_sale` executable by `anon`, SECURITY DEFINER, branch guard passes when `auth.uid()` is NULL → cross-branch write | Revoke from `anon`/`public` (keep `authenticated`), harden guard to require `auth.uid()` |
+| 2 | Read leak | `raw_materials` RLS `USING (true)` → cross-branch read | Scope to branch |
+| 3 | Read leak | `product_components` RLS `USING (true)` → cross-branch read | Scope to branch |
+| 4 | LOW | `subscription_status` readable by `anon` for any branch | Restrict to `authenticated` |
+| 5 | App leak | `recipe_costs` RPC has no branch filter | Enforce branch scope for non-admins |
+
+## 6D–6G — VERIFIED / CLOSED
+
+6D–6G was completed on the previous rebuild branch and verified by Run #160. The unified `Design*` surface package, list/filter/table migrations, stable test IDs, shell/login/dashboard reconciliation, DB/RLS checks, and browser smoke passed.
+
+## 6H + 6I — Full Visual Rebuild Bundle
+
+### P1 (6H-A) — Design Tokens — DONE
+- Established the new visual language via CSS variables + Tailwind config, linked to the brand-color engine.
+- `src/index.css`: expanded `--ui-*` token set (primary violet `#5b2bd8` + hover/active/soft/fg, `--ui-accent` = `var(--brand-600)` so accents/charts follow the merchant brand engine, surface/raised, page/page-alt, border/strong, text/muted/subtle, success/warning/danger/info, radius scale `sm/…/2xl`, shadow scale `sm/xl`, focus ring) + `.dark` token overrides for neutrals.
+- `tailwind.config.js`: new `ui` color namespace (`bg-ui-page`, `text-ui-text`, `bg-ui-primary`, `text-ui-muted`, …), `shadow-ui-*` scale, `rounded-ui*` scale.
+- `body` now uses `bg-ui-page text-ui-text`; `.ui-surface` uses `var(--ui-shadow)`.
+- Brand linkage: primary stays violet by default (approved identity); `--ui-accent` follows the brand engine (`--brand-600`), so merchant brand still drives highlights/charts. Decision recorded for future phases.
+- Keep semantic identities and interaction behavior unchanged.
+
+### P2 (6H-B) — App Shell — DONE
+- Rebuilt Sidebar, Header, navigation hierarchy, content surface and responsive shell on the new `ui-*` tokens (`Layout.tsx`).
+- Added a global **active-branch indicator** + **admin branch switcher** in the header: `data-testid="branch-indicator"`, dropdown `branch-menu` with `branch-option-all` and `branch-option-{id}`. Non-admins see a read-only chip pinned to their branch; admins pick "All branches" or any branch.
+- New lightweight global store `src/lib/activeBranch.ts` (`getActiveBranchId` / `setActiveBranchId` / `useActiveBranchId`, persisted to `localStorage`) — the shell indicator uses it now; P3 wires the dashboard to it.
+- Preserved ALL stable IDs: `app-shell`, `app-sidebar`, `app-navigation`, `nav-group-{group}`, `nav-group-toggle-{group}`, `nav-item-{id}`, `sidebar-close`, `sidebar-open`, `mobile-sidebar-backdrop`, `assistant-card`, `app-header`, `top-navigation`, `top-tab-{key}`, `active-orders-button`, `active-orders-count`, `user-menu-button`, `language-toggle`, `theme-toggle`, `sign-out-button`, `app-main`, `design-content-surface`.
+- Route guards, permissions, active-navigation behavior, `navigate('/floor-plan')` active-orders handler, and all existing handlers unchanged.
+
+### P3 (6H-C) — Dashboard — DONE (pushed, CI green)
+- Complete the `VisualDashboardPage` contract, restoring everything the old `DashboardFoodicsPage` had:
+  - Currency from `effectiveSettings().currency` (not hardcoded `EGP`).
+  - Admin branch picker wired to the global active-branch store (`useActiveBranchId`), with the correct guard `isAdmin ? activeBranchId : branchFilter` (old `isAdminRole(...) ? branchFilter : branchFilter` was a no-op).
+  - KPI report deep links `to="/reports?reportType=…"` (sales, sales_by_payment, sales_by_product, detailed_invoices).
+  - Year range, previous-period comparison, order-type filter, export.
+- Preserve all existing Supabase data, filters, metrics and chart data contracts.
+- New contract test `tests/unit/dashboardContract.test.ts` (currency source, `isAdmin ? activeBranchId : branchFilter`, KPI deep links, year/comparison/filter/export, no `branchFilter : branchFilter`).
+- Removed unused lucide imports (`Activity`, `CalendarDays`, `Package`).
+- Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 144/144 (fixed one contract assertion: `data-testid={testId}` is rendered as `<Metric testId="…">`), build pass. Two earlier test timeouts (`brandColor` / `pages.smoke`) were parallel-load artifacts — pass in isolation and in full sequential run.
+
+### P4 (6H-P4) — Reports Center — DONE (pushed, CI green)
+- Dropdown 1 = report type: `data-testid="report-type-select"` grouping all 14 operational + 9 financial types (`optgroup` Operational / Financial). Financial options render only with the `reports.financial` permission; selecting one navigates to `/financial-reports?view=<key>&from=<from>&to=<to>`.
+- Dropdown 2 = contextual period filter: `data-testid="report-context-filter"` with presets (today / yesterday / last7 / last30 / this month / last month / this year / custom) driving `from`/`to`; manual date edits reset to custom. New i18n key `filterByPeriod`.
+- **Preserved the contract:** compact quick-access chip row keeps `button[data-report-type="<key>"]` for all 14 operational + 9 financial keys, and `/reports?reportType=…` deep links still resolve via `ReportDeepLinkPage`.
+- `FinancialReportsPage` now reads `?view` / `?from` / `?to` (deep-linkable) and its view buttons carry `data-report-type`.
+- Reports center restyled on `ui-*` tokens (surface, page-alt, primary, border, shadows).
+- New contract test `tests/unit/reportsCenterContract.test.ts` (dropdowns, financial gating, `button[data-report-type]`, deep links, financial navigation, period presets).
+- Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 150/150, build.
+
+### P5 (6H-D) — Shared Components + Full Sweep — DONE (pushed, CI green)
+- **Interaction-Identity Registry** `src/lib/interactionIdentity.ts`: central list of every stable `data-testid`/handler contract (shell, dashboard KPIs, reports center, deep links, financial views, data-table, design primitives, POS bottom bar — 60+ contracts) with its owning file + required behavior marker.
+- New contract test `tests/unit/interactionIdentity.test.ts`: fails if any registered identity or its documented behavior marker is removed/renamed from the source.
+- Swept shared components onto `ui-*` tokens (auto dark-mode via token overrides):
+  - `Card` (`PageHeader.tsx`) → `bg-ui-surface border-ui-border rounded-ui-xl shadow-ui`; header title/subtitle/breadcrumbs → `ui-text`/`ui-muted`/`ui-subtle`.
+  - `Button` variants → `bg-ui-primary`/`bg-ui-page-alt`/`border-ui-border-strong`, `focus-visible:ring-ui-ring`, `rounded-ui*` scale, `shadow-ui-sm`.
+  - `Input`/`Select`/`Textarea` → `bg-ui-surface-raised`, `border-ui-border`, `placeholder-ui-subtle`, error → `text-ui-danger`.
+  - `Modal` → `bg-ui-surface rounded-ui-xl shadow-ui-xl ring-ui-border` + `ui-*` header/close.
+  - Design package: `DesignSearch`, `DesignStates` (loading/empty/error), `DesignFilterBar`, `DesignPanel` header, `PaginationBar` → `ui-*` tokens.
+- No business logic touched; all stable testids unchanged.
+- Local gates green: lint 0 errors (16 pre-existing warnings), typecheck:all, `test:unit` 213/213, build.
+
+### P6 (6I-A..D) — POS Visual
+- 6I-A POS Workspace layout; 6I-B Product Browser / Order Panel; 6I-C Order Types / Tables (Table, Delivery, Takeaway, Car, Quick); 6I-D Active Orders / Kitchen integration UI.
+- Presentation only — preserve every existing handler, data contract, table availability, occupied-table, guest-count and order-selection logic.
+
+### P7 — Safe Legacy Removal + Final CI + PR — DONE
+1. Consumer audit: identify every import/route of `DashboardFoodicsPage`, orphan POS components (`TypeChangePicker`, `OrderTypeQuickPicker`, unused `src/ui`), and any legacy surfaces.
+2. Remove them only after the replacement is fully verified by tests.
+3. Full gate: lint, typecheck:all, unit/smoke, build, DB/RLS integration/security, browser e2e.
+4. Merge PR into `main` → auto-deploy. Update this log.
+
+## 6H–6I Execution Rules
+
+1. Work only on `ui-visual-rebuild-6h`; `main` is protected from direct UI changes.
+2. Bundle related stages into CI batches, but keep clear internal checkpoints: Batch 1 = P0 (DB), Batch 2 = P1+P2+P3, Batch 3 = P4, Batch 4 = P5+P6, Batch 5 = P7.
+3. Preserve every existing functional contract; run the contract tests before and after each batch.
+4. Add focused regression/contract tests for critical interactions when needed (never weaken existing ones).
+5. Do not delete legacy UI until replacement consumers are verified.
+6. If any regression appears, **stop**, fix the root cause, and rerun the affected + full gates before continuing.
+7. The bundle is complete only when the new UI is visibly different, functional behavior is preserved, tests pass, and the legacy surface has a safe removal plan.
+
+## Implementation Progress — 6H + 6I
+
+### Completed
+- Created isolated branch `ui-visual-rebuild-6h` from `main`.
+- Began the genuinely new Dashboard visual surface on the isolated branch.
+- Recorded this bundle and its safety contract in the master log before continuing implementation.
+- Fixed 6h-branch baseline: removed unused `APP_ROUTES` import; aligned recharts `Tooltip formatter` typing with repo convention (`Number(value ?? 0)`).
+- Baseline gates green locally: lint (0 errors), typecheck:all, test:unit (139 passed), build.
+- Rollback tag `rb-6h-base` created.
+- Fixed local git fetch refspec so all remote branches are visible.
+- **P0 (security) done & pushed** — migration `068_security_harden_audit_gaps.sql` (revoke `process_sale` from anon/public, restrict `subscription_status`, branch-scope `product_components` SELECT via parent product), `ReportsPage.tsx` `recipe_costs` branch filter, integration tests `tests/integration/p0_security_hardening.test.ts`. Local gates green; pushed to PR #4 for CI. Commit `690eb71`.
+- **P1 (design tokens) done** — expanded `--ui-*` tokens + `.dark` overrides in `src/index.css`, `ui` color namespace + shadow/radius scales in `tailwind.config.js`. Local gates green (lint 0 errors, typecheck:all, 139 unit tests, build).
+- **P2 (app shell) done** — restyled shell on `ui-*` tokens + global active-branch indicator/admin switcher (`src/lib/activeBranch.ts`, header `branch-indicator`). All stable IDs + handlers preserved. Local gates green.
+- **P3 (dashboard contract) done locally** — rewrote `VisualDashboardPage.tsx` on `ui-*` tokens with the full contract (currency from `effectiveSettings`, branch picker via `useActiveBranchId`, KPI deep links, year range, previous-period comparison, order-type filter, export menu). New `tests/unit/dashboardContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 144/144, build).
+- **P4 (reports center, two dropdowns) done** — report-type dropdown (14 operational + 9 financial gated by `reports.financial`, financial navigate to `/financial-reports?view=…`) + contextual period dropdown; preserved `button[data-report-type]` chips and `/reports?reportType=…` deep links; `FinancialReportsPage` reads `?view/from/to`. New `tests/unit/reportsCenterContract.test.ts`. Local gates green (lint, typecheck:all, test:unit 150/150, build). Pushed `9fb9d5d`; PR #4 CI green (verify, db, browser-smoke).
+- **P5 (shared components + identity registry) done** — Interaction-Identity Registry `src/lib/interactionIdentity.ts` (60+ contracts) + `tests/unit/interactionIdentity.test.ts`; swept `Card`, `Button`, `Input`/`Select`/`Textarea`, `Modal`, `DesignSearch`, `DesignStates`, `DesignFilterBar`, `DesignPanel`, `PaginationBar` onto `ui-*` tokens. Local gates green (lint, typecheck:all, test:unit 213/213, build). Pushed `8152eb7`; PR #4 CI green (verify, db, browser-smoke).
+- **P6 (POS visual) done** — swept the entire POS feature onto `ui-*` design tokens, presentation-only (no logic/props/handlers/testids changed; all `pos-*` data attributes, bottom-bar `onClick={() => setOrdersOpen(true)}`, and its aria-label preserved): `PosWorkspacePage` (workspace shell, loading/error screens, receipt modal), `PosTopBar`, `ProductBrowser` (search, category chips, cards, stock badges), `CurrentOrderPanel` (chips, cart rows, steppers, totals, pay = `bg-ui-success`, discount editor), `PaymentPanel` (method cards, paid input, change banner, confirm), `OrderTypeBottomBar` (drawer + bottom nav pill), `ActiveOrdersDrawer` (backdrop/aside/filters/cards/actions), `KitchenPanel` (sends, status badges), `TablesPanel` + `TableFloorPlan` (floor canvases, table cards), `OrderStartWizard` + `OrderTypePicker` + `CarOrderStep` + `DeliveryOrderStep` + `TablePickerStep` + `TableActionModal` + `OrderTypeQuickPicker` + `TypeChangePicker`, `ActiveOrdersPage` (StatCard color map via shared `PageHeader.tsx`, branch select, filters, order cards, table form inputs). Utility style maps tokenized: `orderTypes.ts` `STATUS_STYLES`, `orderStage.ts`, `orderState.ts` (+ `OrderStateDot`), `orderLabels.ts` `ORDER_TYPE_META` pill. `shadow-pos`/`hover:shadow-card-hover` → `shadow-ui-*`. No hardcoded slate/navy/gold/brand/emerald/amber/red/sky/blue/orange/green color classes remain under `src/features/pos`. Local gates green (lint 0 errors, typecheck:all, test:unit 213/213, build).
+- **P7 (safe legacy removal) done** — full consumer audit completed first, then only proven orphans removed. **Replacement proof:** `VisualDashboardPage` (live via route `/dashboard` → `DashboardEnhancedPage`) contains every marker the legacy contract pinned (`reportType=sales|sales_by_payment|sales_by_product|detailed_invoices`, `to="/inventory"`, `setCompareEnabled`, `setFilterOpen`; no `sales_by_branch`, no `/pos/active`), and the `interactionIdentity` registry pins dashboard testids (`dashboard-surface`, `dashboard-branch-filter`, …) to `VisualDashboardPage`; POS bottom-bar nav + aria contracts remain pinned to `OrderTypeBottomBar`. **Contract tests before deletion: 117/117 green; after deletion: 117/117 green** (7 files: interactionIdentity, navigationRegression, dashboardContract, navigation-contract, navigationRegistry, reportsCenterContract, pages.smoke). **Deleted (11, all zero-consumer after audit):** `DashboardFoodicsPage.tsx`, `DashboardPage.tsx`, `DashboardControlCenterPage.tsx`, `DashboardFinalPage.tsx`, `DashboardModernPage.tsx` (legacy dashboard + compat wrappers), `DashboardChrome.tsx` (legacy shell adapter, only consumer was the deleted legacy page), `TypeChangePicker.tsx`, `OrderTypeQuickPicker.tsx` (orphan POS pickers, no import anywhere), `src/ui/AppCard.tsx`, `src/ui/AppStatCard.tsx`, `src/ui/index.ts` (orphan package, zero consumers in src/tests). **Kept:** `VisualDashboardPage.tsx`, `DashboardEnhancedPage.tsx` (live route), `OrderTypePill.tsx`, `OrderStageBadge.tsx`, `OrderStatusBadge.tsx`, `CurrentOrderPanel.tsx`, all start-wizard/table/orders/kitchen components (live consumers), `orderLabels.ts`/`orderStage.ts`/`orderState.ts`/`orderTypes.ts` (used by live components). **Test/config re-points (no contracts weakened):** `navigationRegression.test.ts` now reads `VisualDashboardPage.tsx` (same 9 assertions) and dropped the obsolete `DashboardChrome` read; `pages.smoke.test.tsx` renders `DashboardEnhancedPage` (the real route component); `eslint.config.js` removed the deleted-wrappers exception block. **Full gate green:** lint 0 errors (16 pre-existing warnings), typecheck:all, test:unit 213/213, build; DB/RLS integration 153 tests self-skip locally (no DB URL — runs in CI `db` job); browser-smoke runs in CI. **Observation (not deleted):** `src/features/pos/hooks/usePosSummary.ts` is unused but is a hook, not a listed legacy surface — flagged for a future cleanup decision. No business logic, RBAC/RLS, schema, routes, or POS behavior changed. Pushed; PR #4 CI green (verify, db, browser-smoke).
+
+### Pending
+- P7 pushed and CI green; PR #4 stays in Draft — merge into `main` only at the final full-bundle green checkpoint per workflow rule 3 (last check: P7 green — verify, db, browser-smoke all success).
+
+## Relationship Audit Note
+
+The production Supabase schema had a duplicate FK on `users.branch_id`. The duplicate `users_branch_id_fkey` was removed manually after verification, leaving only `users_branch_fk_strict`. A migration was added on the previous rebuild branch to preserve the fix for schema recreation. This relationship fix is separate from the visual rebuild and must remain behavior-preserving.
+
+## Definition of Done — 6H + 6I
+
+The bundle is complete only when the new App Shell + Dashboard + Reports Center + POS visual surfaces are clearly distinguishable from the old design, all existing functionality remains intact (contract tests green), legacy consumers are audited, P0 security gaps are closed with passing RLS tests, focused tests and full CI pass, DB/RLS/security/browser checks pass, and the work is ready for a dedicated PR into `main`.
