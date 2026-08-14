@@ -158,7 +158,10 @@ BEGIN
           COALESCE((v_item->>'discount_amount')::numeric, 0),
           COALESCE((v_item->>'bonus_quantity')::numeric, 0),
           COALESCE((v_item->>'total')::numeric, 0),
-          NULLIF(v_item->>'notes', ''));
+          NULLIF(v_item->>'notes', ''))
+        RETURNING id INTO v_matched_id;
+        -- Protect the brand-new line from the deletion sweep below.
+        INSERT INTO _upd_matched (order_item_id) VALUES (v_matched_id);
       END IF;
     END LOOP;
 

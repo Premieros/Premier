@@ -1,9 +1,9 @@
 # ERP-01 — تقرير التنفيذ والتحقق
 
-- الحالة: **VERIFICATION PENDING** — لم تُغلق ERP-01 بعد؛ الإغلاق يتوقف على إتمام التحقق الحي (بيئة Supabase/Postgres + E2E) ثم المراجعة والـPR.
+- الحالة: **VERIFICATION PENDING** — لم تُغلق ERP-01 بعد؛ الإغلاق يتوقف على إكمال بوابات CI (التي كشفت خللين وعولجا أدناه) ثم المراجعة والدمج.
 - الفرع: `erp-01-settings-organization` (قاعدة `main` بعد دمج P7).
-- `main`: لم يُلمس. لا PR مفتوح. لم يُبدأ ERP-02.
-- التاريخ: 2026-08-14 (إعادة تحقق نهائية في هذه الجلسة).
+- `main`: لم يُلمس. **PR #5 مفتوح** (https://github.com/Premieros/Premier/pull/5) — لم يُدمج. لم يُبدأ ERP-02.
+- التاريخ: 2026-08-14 (إعادة تحقق نهائية + أول تشغيل حي للـDB suite في CI عبر PR #5).
 
 ---
 
@@ -29,6 +29,13 @@
 - **لذلك لا يُحسب هذا البوابة ناجحًا.** يُسجَّل رسميًا: `NOT EXECUTED — ENVIRONMENT BLOCKED`.
 - ما يغطيه عند تشغيله الحي/CI: `kitchen_sends` (069)، `update_order` (046)، `rls_branch_isolation` (110)، `rbac_hardening`، `phase4_security_contract`، `process_sale_pricing`، `process_sale_order_settlement`، `p0_security_hardening`، `floorplan_orders`، `order_lifecycle_guards`.
 - الطريق المُصادق عليه في هذا المستودع لتشغيله محليًا هو نهج CI نفسه (`.github/workflows/verify-main.yml` `db` job): Postgres محلي + `stub_auth.sql` + الهجرات + `verify-schema.js` + `disable_subscription_guard.sql` + `seed_raw_material_branch.sql` ثم `npm run test:integration`. لا يُنسخ في `.env` أي قيمة مخترَعة.
+
+### 2.1. أول تشغيل حي في CI (عبر PR #5) — كشف خللين وعولجا
+
+- **`npm ci` فشل في `verify` job** رغم نجاحه محليًا: lockfile المولّد محليًا بـ npm 11 فقد حزم `esbuild@0.28.x` المطلوبة من rolldown-vite (الذي يجره vitest 4.x)، وnpm 10 في CI (Node 22) يرفضها (EUSAGE). **الإصلاح:** أُعيد توليد `package-lock.json` بـ npm 10.9.9 → `npm ci` متوافق محليًا وفي CI (commit `2382280`).
+- **`db` job شغّل حزمة integration حيًا: 154 اختبارًا → 153 نجحت / 1 فشل** — «resume + add item + send + payment: only the new line reaches KDS (ERP-01)». لم تلتقطها القراءة الثابتة (القسم 4):
+  - السبب: في إعادة كتابة 069، الأسطر **الجديدة** المدرَجة في `order_items` لم تُسجَّل في `_upd_matched`، فحذفها سَيرُ الحذف فورًا (`DELETE ... NOT EXISTS (_upd_matched)`) → اختفت السلعة المضافة من السلة → `items_sent_count` = 0 بدل 1.
+  - **الإصلاح:** `INSERT ... RETURNING id INTO v_matched_id` ثم تسجيل السطر الجديد في `_upd_matched`. إعادة تشغيل CI معلّقة حتى هذه الكتابة.
 
 ## 3. E2E — ⚠️ BLOCKED BY ENVIRONMENT (المتطلبات محددّة بالضبط)
 
@@ -58,7 +65,7 @@
   - **عزل الفرع/RBAC**: الحراس `is_pos_admin()` / `get_branch_id()` (مُعرَّفان في 001/004/006) لم تُمس؛ شرط `BRANCH_MISMATCH` في 069 مطابق حرفيًا لـ046.
 - **توافق الواجهة الأمامية**: `src/api/modules.ts` ينادي `update_order` بنفس أسماء المعاملات → لا انحراف تعاقدي. `verify-schema.js` لا يتضمن `update_order` بالاسم → لا أثر على فحص schema.
 - **التغطية**: `tests/integration/kitchen_sends.test.ts` (7) — إرسال أول، إعادة إرسال no-op، حفظ نفس السلة لا يُعيد الإرسال، resume+إضافة يُرسل الجديد فقط ثم `process_sale` يسوّي السلة كاملة، رفض completed، H4، قراءة RLS داخل الفرع؛ `update_order.test.ts` (7) — C2/H2/M4/H4؛ بجانب `rls_branch_isolation` (110) و`floorplan_orders` (3) وغيرها.
-- **الخلاصة**: لا regression مكتشفة قرائيًا في Resume/KDS ولا في عزل الفرع. التصديق الحي معلّق على البيئة (القسم 2).
+- **الخلاصة**: القراءة الثابتة لم ترصد regression، لكن **التشغيل الحي في CI (القسم 2.1) رصد خللًا حقيقيًا في مسار «الأسطر الجديدة»** (سَير الحذف كان يمسح السطر المُضاف) وعولج بتسجيله في `_upd_matched`. إعادة التحقق النهائية معلّقة على إعادة تشغيل CI.
 
 ## 5. ملخص الحالات الثلاث
 
@@ -70,19 +77,20 @@
 | `npm run typecheck:all` | ✅ VERIFIED |
 | `npm run test:unit` | ✅ VERIFIED (236/236, 19 ملفًا) |
 | `npm run build` | ✅ VERIFIED |
-| `npm run test:integration` | ⚠️ NOT EXECUTED — ENVIRONMENT BLOCKED (154/154 skipped) |
-| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | ⚠️ BLOCKED BY ENVIRONMENT (يحتاج VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY عند البناء) |
-| مراجعة هجرة 069 + RLS/RBAC | ✅ VERIFIED (قراءة ثابتة؛ الحي معلّق) |
-| ❌ FAILED | — لا توجد نتائج فاشلة في هذه الجلسة |
+| `npm run test:integration` | ⚠️ محليًا NOT EXECUTED (لا DB) — **في CI: 154 اختبارًا، 153 ✅ / 1 ❌ (069) → عولج** |
+| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | ⚠️ BLOCKED BY ENVIRONMENT محليًا (يحتاج VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY عند البناء) — يُشغَّل في CI `browser-smoke` |
+| مراجعة هجرة 069 + RLS/RBAC | ✅ قراءة ثابتة سليمة لكنها لم تكشف الخلل؛ **التشغيل الحي في CI كشفه وعولج** |
+| ❌ FAILED | 1 فشل integration واحد في أول تشغيل CI (069 — سطر جديد يُمحى) → مُصلَح؛ إعادة تشغيل جارية |
 
 ## 6. الالتزامات المحفوظة
 
 - لا قيمة `SUPABASE_DB_URL`/`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` مخترَعة أو مضافة إلى `.env` أو إلى أي commit.
 - لم يُطلب أي secret داخل Git.
-- `main` لم يُلمس؛ لا PR مفتوح؛ ERP-02 لم يُبدأ.
+- `main` لم يُلمس؛ **PR #5 مفتوح وغير مدمج**؛ ERP-02 لم يُبدأ.
+- خللان كشفهما CI وعولجا: lockfile (esbuild@0.28.x) + 069 (مسح السطر الجديد).
 - تحديثات التوثيق في هذه الجلسة غير مرفوعة/غير committed بانتظار مراجعتك (أو يُلتزَم بها في commit عند طلبك صراحة).
 
 ## 7. الحالة والتالي
 
-- **ERP-01: VERIFICATION PENDING** — كل البوابات القابلة للتنفيذ محليًا خضراء (القسم 1)، والبوابات الحية محجوبة بالبيئة ومُصنّفة بأسمائها الصريحة (القسمان 2–3). لا يوجد FAILED.
-- لإغلاق F: توفير بيئة مؤهلة (`.env` محلي git-ignored بقيم فعلية أو تشغيل CI) ثم `test:integration` الحي + E2E، تليها المراجعة النهائية والـPR.
+- **ERP-01: VERIFICATION PENDING** — البوابات المحلية خضراء (القسم 1)؛ أول تشغيل حي في CI كشف خللين وعولجا (lockfile + 069) وتجري إعادة التشغيل (القسم 2.1)؛ E2E محجوب محليًا ويُشغَّل في CI `browser-smoke`.
+- لإغلاق F: اكتمال بوابات PR #5 (verify + db + browser-smoke) خضراء، ثم المراجعة النهائية والدمج (لا يُدمج قبل موافقتك).
