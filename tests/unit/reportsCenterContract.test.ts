@@ -8,6 +8,8 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 const reportsSource = read('src/features/reporting/pages/ReportsPage.tsx');
 const deepLinkSource = read('src/features/reporting/pages/ReportDeepLinkPage.tsx');
 const financialSource = read('src/features/accounting/pages/FinancialReportsPage.tsx');
+const reportFiltersSource = read('src/features/reporting/reportFilters.ts');
+const reportExportSource = read('src/lib/reportExport.ts');
 
 const OPERATIONAL_KEYS = [
   'sales', 'sales_by_payment', 'sales_by_employee', 'sales_by_product', 'detailed_invoices',
@@ -70,5 +72,41 @@ describe('Reports Center contract (6H-P4)', () => {
     expect(reportsSource).toContain('value="last_month"');
     expect(reportsSource).toContain('value="this_year"');
     expect(reportsSource).toContain('applyPeriod');
+  });
+
+  it('shows only the filters relevant to the selected report (ERP-01 §6)', () => {
+    expect(reportsSource).toContain('data-testid="report-contextual-filters"');
+    expect(reportsSource).toContain('data-filter-dim={dim}');
+    expect(reportsSource).toContain('REPORT_FILTER_DIMS[reportType].length > 0');
+    expect(reportsSource).toContain('DATE_DRIVEN_REPORTS.has(reportType)');
+    expect(reportFiltersSource).toContain('REPORT_FILTER_DIMS');
+    expect(reportFiltersSource).toContain('DATE_DRIVEN_REPORTS');
+  });
+
+  it('applies contextual filters to real queries via column-scoped builders', () => {
+    expect(reportFiltersSource).toContain('applySalesFilters');
+    expect(reportFiltersSource).toContain('applySaleItemFilters');
+    expect(reportFiltersSource).toContain('applyPurchaseFilters');
+    expect(reportFiltersSource).toContain('applyExpenseFilters');
+    expect(reportFiltersSource).toContain('applyProductScopedFilters');
+    expect(reportsSource).toContain('filterQ(q, filters, applySalesFilters)');
+    expect(reportsSource).toContain('filterQ(q, filters, applyPurchaseFilters)');
+    expect(reportsSource).toContain('filterQ(q, filters, applyExpenseFilters)');
+  });
+
+  it('offers Excel, CSV and print/PDF output from the report page', () => {
+    expect(reportsSource).toContain('exportToExcel');
+    expect(reportsSource).toContain('downloadCSV');
+    expect(reportsSource).toContain('openPrintWindow');
+    expect(reportsSource).toContain("t('exportExcel')");
+    expect(reportsSource).toContain("t('exportCsv')");
+    expect(reportsSource).toContain("t('print')");
+    expect(reportExportSource).toContain('downloadCSV');
+    expect(reportExportSource).toContain('openPrintWindow');
+    expect(reportExportSource).toContain('text/csv;charset=utf-8');
+  });
+
+  it('resets contextual filters when switching report type', () => {
+    expect(reportsSource).toContain('setFilters({})');
   });
 });
