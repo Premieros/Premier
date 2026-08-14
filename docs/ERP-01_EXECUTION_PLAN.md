@@ -646,22 +646,25 @@ Never bypass a stop condition just to make the UI appear complete.
 - `tests/components/pos-payment-panel.test.tsx` — payment receipt review contract.
 - `tests/integration/kitchen_sends.test.ts` — Resume/KDS incremental-send regression (live DB).
 
-## Local gate results (PHASE F) — verified on fresh install
+## Local gate results (PHASE F) — re-verified 2026-08-14 on fresh install
 
-- `npm ci` ✅ (fresh install, 477 packages) — exposed and fixed a missing-devDependency gap: `@playwright/test` was already used by `tests/e2e/*.spec.ts` and `playwright.config.ts` but never declared; declared as devDependency `@playwright/test@^1.62.1` (commit `32d2faa`) so `npm ci` and `typecheck:all` are deterministic.
+- `npm ci` ✅ (fresh install; added 480 packages, audited 481) — the devDependency gap fix is in place: `@playwright/test@^1.62.1` is declared (commit `32d2faa`), so `npm ci` and `typecheck:all` are deterministic. Non-blocking `allow-scripts` warning for the `esbuild` postinstall was observed; every later gate still passed. (Note: earlier report recorded 477 packages; actual fresh-install count is 480 — npm resolution version detail, no dependency change.)
 - `npm run lint` ✅ (0 errors; 16 pre-existing warnings)
 - `npm run typecheck` ✅
 - `npm run typecheck:all` ✅ (includes type-checking `tests/e2e`)
 - `npm run test:unit` ✅ 236/236 across 19 files
-- `npm run build` ✅
+- `npm run build` ✅ (~25s)
 
-## Verification still pending (PHASE F) — blocked on live Supabase environment
+## Verification still pending (PHASE F) — blocked on environment; classified precisely
 
-No Supabase environment values exist in this checkout (no `.env`; it is git-ignored) and none were invented. The remaining gates require user-provided values:
+No environment values exist in this checkout (no `.env`; git-ignored) and none were invented. The remaining gates are **environment-blocked**, not passed:
 
-1. **`npm run test:integration` against live Supabase** — confirmed the suite self-skips without a URL (154/154 skipped, 10 files): `SUPABASE_DB_URL` (or `DATABASE_URL`) is required. This covers migration `069` and the RLS/security suites (`rls_branch_isolation`, `p0_security_hardening`, `rbac_hardening`, `phase4_security_contract`, `process_sale_*`, `update_order`, `floorplan_orders`, `order_lifecycle_guards`).
-2. **Browser E2E** (`pos-actions`, `public-smoke`, `dashboard-navigation`) — Playwright 1.62.1 + chromium are installed and the specs mock the whole Supabase network, but the app build needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (`src/lib/supabase.ts`), so a `.env` is required before the specs can boot the app.
-3. **RLS/security review of migration `069`** — static review done (function-only replacement; no RLS/grants/schema-object changes); live confirmation requires the DB URL above.
+1. **`npm run test:integration` → `NOT EXECUTED — ENVIRONMENT BLOCKED`** — re-run 2026-08-14: 10 files / 154 tests, all skipped (154/154). `getDbUrl()` reads `SUPABASE_DB_URL`/`DATABASE_URL`/`POSTGRES_URL` from env or `.env` only, and the suite `describe.skipIf(skip)`s wholesale without one. Covers migration `069` + the RLS/security suites (`rls_branch_isolation`, `p0_security_hardening`, `rbac_hardening`, `phase4_security_contract`, `process_sale_*`, `update_order`, `floorplan_orders`, `order_lifecycle_guards`). The repo's sanctioned way to run it locally is the CI `db` job recipe (`.github/workflows/verify-main.yml`): local Postgres + `stub_auth.sql` + migrations + `verify-schema.js` + `disable_subscription_guard.sql` + `seed_raw_material_branch.sql`, then `npm run test:integration`. No Postgres/Docker is installed on this machine, so it cannot be executed here.
+2. **Browser E2E** (`pos-actions` 9, `public-smoke` 38 — 2 + 36 protected routes, `dashboard-navigation` 3 = 50 tests) — **BLOCKED BY ENVIRONMENT** with precisely identified requirements:
+   - A git-ignored `.env` with `VITE_SUPABASE_URL` set **exactly** to the specs' mock origin `https://lwnsdsncmlsroiswgoga.supabase.co` (`SUPABASE_ORIGIN` in `pos-actions.spec.ts` / `dashboard-navigation.spec.ts`, so `page.route()` interceptors match) and a non-empty `VITE_SUPABASE_ANON_KEY`.
+   - Why required: `src/lib/supabase.ts` calls `createClient(...)` at module scope and `@supabase/supabase-js` throws synchronously (`supabaseUrl is required.` / `supabaseKey is required.`) when either is missing; this module is imported eagerly by `AuthContext`/`SettingsContext`/`RolesContext`/`api/client.ts`, so the whole app (including the `public-smoke` login page) fails to boot without the values at build time.
+   - Then `npm run build` (with the values) → `npx playwright test` (`playwright.config.ts` auto-starts `npm run preview -- --host 127.0.0.1 --port 4173` serving `dist/`). `@playwright/test@^1.62.1` and chromium revision 1234 (matching the installed version) are already present.
+3. **RLS/security review of migration `069`** — static review passed (function-only replacement; no RLS/grants/schema-object changes; branch guard byte-identical to 046; send boundary `order_kitchen_sends` + `send_to_kitchen` untouched); live confirmation requires the DB URL above.
 
 ## Known limitations & technical debt
 
