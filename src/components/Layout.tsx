@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, BarChart3, Boxes, BookOpenText, Building2, ChefHat,
+  Activity, ArrowLeftRight, BarChart3, BookOpenText, Boxes, Building2, Calculator, ChefHat,
   ChevronDown, CreditCard, Factory, FileSpreadsheet, FileText, FlaskConical,
   Globe, HandCoins, Landmark, Layers, LayoutDashboard, LogOut, Menu, Moon, NotebookPen,
   Package, Receipt, Scale, ScrollText, Settings, ShoppingCart, Sparkles, Store, Sun,
@@ -44,6 +44,7 @@ const ICONS: Record<MenuIcon, ReactNode> = {
   treasury: <Wallet className="h-5 w-5" />,
   reconciliation: <Scale className="h-5 w-5" />,
   financialReports: <FileSpreadsheet className="h-5 w-5" />,
+  costing: <Calculator className="h-5 w-5" />,
   sales: <FileText className="h-5 w-5" />,
   shifts: <Timer className="h-5 w-5" />,
   reports: <BarChart3 className="h-5 w-5" />,

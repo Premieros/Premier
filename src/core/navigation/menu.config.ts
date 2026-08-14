@@ -8,7 +8,7 @@ export type MenuIcon =
   | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
   | 'inventoryLedger' | 'branches' | 'purchases' | 'customers' | 'suppliers' | 'expenses'
   | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation' | 'financialReports'
-  | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
+  | 'costing' | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
 
 export interface MenuItemConfig {
   id: string;
@@ -62,6 +62,7 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'treasury', route: APP_ROUTES.treasury, icon: 'treasury', labelKey: 'treasury', permission: 'accounts.view', group: 'finance' },
   { id: 'reconciliation', route: APP_ROUTES.reconciliation, icon: 'reconciliation', labelKey: 'bankReconciliation', permission: 'accounts.view', group: 'finance' },
   { id: 'financial-reports', route: APP_ROUTES.financialReports, icon: 'financialReports', labelKey: 'financialReports', permission: 'reports.financial', group: 'finance' },
+  { id: 'costing', route: APP_ROUTES.costing, icon: 'costing', labelKey: 'costing', permission: 'reports.view', group: 'finance' },
   { id: 'sales', route: APP_ROUTES.sales, icon: 'sales', labelKey: 'salesInvoices', permission: 'sales.view', group: 'finance' },
   { id: 'shifts', route: APP_ROUTES.shifts, icon: 'shifts', labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
   { id: 'reports', route: APP_ROUTES.reports, icon: 'reports', labelKey: 'reports', permission: 'reports.view', group: 'finance' },

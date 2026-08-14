@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: **IN PROGRESS** — PHASE A (design) drafted; implementation on branch `erp-02-recipe-costing` from `main` @ `0c2d812` (after ERP-01 merged via PR #5).
+- Status: **IN PROGRESS** — data layer committed (migration `070_recipe_costing.sql` + integration tests, `087768a`); UI (CostingPage + route/menu/i18n) and contract tests done; local gates green; next is PR + CI.
 - Branch: `erp-02-recipe-costing`
 - Base: production `main` (post ERP-01)
 - Scope: ERP-02 only — Product & Recipe Costing

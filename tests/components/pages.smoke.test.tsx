@@ -141,6 +141,7 @@ import { JournalPage } from '@/features/accounting/pages/JournalPage';
 import { FinancialReportsPage } from '@/features/accounting/pages/FinancialReportsPage';
 import { TreasuryPage } from '@/features/accounting/pages/TreasuryPage';
 import { ReconciliationPage } from '@/features/accounting/pages/ReconciliationPage';
+import { CostingPage } from '@/features/costing/pages/CostingPage';
 
 const pages: Array<[string, React.ComponentType]> = [
   ['LoginPage', LoginPage],
@@ -174,6 +175,7 @@ const pages: Array<[string, React.ComponentType]> = [
   ['FinancialReportsPage', FinancialReportsPage],
   ['TreasuryPage', TreasuryPage],
   ['ReconciliationPage', ReconciliationPage],
+  ['CostingPage', CostingPage],
 ];
 
 describe('page smoke tests (locked baseline behaviour)', () => {

@@ -30,6 +30,7 @@ const SalesPage = lazy(() => import('../features/trade/pages/SalesPage').then(m 
 const ShiftsPage = lazy(() => import('../features/trade/pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
 const ReportDeepLinkPage = lazy(() => import('../features/reporting/pages/ReportDeepLinkPage').then(m => ({ default: m.ReportDeepLinkPage })));
 const FinancialReportsPage = lazy(() => import('../features/accounting/pages/FinancialReportsPage').then(m => ({ default: m.FinancialReportsPage })));
+const CostingPage = lazy(() => import('../features/costing/pages/CostingPage').then(m => ({ default: m.CostingPage })));
 const AccountsPage = lazy(() => import('../features/accounting/pages/AccountsPage').then(m => ({ default: m.AccountsPage })));
 const PaymentsPage = lazy(() => import('../features/accounting/pages/PaymentsPage').then(m => ({ default: m.PaymentsPage })));
 const JournalPage = lazy(() => import('../features/accounting/pages/JournalPage').then(m => ({ default: m.JournalPage })));
@@ -85,6 +86,7 @@ export function AppRoutes() {
     <Route path={APP_ROUTES.shifts} element={<ProtectedRoute permission="shifts.view"><ShiftsPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.reports} element={<ProtectedRoute permission="reports.view"><ReportDeepLinkPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.financialReports} element={<ProtectedRoute permission="reports.financial"><FinancialReportsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.costing} element={<ProtectedRoute permission="reports.view"><CostingPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.accounting} element={<ProtectedRoute permission="reports.financial"><Navigate to={APP_ROUTES.financialReports} replace /></ProtectedRoute>} />
     <Route path={APP_ROUTES.accounts} element={<ProtectedRoute permission="accounts.view"><AccountsPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.payments} element={<ProtectedRoute permission="accounts.view"><PaymentsPage /></ProtectedRoute>} />

@@ -137,6 +137,7 @@ import { RawMaterialsPage } from '@/features/manufacturing/pages/RawMaterialsPag
 import { ProductionOrdersPage } from '@/features/manufacturing/pages/ProductionOrdersPage';
 import { ComponentsPage } from '@/features/catalog/pages/ComponentsPage';
 import { ActiveOrdersPage } from '@/features/pos/pages/ActiveOrdersPage';
+import { CostingPage } from '@/features/costing/pages/CostingPage';
 
 describe('design primitives (stable test identity)', () => {
   it('renders DesignSurface with its test id', () => {
@@ -214,6 +215,7 @@ const pageSurfaceCases: Array<[string, React.ComponentType, string, string]> = [
   ['ProductionOrdersPage', ProductionOrdersPage, 'production-orders-page', 'production-orders-search'],
   ['ComponentsPage', ComponentsPage, 'components-page', ''],
   ['ActiveOrdersPage', ActiveOrdersPage, 'active-orders-page', ''],
+  ['CostingPage', CostingPage, 'costing-page', 'costing-search'],
 ];
 
 describe('migrated pages expose the 6D-6G surfaces', () => {

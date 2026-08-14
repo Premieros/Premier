@@ -37,6 +37,7 @@ export const APP_ROUTES = {
   journal: '/journal',
   treasury: '/treasury',
   reconciliation: '/reconciliation',
+  costing: '/costing',
   users: '/users',
   employees: '/employees',
   auditLog: '/audit-log',
