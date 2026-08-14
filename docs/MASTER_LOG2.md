@@ -24,7 +24,18 @@ All operational list/detail screens should use reusable controls for:
 - persisted user preferences
 
 ## Phase reporting rule
-At every phase closure report exactly: DONE, REMAINING, BLOCKED/RISKS, EVIDENCE, NEXT.
+At every phase closure report exactly:
+- DONE: completed and verified items.
+- REMAINING: items not yet completed.
+- BLOCKED/RISKS: blockers or risks, with reason.
+- EVIDENCE: commit/CI/test evidence.
+- NEXT: the next phase or slice only after the gate passes.
 
 ## Current execution
-Baseline verification passed. POS Core is active. Before code changes, locate the actual current POS source path from the repository tree; never infer a path from stale documentation.
+- Baseline source is current `main` (`e9af268f51b9ccb013f537adcd0ee85ced9a6ff1`).
+- Development branch is `development/master-log2`.
+- Supabase is the existing project; no Supabase branch/project is being created.
+- POS Core is the active phase.
+- Actual POS source path confirmed from the repository tree: `src/features/pos/pages/PosWorkspacePage.tsx`, with `ActiveOrdersPage.tsx` alongside it.
+- The previous CODEMAP path mismatch is resolved: do not use stale path assumptions.
+- CI evidence for the baseline is green on run `31844626967` (verify, db, browser-smoke). A new run must be associated with the current head before this development phase can be closed.
