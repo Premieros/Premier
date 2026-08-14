@@ -92,7 +92,7 @@ export const INTERACTION_CONTRACTS: InteractionContract[] = [
   { testId: 'design-empty', file: 'src/components/design/DesignStates.tsx', label: 'Shared empty state', marker: 'testId = \'design-empty\'' },
   { testId: 'design-error', file: 'src/components/design/DesignStates.tsx', label: 'Shared error state', marker: 'testId = \'design-error\'' },
 
-  // POS bottom bar (OrderTypeBottomBar.tsx)
-  { testId: 'pos active-orders nav', file: 'src/features/pos/components/bottom/OrderTypeBottomBar.tsx', label: 'Bottom bar opens the active-orders drawer', marker: 'onClick={() => setOrdersOpen(true)}' },
-  { testId: 'pos active-orders aria', file: 'src/features/pos/components/bottom/OrderTypeBottomBar.tsx', label: 'Bottom bar keeps the Active-orders aria label', marker: "aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}" },
+  // POS bottom navigation (PosBottomNav.tsx)
+  { testId: 'pos active-orders nav', file: 'src/features/pos/components/bottom/PosBottomNav.tsx', label: 'Bottom nav opens the active-orders drawer', marker: "onOpenOrders('all')" },
+  { testId: 'pos active-orders aria', file: 'src/features/pos/components/bottom/PosBottomNav.tsx', label: 'Bottom nav keeps the Active-orders aria label', marker: "'الطلبات النشطة' : 'Active orders'" },
 ];

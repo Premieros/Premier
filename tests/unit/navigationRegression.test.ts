@@ -27,10 +27,10 @@ describe('navigation regressions', () => {
     expect(source).not.toContain('/pos/active');
   });
 
-  it('keeps the POS bottom bar dedicated to active orders', () => {
-    const source = read('src/features/pos/components/bottom/OrderTypeBottomBar.tsx');
-    expect(source).toContain("aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}");
-    expect(source).toContain('setOrdersOpen(true)');
+  it('keeps the POS bottom navigation opening the active orders drawer', () => {
+    const source = read('src/features/pos/components/bottom/PosBottomNav.tsx');
+    expect(source).toContain("'الطلبات النشطة' : 'Active orders'");
+    expect(source).toContain("onOpenOrders('all')");
     expect(source).not.toContain('onSelect(type)');
   });
 
