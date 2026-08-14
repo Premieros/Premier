@@ -23,15 +23,8 @@ All operational list/detail screens should use reusable controls for:
 - print where operationally appropriate
 - persisted user preferences
 
-Example: Orders can be viewed by order/invoice number, customer, products, branch, date, status, payment, totals, etc. These are reusable capabilities, not one-off screens.
-
 ## Phase reporting rule
-At every phase closure report exactly:
-- DONE: completed and verified items.
-- REMAINING: items not yet completed.
-- BLOCKED/RISKS: blockers or risks, with reason.
-- EVIDENCE: commit/CI/test evidence.
-- NEXT: the next phase or slice only after the gate passes.
+At every phase closure report exactly: DONE, REMAINING, BLOCKED/RISKS, EVIDENCE, NEXT.
 
 ## Current execution
-Baseline verification passed on the current development branch. POS Core is the active phase. The next implementation must first locate the actual current POS source path from the repository tree before changing code; never infer a path from stale documentation.
+Baseline verification passed. POS Core is active. Before code changes, locate the actual current POS source path from the repository tree; never infer a path from stale documentation.
