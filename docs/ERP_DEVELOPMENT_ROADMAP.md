@@ -19,7 +19,7 @@
 
 ### ERP-01 Inventory Control + Settings Control Center
 
-> **Status: ⏳ VERIFICATION PENDING** — implementation on branch `erp-01-settings-organization` (commits `469256b`..`fde107f`) is complete for PHASE A–E; PHASE F verification is **fully green in CI on PR #5** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — run 31813850004). ERP-01 is NOT complete until your final review + merge of PR #5 and PHASE G closure. See `docs/ERP-01_EXECUTION_PLAN.md` → `# CURRENT STATUS` for the full completion record (commits, migration `069`, tests, limitations, rollback).
+> **Status: ✅ COMPLETE — MERGED** — ERP-01 implemented on branch `erp-01-settings-organization` (commits `469256b`..`e644630`) and **merged into `main` via PR #5 on 2026-08-14 (merge commit `0c2d812`)**. PHASE F **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — run 31813850004); PHASE G documentation closed. See `docs/ERP-01_EXECUTION_PLAN.md` → `# CURRENT STATUS` for the full completion record (commits, migration `069`, tests, limitations, rollback).
 
 ERP-01 now includes the organization of the Settings page because inventory behavior, branch defaults, tax/currency, purchasing, receipts, POS rules, and operational policies must have one clear administrative control surface.
 
@@ -385,11 +385,12 @@ ERP-01 now includes the organization of the Settings page because inventory beha
 
 - ERP roadmap created: 2026-08-13.
 - ERP-01 Settings organization scope expanded: 2026-08-14.
-- ERP-01 implementation status: **VERIFICATION PENDING** — PHASE A–E implemented on branch `erp-01-settings-organization`; PHASE F **fully green in CI on PR #5** (verify ✅, db ✅ 154/154, browser-smoke ✅ 50/50, deploy preview ✅ — run 31813850004). Awaiting your final review + merge; PHASE G docs in progress. Not complete until merge + G closed.
-- Production/main code changes: NONE (feature branch not yet merged; PR #5 open).
+- ERP-01 implementation status: **✅ COMPLETE — MERGED** — PHASE A–E implemented on branch `erp-01-settings-organization`; PHASE F **fully green in CI on PR #5** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — run 31813850004); PHASE G docs closed.
+- Production/main code changes: **ERP-01 merged into `main` via PR #5 on 2026-08-14 (merge commit `0c2d812`).**
 - ERP-01 implementation record (2026-08-14):
   - Commits `469256b` (spec), `5e8444d` (settings audit), `b8a7459` (Settings Control Center + real consumer wiring), `b70ffed` (POS takeaway default), `6d8cae6` (bottom POS navigation), `363b608` (Resume/KDS incremental fix + migration `069_resume_order_kitchen_incremental.sql`), `a2bc51e` (full receipt review in payment), `1f38fcd` (report center contextual filters + Excel/CSV/print).
+  - CI-found fixes during PHASE F: `2382280` (lockfile npm 10/esbuild), `d4c5e84` (069 deletion sweep), `fde107f` (E2E pos-actions picker via New Order).
   - Local gates (fresh `npm ci`): typecheck ✅, typecheck:all ✅, lint ✅ (0 errors), test:unit 236/236 ✅, build ✅. Fix recorded: `@playwright/test@^1.62.1` declared as devDependency (commit `32d2faa`).
-  - Live gates still pending (no `.env`/values in checkout): `test:integration` self-skips without `SUPABASE_DB_URL` (154/154 skipped); browser E2E needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`.
-  - Known limitations: no delivery fees/service, mixed payment unsupported, E3 explicit analysis modes not implemented, `test:integration` self-skips locally without a DB URL, `usePosSummary.ts` unused (pre-existing debt).
-- Next step: complete PHASE F verification (live Supabase `test:integration` incl. RLS/security + browser E2E), close PHASE G documentation, then final review/PR. Do NOT start ERP-02 until ERP-01 is fully closed.
+  - Live gates (CI): `test:integration` 154/154 ✅; browser E2E 50/50 ✅.
+  - Known limitations: no delivery fees/service, mixed payment unsupported, E3 explicit analysis modes not implemented, `usePosSummary.ts` unused (pre-existing debt).
+- Next step: **ERP-02 Product & Recipe Costing — started 2026-08-14 from `main` @ `0c2d812`.**

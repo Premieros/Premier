@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: **VERIFICATION PENDING** — implementation of PHASE A–E is complete and committed; PHASE F verification is **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, Netlify deploy preview ✅ — run 31813850004 on PR #5); PHASE G documentation in progress. ERP-01 is NOT complete until your final review and merge of PR #5, then G is closed.
+- Status: **✅ COMPLETE — MERGED** — PHASE A–E implemented and committed; PHASE F **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, Netlify deploy preview ✅ — run 31813850004); PHASE G documentation closed. **PR #5 merged into `main` on 2026-08-14 (merge commit `0c2d812`).** ERP-01 is complete.
 - Branch: `erp-01-settings-organization`
 - Base: production `main` after P7 merge
 - Scope: ERP-01 only
@@ -506,7 +506,7 @@ Exports must match the selected filters and displayed report.
 
 If CI differs from local results, CI is authoritative.
 
-# PHASE G — Documentation & Audit ⏳ IN PROGRESS
+# PHASE G — Documentation & Audit ✅ CLOSED (2026-08-14)
 
 Update:
 
@@ -575,9 +575,9 @@ Never bypass a stop condition just to make the UI appear complete.
 
 # CURRENT STATUS
 
-- Status: **VERIFICATION PENDING** — PHASE A–E complete and committed; PHASE F verification **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — PR #5 run 31813850004). ERP-01 is NOT marked complete until your final review + merge of PR #5 and PHASE G closure.
+- Status: **✅ COMPLETE — MERGED** — PHASE A–E complete and committed; PHASE F verification **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — PR #5 run 31813850004); PHASE G closed. **PR #5 merged into `main` on 2026-08-14 (merge commit `0c2d812`).**
 - Branch: `erp-01-settings-organization`
-- Production/main: untouched by ERP-01 (feature branch not yet merged; no PR opened).
+- Production/main: **ERP-01 merged into `main` via PR #5 (2026-08-14).**
 
 ## Implementation record (commits, A→E)
 

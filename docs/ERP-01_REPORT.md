@@ -98,5 +98,5 @@
 
 ## 7. الحالة والتالي
 
-- **ERP-01: VERIFICATION PENDING** — كل بوابات CI خضراء: `verify` ✅ (unit 236/236)، `db` ✅ (integration 154/154)، `browser-smoke` ✅ (E2E 50/50)، وNetlify deploy preview ✅ (run 31813850004).
-- لإغلاق F: مراجعتك النهائية ثم دمج PR #5 (لا يُدمج قبل موافقتك)؛ ERP-02 لا يُبدأ قبل إغلاق ERP-01.
+- **ERP-01: ✅ COMPLETE** — كل بوابات CI خضراء: `verify` ✅ (unit 236/236)، `db` ✅ (integration 154/154)، `browser-smoke` ✅ (E2E 50/50)، وNetlify deploy preview ✅ (run 31813850004). **PR #5 دُمج في `main` بتاريخ 2026-08-14 (merge commit `0c2d812`).**
+- ERP-02 (Product & Recipe Costing) يبدأ الآن من `main` المُحدَّث وفق الخارطة.
