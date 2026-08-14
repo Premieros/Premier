@@ -105,6 +105,13 @@ export function PosWorkspacePage() {
 
   const pos = usePosOrder({ branchId: effectiveBranch, orderId: orderIdParam || null, customers, effSettings, isCashier, activeShift, products, stockMap, sellableStock, recipeMap });
   const live = useActiveOrders(effectiveBranch);
+
+  useEffect(() => {
+    if (!effSettings?.pos_barcode_autofocus) return;
+    if (panel || pos.checkoutOpen || mobileOrderOpen) return;
+    const timer = setTimeout(() => barcodeRef.current?.focus(), 60);
+    return () => clearTimeout(timer);
+  }, [effSettings?.pos_barcode_autofocus, panel, pos.checkoutOpen, mobileOrderOpen]);
   const { orders, tables, counts, ordersByTable, itemsByOrder, kitchenSendsByOrder, sentOrderItemIds, tableById } = live;
   const customerById = useMemo(() => Object.fromEntries(customers.map((c) => [c.id, c])), [customers]);
   const productNames = useMemo(() => Object.fromEntries(products.map((p) => [p.id, isAr ? p.name : (p.name_en || p.name)])), [products, isAr]);

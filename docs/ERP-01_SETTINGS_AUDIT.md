@@ -29,20 +29,20 @@ Routes: `APP_ROUTES.settings` → `SystemControlCenterPage`, `APP_ROUTES.basicSe
 | `receipt_copies` | `printing.ts` | functional |
 | `receipt_show_tax` | `printing.ts` | functional |
 | `receipt_show_qr` | `printing.ts` | functional |
-| `receipt_auto_print` | none | **dead** |
-| `logo_url` | SettingsContext merge only — no component reads it | **dead** |
+| `receipt_auto_print` | `usePosOrder.ts` `completeSale` auto-print | functional |
+| `logo_url` | `printing.ts` receipt logo (newly wired) | functional |
 | `language` | SettingsContext → `LanguageContext` | functional |
 | `theme` | SettingsContext → `ThemeContext` | functional |
 | `brand_color` | SettingsContext → brandColor/themes | functional |
 | `low_stock_threshold` | `VisualDashboardPage` low-stock | functional |
-| `pos_default_payment_method` | none | **dead** |
-| `pos_barcode_autofocus` | none | **dead** |
+| `pos_default_payment_method` | `usePosOrder.ts` payment default (newly wired) | functional |
+| `pos_barcode_autofocus` | `PosWorkspacePage` barcode focus (newly wired) | functional |
 | `pos_line_discount` | none | **dead** |
 | `invoice_prefix` | none (serials server-side `010_document_serials.sql`) | **dead** |
 | `invoice_next_number` | none (serials server-side) | **dead** |
 | `invoice_decimal_places` | none | **dead** |
 
-Dead count: **10/24**.
+Dead fields remaining (no real consumer, not exposed): **5/24** — `store_name_en`, `pos_line_discount`, `invoice_prefix`, `invoice_next_number`, `invoice_decimal_places`. The `invoice_*` fields are removed from the UI only; the server-side serial contract (`010_document_serials.sql`) is untouched.
 
 ## 3. `branch_settings` — 7 override fields
 

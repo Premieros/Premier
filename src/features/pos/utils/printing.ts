@@ -46,6 +46,7 @@ export async function buildReceiptHtml(receipt: ReceiptData, s: Settings, lang: 
   }
 
   const single = `
+    ${s.logo_url ? `<div class="center"><img src="${escapeHtml(s.logo_url)}" alt="logo" style="max-width:${Math.min(width, 120)}px;max-height:80px;display:block;margin:2px auto" /></div>` : ''}
     <div class="center header">${escapeHtml(s.store_name)}</div>
     ${s.store_address ? `<div class="center sub">${escapeHtml(s.store_address)}</div>` : ''}
     ${s.store_phone ? `<div class="center sub">${isAr ? 'هاتف' : 'Tel'}: ${escapeHtml(s.store_phone)}</div>` : ''}
