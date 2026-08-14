@@ -79,6 +79,7 @@ test.describe('POS action-level', () => {
     await expect(posLink).toBeVisible({ timeout: 10000 });
     await posLink.click();
     await expect(page).toHaveURL(/#\/pos$/);
+    await page.getByTestId('pos-action-new-order').click();
     await expect(page.getByTestId('pos-order-type-picker')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('body')).not.toHaveText(/Error Loading Data|خطأ في تحميل البيانات/i);
   });

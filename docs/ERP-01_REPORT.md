@@ -37,6 +37,12 @@
   - السبب: في إعادة كتابة 069، الأسطر **الجديدة** المدرَجة في `order_items` لم تُسجَّل في `_upd_matched`، فحذفها سَيرُ الحذف فورًا (`DELETE ... NOT EXISTS (_upd_matched)`) → اختفت السلعة المضافة من السلة → `items_sent_count` = 0 بدل 1.
   - **الإصلاح:** `INSERT ... RETURNING id INTO v_matched_id` ثم تسجيل السطر الجديد في `_upd_matched`. إعادة تشغيل CI معلّقة حتى هذه الكتابة.
 
+### 2.2. أول تشغيل لـ browser-smoke (E2E) — فشل 9/50 بسبب مواصفة قديمة → حُدِّثت
+
+- **41/50 نجحت** (public-smoke 38 + dashboard-navigation 3)؛ فشلت الـ9 في `pos-actions.spec.ts` كلها في نفس السطر (`beforeEach`): كانت تنتظر `pos-order-type-picker` فور الدخول إلى `/pos`.
+- السبب: تغيير ERP-01 (بند B) جعل الـPOS يفتح مباشرة على Takeaway، والمُنتقي (`OrderStartWizard` → `OrderTypePicker`) لا يظهر إلا عبر زر **New Order** (`setStartStep('type')`). المواصفة كُتبت قبل التغيير.
+- **الإصلاح:** أُضيف `data-testid="pos-action-new-order"` إلى زر New Order في `PosTopBar`، وحدّث `beforeEach` لفتح المُنتقي عبره قبل تأكيد ظهوره. كل testids المستخدمة في المواصفة موجودة في الكود الجديد (تحقّق بالقراءة). إعادة تشغيل معلّقة.
+
 ## 3. E2E — ⚠️ BLOCKED BY ENVIRONMENT (المتطلبات محددّة بالضبط)
 
 توجد 3 ملفات: `tests/e2e/pos-actions.spec.ts` (9 اختبارات)، `public-smoke.spec.ts` (38 اختبارًا: صفحة الدخول + التحقق + 36 مسارًا محميًا)، `dashboard-navigation.spec.ts` (3 اختبارات) — إجمالي **50 اختبارًا**.
@@ -78,7 +84,7 @@
 | `npm run test:unit` | ✅ VERIFIED (236/236, 19 ملفًا) |
 | `npm run build` | ✅ VERIFIED |
 | `npm run test:integration` | ⚠️ محليًا NOT EXECUTED (لا DB) — **في CI: 154 اختبارًا، 153 ✅ / 1 ❌ (069) → عولج** |
-| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | ⚠️ BLOCKED BY ENVIRONMENT محليًا (يحتاج VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY عند البناء) — يُشغَّل في CI `browser-smoke` |
+| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | محليًا BLOCKED BY ENVIRONMENT؛ **أول تشغيل CI: 41/50 ✅، 9 ❌ (مواصفة قديمة) → حُدِّثت، إعادة تشغيل معلّقة** |
 | مراجعة هجرة 069 + RLS/RBAC | ✅ قراءة ثابتة سليمة لكنها لم تكشف الخلل؛ **التشغيل الحي في CI كشفه وعولج** |
 | ❌ FAILED | 1 فشل integration واحد في أول تشغيل CI (069 — سطر جديد يُمحى) → مُصلَح؛ إعادة تشغيل جارية |
 
