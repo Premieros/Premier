@@ -114,6 +114,10 @@ export function CostingPage() {
   }), [effectiveBranch, run]);
 
   const loadProfit = useCallback(() => run(async () => {
+    if (!effectiveBranch) {
+      setProfitRows([]);
+      return;
+    }
     const fromTs = `${from}T00:00:00`;
     const toTs = `${to}T23:59:59`;
     const { data, error: err } = await supabase.rpc('costing_profitability_report', { p_branch_id: effectiveBranch, p_from: fromTs, p_to: toTs });
@@ -236,6 +240,11 @@ export function CostingPage() {
             <Input label={t('from')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <Input label={t('to')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
+          {!effectiveBranch && (
+            <p data-testid="costing-profit-branch-hint" className="text-sm text-ui-subtle">
+              {isAr ? 'اختر فرعاً من الأعلى لعرض الربحية' : 'Select a branch above to view profitability'}
+            </p>
+          )}
         </DesignPanel>
       )}
 
