@@ -108,7 +108,12 @@ export function TablesPanel({ open, onClose, tables, ordersByTable, currency, on
 
   return (
     <>
-      {open && <div className="fixed inset-0 top-16 z-40 bg-ui-surface flex flex-col animate-fade-in">
+      {open && <div className="fixed inset-0 top-16 z-40 bg-ui-text/40 backdrop-blur-[1px]" onClick={onClose} />}
+      <aside
+        className={`fixed top-16 bottom-0 z-50 w-[380px] max-w-[92vw] bg-ui-surface border-s border-ui-border shadow-ui-xl transition-transform duration-300 flex flex-col ${
+          isAr ? 'left-0' : 'right-0'
+        } ${open ? 'translate-x-0' : isAr ? '-translate-x-full' : 'translate-x-full'}`}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-ui-border flex-shrink-0">
           <h2 className="text-sm font-bold text-ui-text flex items-center gap-2">
             <Grid3x3 className="w-4 h-4 text-ui-success" />
@@ -170,7 +175,7 @@ export function TablesPanel({ open, onClose, tables, ordersByTable, currency, on
             </>
           )}
         </div>
-      </div>}
+      </aside>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.name || ''} size="md">
         {selected && (() => {

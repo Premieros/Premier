@@ -8,6 +8,8 @@ import { computeSentState } from '../../utils/sentState';
 import { formatClockTime, timeAgo } from '../../utils/timeAgo';
 import { deriveCartStage } from '../../utils/orderStage';
 import { parseCarNotes, parseDeliveryNotes } from '../../utils/orderLabels';
+import { ORDER_TYPES } from '../../utils/orderTypes';
+import { orderTypeLabel } from '../../utils/format';
 import { OrderTypePill } from './OrderTypePill';
 import { OrderStageBadge } from './OrderStageBadge';
 
@@ -16,7 +18,7 @@ interface CurrentOrderPanelProps {
   onSwitchOrderType: (ot: OrderType) => void; onGuestCountChange: (n: number | null) => void; onDiscountTypeChange: (v: 'amount' | 'percent') => void; onDiscountAmountChange: (v: number) => void; onUpdateQty: (productId: string, delta: number) => void; onSetQty: (productId: string, qty: number) => void; onRemove: (productId: string) => void; onClear: () => void; onSetItemDiscount: (productId: string, discount: number) => void; onHold: () => void; onSendKitchen: () => void; onPrint: () => void; onPay: () => void; onAddItem: () => void;
 }
 
-export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, discountAmount, total, completing, orderLoading, kitchenSending, orderType, activeOrderNumber, activeOrderId, activeTable, guestCount, customerId, customerById, orderNotes, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent, onGuestCountChange, onDiscountTypeChange, onDiscountAmountChange, onUpdateQty, onRemove, onClear, onHold, onSendKitchen, onPrint, onPay }: CurrentOrderPanelProps) {
+export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, discountAmount, total, completing, orderLoading, kitchenSending, orderType, activeOrderNumber, activeOrderId, activeTable, guestCount, customerId, customerById, orderNotes, activeOrderCreatedAt, orderItems, sentOrderItemIds, sessionSent, onSwitchOrderType, onGuestCountChange, onDiscountTypeChange, onDiscountAmountChange, onUpdateQty, onRemove, onClear, onHold, onSendKitchen, onPrint, onPay }: CurrentOrderPanelProps) {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const [showDiscount, setShowDiscount] = useState(false);
@@ -40,7 +42,16 @@ export function CurrentOrderPanel({ cart, currency, subtotal, discountValue, dis
         {activeOrderId && !empty && <button onClick={onClear} aria-label={isAr ? 'مسح الطلب' : 'Clear order'} className="text-[11px] text-ui-danger hover:text-ui-danger hover:bg-ui-danger/10 px-2 py-1 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>}
       </div>
       <div className="flex items-center gap-1.5 flex-wrap">
-        <OrderTypePill type={orderType} />
+        {activeOrderNumber ? <OrderTypePill type={orderType} /> : (
+          <div className="flex items-center gap-1 rounded-xl bg-ui-page-alt p-1">
+            {ORDER_TYPES.map((ot) => {
+              const active = ot === orderType;
+              return (
+                <button key={ot} type="button" data-testid={`pos-switch-type-${ot}`} aria-pressed={active} onClick={() => onSwitchOrderType(ot)} className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-colors ${active ? 'bg-ui-primary text-ui-primary-fg shadow-ui-sm' : 'text-ui-muted hover:text-ui-text'}`}>{orderTypeLabel(t, ot)}</button>
+              );
+            })}
+          </div>
+        )}
         {contextText && <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-ui-page-alt text-[11px] font-bold text-ui-muted">{orderType === 'dine_in' && <UtensilsCrossed className="w-3 h-3 text-ui-success" />}{orderType === 'drive_thru' && <Car className="w-3 h-3 text-ui-info" />}{orderType === 'delivery' && <Bike className="w-3 h-3 text-ui-info" />}<span className="truncate max-w-[110px]">{contextText}</span></span>}
         {orderType === 'dine_in' && <label className="flex items-center gap-1 text-[11px] text-ui-muted">{isAr ? 'أفراد' : 'Guests'}:<input type="number" min={1} value={guestCount || ''} placeholder="0" onChange={(e) => onGuestCountChange(parseInt(e.target.value) || null)} className="w-12 px-1.5 py-1 rounded-lg border border-ui-border bg-ui-surface-raised text-center text-xs font-bold text-ui-text focus:outline-none focus:ring-1 focus:ring-ui-ring" /></label>}
         {activeOrderCreatedAt && <span className="flex items-center gap-1 text-[11px] text-ui-subtle ms-auto"><Clock className="w-3 h-3" />{formatClockTime(activeOrderCreatedAt, lang)}{ago && <span className="hidden xl:inline">· {ago.n != null ? `${ago.n} ${t(ago.key)}` : t(ago.key)}</span>}</span>}

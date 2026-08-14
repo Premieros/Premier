@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, X, UtensilsCrossed, Banknote, Play, Trash2, ListOrdered, Car, Bike } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/format';
@@ -13,6 +13,7 @@ import { OrderStageBadge } from '../order/OrderStageBadge';
 interface ActiveOrdersDrawerProps {
   open: boolean;
   onClose: () => void;
+  initialCategory?: ActiveCategory;
   orders: Order[];
   itemsByOrder: Record<string, OrderItem[]>;
   kitchenSendsByOrder: Record<string, OrderKitchenSend[]>;
@@ -25,15 +26,20 @@ interface ActiveOrdersDrawerProps {
 }
 
 type ActiveCategory = 'all' | 'tables' | 'cars' | 'delivery' | 'quick' | 'kitchen' | 'held' | 'ready';
+export type { ActiveCategory };
 
 export function ActiveOrdersDrawer({
-  open, onClose, orders, itemsByOrder, kitchenSendsByOrder, tableById, customerById, currency,
+  open, onClose, initialCategory, orders, itemsByOrder, kitchenSendsByOrder, tableById, customerById, currency,
   onResume, onPay, onCancel,
 }: ActiveOrdersDrawerProps) {
   const { t, lang } = useLanguage();
   const isAr = lang === 'ar';
   const [category, setCategory] = useState<ActiveCategory>('all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (open) { setCategory(initialCategory || 'all'); setQuery(''); }
+  }, [open, initialCategory]);
 
   const stageMap = useMemo(() => {
     const map: Record<string, OrderStage> = {};

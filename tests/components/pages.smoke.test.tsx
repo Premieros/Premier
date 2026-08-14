@@ -127,7 +127,7 @@ import { SalesPage } from '@/features/trade/pages/SalesPage';
 import { ReportsPage } from '@/features/reporting/pages/ReportsPage';
 import { UsersPage } from '@/features/admin/pages/UsersPage';
 import { AuditLogPage } from '@/features/reporting/pages/AuditLogPage';
-import { SettingsPage } from '@/features/admin/pages/SettingsPage';
+import { SettingsControlCenterPage } from '@/features/admin/pages/SettingsControlCenterPage';
 import { ComponentsPage } from '@/features/catalog/pages/ComponentsPage';
 import { ShiftsPage } from '@/features/trade/pages/ShiftsPage';
 import { RawMaterialsPage } from '@/features/manufacturing/pages/RawMaterialsPage';
@@ -160,7 +160,7 @@ const pages: Array<[string, React.ComponentType]> = [
   ['ReportsPage', ReportsPage],
   ['UsersPage', UsersPage],
   ['AuditLogPage', AuditLogPage],
-  ['SettingsPage', SettingsPage],
+  ['SettingsControlCenterPage', SettingsControlCenterPage],
   ['ComponentsPage', ComponentsPage],
   ['ShiftsPage', ShiftsPage],
   ['RawMaterialsPage', RawMaterialsPage],

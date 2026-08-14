@@ -7,7 +7,9 @@ import type pg from 'pg';
 //
 //   * send_to_kitchen snapshots ONLY the unsent lines and returns them.
 //   * A re-send is a no-op (items_sent_count = 0, no duplicate rows).
-//   * After update_order rewrites items, only the NEW lines are sent.
+//   * update_order (069) PRESERVES the ids of lines that match the cart, so a
+//     Hold -> Resume after Send Kitchen does NOT re-send previously sent items:
+//     only genuinely new lines reach KDS (ERP-01 item 4).
 //   * send_to_kitchen rejects non-editable (completed) orders.
 //   * set_order_status cannot reopen a completed/cancelled order (H4).
 //
@@ -160,17 +162,17 @@ describe.skipIf(skip)('send_to_kitchen + order_kitchen_sends (048)', () => {
     expect(r.rows[0].c).toBe(0);
   });
 
-  it('after update_order rewrites items, only the NEW lines are sent', async () => {
+  it('update_order preserves line ids: a same-cart re-persist does not re-send (069)', async () => {
     const created = await createOrder();
     expect(created.success).toBe(true);
     const orderId = created.order_id!;
 
-    await sendToKitchen(orderId);
+    const first = await sendToKitchen(orderId);
+    expect(first.items_sent_count).toBe(1);
     expect(await sendRows(orderId)).toBe(1);
 
-    // update_order replaces the item lines (DELETE + re-insert): the old send
-    // rows cascade away and the new line is unsent. Detach the table (NULL) so
-    // the rewrite does not need a pre-created table id.
+    // Re-persist the exact same cart (Hold -> Resume). The matching line keeps
+    // its order_item_id, its send row survives, and nothing is re-sent.
     await asUser(async () => {
       const res = await client.query(
         `SELECT public.update_order($1, 'dine_in', NULL, NULL, 2, NULL, $2::jsonb, 100, 0, 'amount', 0, 100, 'held') AS r`,
@@ -179,10 +181,75 @@ describe.skipIf(skip)('send_to_kitchen + order_kitchen_sends (048)', () => {
       expect(res.rows[0].r.success).toBe(true);
     });
 
+    const second = await sendToKitchen(orderId);
+    expect(second.success).toBe(true);
+    expect(second.items_sent_count).toBe(0);
+    expect(second.all_sent).toBe(true);
+    expect(await sendRows(orderId)).toBe(1);
+
+    // The sent line still exists and its send row is intact.
+    const lines = await client.query<{ c: number; sent: number }>(
+      `SELECT count(*)::int AS c,
+              count(*) FILTER (WHERE EXISTS (
+                SELECT 1 FROM public.order_kitchen_sends s WHERE s.order_item_id = public.order_items.id
+              ))::int AS sent
+       FROM public.order_items WHERE order_id = $1`,
+      [orderId],
+    );
+    expect(lines.rows[0].c).toBe(1);
+    expect(lines.rows[0].sent).toBe(1);
+  });
+
+  it('resume + add item + send + payment: only the new line reaches KDS, sale settles the full cart (ERP-01)', async () => {
+    const created = await createOrder();
+    expect(created.success).toBe(true);
+    const orderId = created.order_id!;
+
+    await sendToKitchen(orderId);
+    expect(await sendRows(orderId)).toBe(1);
+
+    // Resume and add product B to the same order.
+    const cart = itemJson([
+      { product_id: prodA, quantity: 1 },
+      { product_id: prodB, quantity: 1 },
+    ]);
+    await asUser(async () => {
+      const res = await client.query(
+        `SELECT public.update_order($1, 'dine_in', NULL, NULL, 2, NULL, $2::jsonb, 200, 0, 'amount', 0, 200, 'held') AS r`,
+        [orderId, cart],
+      );
+      expect(res.rows[0].r.success).toBe(true);
+    });
+
+    // Send: only product B is new; product A stays sent exactly once.
     const sent = await sendToKitchen(orderId);
     expect(sent.success).toBe(true);
+    if (!sent.success) throw new Error(JSON.stringify(sent));
     expect(sent.items_sent_count).toBe(1);
-    expect(await sendRows(orderId)).toBe(1);
+    expect(sent.sent).toHaveLength(1);
+    expect(sent.sent![0].product_id).toBe(prodB);
+    expect(await sendRows(orderId)).toBe(2);
+
+    // Pay the full order: the sale contains both items and closes the order.
+    await client.query(`SELECT public.ensure_chart_of_accounts($1)`, [branchId]);
+    await client.query(`SELECT public.seed_account_mappings($1)`, [branchId]);
+    const sale = await client.query<{ r: { success: boolean; error?: string; sale_id?: string; detail?: string } }>(
+      `SELECT public.process_sale($1, $2, $3, NULL, NULL, 200, 0, 'amount', 0, 0, 200, 200, 'cash', 'completed', $4::jsonb, NULL, 'takeaway', NULL, $5) AS r`,
+      [`INV-${randomUUID()}`, branchId, whId, cart, orderId],
+    );
+    expect(sale.rows[0].r.success).toBe(true);
+    if (!sale.rows[0].r.success) throw new Error(JSON.stringify(sale.rows[0].r));
+
+    const saleLines = await client.query<{ c: number }>(
+      `SELECT count(*)::int AS c FROM public.sale_items WHERE sale_id = $1`,
+      [sale.rows[0].r.sale_id],
+    );
+    expect(saleLines.rows[0].c).toBe(2);
+
+    // The settled order can no longer be sent to the kitchen.
+    const closed = await sendToKitchen(orderId);
+    expect(closed.success).toBe(false);
+    expect(closed.error).toBe('ORDER_NOT_EDITABLE');
   });
 
   it('send_to_kitchen rejects a completed order (ORDER_NOT_EDITABLE)', async () => {

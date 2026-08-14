@@ -1,338 +1,352 @@
 # Premier ERP Development Roadmap
 
-> Official long-term ERP roadmap. ERP phases are intentionally separated from the completed visual rebuild and from active feature branches so future ERP work does not interfere with production or parallel OpenCode work.
+> Separate roadmap for future ERP development. This file is intentionally independent from the active production/main work so ERP additions do not interfere with the completed visual rebuild.
 
 ## Safety Contract
 
 - Never modify `main` directly.
-- Never modify `ui-visual-rebuild-6h` while ERP work is being developed.
-- Each ERP phase must use a dedicated feature branch from the approved ERP baseline.
-- Preserve existing routes, authentication, RBAC, branch isolation, Supabase contracts, POS transaction logic, accounting behavior, and existing workflows unless a separately approved change is required.
+- Never modify `ui-visual-rebuild-6h` while this roadmap is being implemented.
+- ERP work must use dedicated feature branches created from the approved ERP branch/base.
+- Preserve existing routes, authentication, RBAC, branch isolation, Supabase contracts, POS transaction logic, and existing workflows unless a separately approved change is required.
 - Reuse existing modules, hooks, RPCs, tables, permissions, and patterns wherever possible.
 - Every database change requires a migration and appropriate RLS/security review.
 - Every important workflow requires regression/contract tests.
-- Do not duplicate authoritative business logic between UI and RPC/database functions.
+- Do not duplicate business logic between UI and RPC/database functions.
 - Do not delete or replace existing functionality without a verified replacement and migration plan.
-- No ERP phase is complete until its implementation, tests, CI, documentation, and rollback notes are recorded.
-- Payroll is deliberately deferred until employee and attendance foundations are stable.
-- Costing must be authoritative before profitability/menu-engineering claims are introduced.
+- Record implementation, decisions, tests, CI results, and rollback notes in this roadmap.
 
-# P0 — Essential ERP Foundation
+## P0 — Essential ERP Capabilities
 
-## ERP-01 — Inventory Control + Settings Control Center
+### ERP-01 Inventory Control + Settings Control Center
 
-**Scope:** Settings organization, real settings consumers, inventory control, POS organization, payment/receipt UX, and unified report center.
+> **Status: ⏳ VERIFICATION PENDING** — implementation on branch `erp-01-settings-organization` (commits `469256b`..`fde107f`) is complete for PHASE A–E; PHASE F verification is **fully green in CI on PR #5** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — run 31813850004). ERP-01 is NOT complete until your final review + merge of PR #5 and PHASE G closure. See `docs/ERP-01_EXECUTION_PLAN.md` → `# CURRENT STATUS` for the full completion record (commits, migration `069`, tests, limitations, rollback).
 
-### Settings Control Center
+ERP-01 now includes the organization of the Settings page because inventory behavior, branch defaults, tax/currency, purchasing, receipts, POS rules, and operational policies must have one clear administrative control surface.
+
+#### Settings information architecture
 
 1. Company & Identity
-2. Branches & Locations
-3. POS & Sales
-4. Orders & Tables
-5. Products & Catalog
-6. Inventory & Warehouses
-7. Purchasing & Suppliers
-8. Production & Recipes
-9. Kitchen / KDS
-10. Delivery
+   - Store name Arabic/English
+   - Address
+   - Phone
+   - Logo
+   - Default currency
+   - Default language
+   - Default theme/UI theme
+   - Brand appearance
+
+2. POS & Sales
+   - Default payment method
+   - Barcode autofocus
+   - Line-item discount
+   - Default order type
+   - Customer requirement by order type
+   - Held-order behavior
+   - POS branch behavior
+   - Price/quantity display preferences
+
+3. Orders & Tables
+   - Dine-in / takeaway / delivery / drive-through / quick order enablement
+   - Guest-count behavior
+   - Table reservation policy
+   - Table status policy
+   - Floor-plan defaults
+   - Areas/tables management shortcuts
+
+4. Invoices & Tax
+   - Tax enabled
+   - Tax rate
+   - Invoice prefix
+   - Next invoice number
+   - Decimal places
+   - Tax display behavior
+   - Invoice numbering safeguards
+
+5. Receipts & Printing
+   - 58/80mm receipt width
+   - Copies
+   - Auto print
+   - Tax display
+   - QR display
+   - Header/footer
+   - Logo
+   - Branch-specific overrides
+
+6. Inventory — ERP-01 core
+   - Low-stock threshold
+   - Reorder point
+   - Minimum stock
+   - Maximum stock
+   - Stocktake frequency/default mode
+   - Stock adjustment policy
+   - Adjustment approval requirement
+   - Negative-stock policy
+   - Expiry tracking
+   - Batch/lot tracking
+   - Inventory valuation method
+   - Inventory variance tolerance
+   - Branch-specific inventory defaults
+   - Warehouse-specific defaults
+
+7. Purchasing
+   - Purchase approval threshold
+   - Receiving tolerance
+   - Partial receiving policy
+   - Supplier price tracking
+   - Purchase numbering
+   - Default payment terms
+
+8. Production / Recipes
+   - Recipe costing mode
+   - Production variance tolerance
+   - Waste approval requirement
+   - Yield tracking
+   - Component consumption behavior
+
+9. Delivery
+   - Delivery enablement
+   - Zones and fees
+   - Driver assignment
+   - Driver settlement behavior
+   - Driver cash/debt controls
+
+10. Kitchen
+   - Kitchen enablement
+   - Stations/routing
+   - Preparation timers
+   - Priority rules
+   - Ready-state behavior
+   - Kitchen ticket printing
+
 11. Customers & Loyalty
+   - Customer requirement rules
+   - Duplicate matching
+   - Loyalty enablement
+   - Points rules
+   - Rewards
+   - Membership tiers
+
 12. Discounts & Promotions
-13. Invoices / Tax
-14. Receipts & Printing
-15. Accounting & Finance
-16. Employees / Roles / Security
-17. Notifications
-18. System / Integrations
+   - Maximum cashier discount
+   - Approval threshold
+   - Promotion defaults
+   - Branch-specific promotions
+   - Time/date restrictions
 
-Only expose settings that have real storage and real consumers. Unsupported future controls remain explicitly marked planned.
+13. Accounting & Finance
+   - Default accounts
+   - Payment-method/account mapping
+   - Posting behavior
+   - Fiscal period controls
+   - Budget defaults
+   - Branch/cost-center mapping
+   - Tax account mapping
 
-### Inventory Control
+14. Branch Management
+   - Branch identity
+   - Currency override
+   - Tax override
+   - Receipt override
+   - Logo override
+   - Low-stock override
+   - Operational defaults
 
-- Physical Stock Count / Stocktake.
+15. Users, Roles & Security
+   - Role management
+   - Permission groups
+   - Branch-scoped roles
+   - Approval permissions
+   - Session/security policy
+   - Audit logging
+
+16. Notifications & System
+   - Low-stock notifications
+   - Shift alerts
+   - Kitchen delay alerts
+   - Failed-operation alerts
+   - System health shortcuts
+   - Demo-data controls
+
+#### ERP-01 inventory capabilities
+
+- Stocktake / physical inventory counts.
 - Partial and periodic counts.
-- Variance calculation.
-- Count approval.
-- Automatic variance adjustment after approval.
-- Adjustment reasons and audit trail.
-- Complete inventory movement ledger.
-- Lot/Batch tracking where applicable.
-- Expiry dates where applicable.
-- Minimum/Maximum stock.
-- Reorder Point.
-- Low-stock alerts.
+- Variance calculation and approval.
+- Stock adjustments with reasons and audit trail.
+- Minimum/maximum stock.
+- Reorder points and low-stock alerts.
+- Lot/batch and expiry tracking where applicable.
 - Stock valuation.
-- Branch/warehouse-specific inventory controls.
 
-### POS / Operations included in ERP-01
+#### ERP-01 safety rules
 
-- Open POS directly on Takeaway/External Order.
-- Bottom POS navigation for Active Orders, Delivery, and Tables without unnecessary page navigation.
-- Preserve current order state while opening drawers/panels.
-- Resume orders without resending previously sent kitchen items.
-- Send only genuinely new/unsent kitchen items to KDS.
-- Keep payment methods and POS context visible.
-- Show the complete receipt/order details for customer review before payment completion.
-- After successful payment, prepare a new order directly on Takeaway.
-- Unified report center with real contextual filters and supported export formats.
+- Reorganize existing Settings controls before creating duplicates.
+- Do not show a control as configurable unless its value has a real consumer.
+- New persistent settings require migration, RLS, typed model, SettingsContext/API integration, audit event, and regression test.
+- Global settings and branch overrides must be visually distinct.
+- Inventory settings must be consumed by inventory/stocktake logic, not merely stored.
+- Unsupported future settings remain explicitly marked as planned until their schema and consumers exist.
+- Preserve all existing POS, sales, accounting, RBAC/RLS, and branch-isolation behavior.
 
-### ERP-01 completion gate
-
-ERP-01 remains `VERIFICATION PENDING` until local clean-install gates, live integration tests, and required E2E/browser checks are complete or explicitly documented as CI-only due to unavailable environment credentials.
-
-## ERP-02 — Product & Recipe Costing
-
+### ERP-02 Product & Recipe Costing
 - Current recipe cost.
 - Component/raw-material unit cost.
-- Product cost.
+- Product cost and gross margin.
 - Food Cost %.
 - Theoretical vs actual cost.
-- Gross margin.
-- Profit per product/order/branch.
-- Actual vs recipe cost comparison.
-- Supplier-price impact on product cost.
 - Cost history.
+- Supplier-price impact on product cost.
+- Branch/product profitability.
 
-**Dependency:** ERP-01 inventory data and authoritative purchase costs must be stable first.
-
-## ERP-03 — Purchasing Workflow
-
+### ERP-03 Purchasing Workflow
 - Purchase Request.
-- RFQ.
-- Supplier Quotation.
+- RFQ / supplier quotation.
 - Purchase Order.
 - Partial/full receiving.
-- Backorders.
-- Last and average purchase price.
+- Backorder handling.
 - Supplier price history.
+- Last/average purchase price.
 - Supplier evaluation.
-- Purchase approval workflow.
 
-## ERP-04 — Unified Accounting Posting
+### ERP-04 Unified Accounting Posting
+- Standard accounting posting for sales, purchases, returns, inventory, taxes, treasury, and adjustments.
+- Single source of truth for journal creation.
+- Reversal/correction workflow.
+- Preserve existing accounting reports and permissions.
 
-- One authoritative posting path for sales.
-- Revenue, COGS, inventory, tax, customer/cash postings.
-- Purchasing to inventory/expense, AP, and tax.
-- Returns and reversals.
-- Treasury transfers.
-- Inventory adjustments.
-- Correction/reversal workflow.
-- Preserve existing financial reports and permissions.
+## P1 — Restaurant Operations
 
-**Dependency:** ERP-02 costing and ERP-03 purchasing must expose authoritative values before final COGS/AP behavior is standardized.
-
-# P1 — Restaurant Operations
-
-## ERP-05 — Waste Center
-
+### ERP-05 Waste Center
 - Raw material waste.
-- Product waste.
-- Expired items.
-- Damaged items.
+- Expired/damaged items.
 - Kitchen waste.
 - Production waste.
-- Reason, quantity, cost, employee, branch.
-- Approval.
-- Waste reports.
-- Food Cost impact.
+- Reason, quantity, cost, employee, branch, approval.
+- Waste analytics and Food Cost impact.
 
-## ERP-06 — Production Planning & Variance
-
-- BOM/Recipe versioning.
-- Recipe approval.
+### ERP-06 Production Variance
+- Recipe/BOM versioning.
 - Yield.
-- Batch size.
-- Production cost.
 - Planned vs actual consumption.
-- Production variance.
+- Production cost variance.
 - Waste/by-products.
 
-## ERP-07 — Independent Kitchen Display System
-
-- New.
-- Accepted.
-- Preparing.
-- Ready.
-- Served.
-- Delayed.
-- Priority.
+### ERP-07 Kitchen Display System
+- New/accepted/preparing/ready/served states.
 - Station routing.
-- Preparation timers.
+- Priority and delayed orders.
+- Preparation-time metrics.
 - Kitchen performance.
 
-Preserve the existing POS/KDS contracts while replacing redirects or incomplete surfaces only when a verified independent KDS implementation exists.
-
-## ERP-08 — Delivery & Driver Management
-
-- Delivery zones.
-- Delivery fees.
+### ERP-08 Delivery & Driver Management
+- Delivery zones and fees.
 - Driver assignment.
-- Delivery lifecycle/status.
+- Delivery lifecycle.
 - Driver cash collection.
 - Driver debt/settlement.
 - Driver performance.
-- Delivery reports.
 
-# P1 — Customer & Sales Growth
+## P1 — Customer & Sales Growth
 
-## ERP-09 — Customer 360
-
-- Customer profile.
-- Complete purchase history.
-- Total purchases.
-- Average order value.
-- Last order.
+### ERP-09 Customer 360
+- Customer profile and purchase history.
 - Favorite products.
+- Average order value.
 - Branch activity.
-- Payment history.
 - Outstanding balance.
-- Notes/tags.
+- Tags/notes.
 
-## ERP-10 — Loyalty
-
-- Points earning rules.
-- Points redemption.
+### ERP-10 Loyalty
+- Points earning/redeeming.
 - Membership tiers.
 - Rewards.
 - Customer wallet.
-- Expiry.
-- Loyalty transaction history.
+- Expiry and transaction history.
 - POS integration.
 
-## ERP-11 — Promotions Engine
-
-- Percentage discount.
-- Fixed discount.
+### ERP-11 Promotions Engine
+- Percentage/fixed discounts.
+- Product/category promotions.
 - Buy X Get Y.
 - Combos.
-- Product promotion.
-- Category promotion.
 - Happy hour.
-- Branch-specific promotion.
-- Customer-specific promotion.
-- Date/time restrictions.
+- Branch/customer/date restrictions.
 - Usage limits.
+- Central promotion rules used by POS.
 
-Promotion rules must live in a central engine consumed by POS, not be duplicated inside POS components.
-
-## ERP-12 — Menu Engineering
-
+### ERP-12 Menu Engineering
 - Sales volume.
 - Food cost.
-- Gross profit.
-- Margin %.
-- Popularity.
-- Contribution margin.
-- Star / Plow Horse / Puzzle / Dog classification.
+- Gross profit and margin.
+- Popularity/contribution analysis.
+- Star/Plow Horse/Puzzle/Dog classification.
 
-**Dependency:** ERP-02 authoritative costing is required before profitability classifications are considered reliable.
+## P2 — Finance & Workforce
 
-# P2 — Finance & Workforce
-
-## ERP-13 — Budgeting
-
-- Branch budgets.
-- Expense budgets.
-- Monthly budgets.
-- Actual vs Budget.
+### ERP-13 Budgeting
+- Branch/monthly budgets.
+- Actual vs budget.
 - Variance.
-- Approval.
+- Approval workflow.
 
-## ERP-14 — Fixed Assets
-
+### ERP-14 Fixed Assets
 - Asset register.
-- Acquisition/purchase.
+- Acquisition.
 - Depreciation.
 - Disposal.
 - Branch transfer.
 - Asset history.
 
-## ERP-15 — Configurable Tax Center
+### ERP-15 Configurable Tax Center
+- Tax rates/configuration.
+- Inclusive/exclusive tax.
+- Sales and purchase tax reporting.
+- Tax liability and periods.
+- Configurable for jurisdiction requirements.
 
-- VAT/tax configuration.
-- Tax rates.
-- Tax-inclusive/exclusive behavior.
-- Sales tax report.
-- Purchase tax report.
-- Tax liability.
-- Tax periods.
-- Export-ready reports.
-
-Tax behavior must be configurable for jurisdiction requirements and must not be hardcoded to a single tax model.
-
-## ERP-16 — Employee Master Data
-
-- Employee profile.
-- Employee code.
-- Department.
-- Job title.
-- Salary/compensation metadata.
-- Commission metadata.
+### ERP-16 Employee Master
+- Employee profile/code.
+- Department/job title.
 - Branch assignment.
 - Employment status.
-- Join date.
-- Emergency contact.
+- Compensation metadata.
 - Documents.
-- Bank/account metadata where appropriate.
 
-Payroll is not included in this phase.
-
-## ERP-17 — Attendance & Leave
-
+### ERP-17 Attendance & Leave
 - Clock in/out.
-- Late.
-- Early leave.
-- Overtime.
+- Late/early leave.
 - Absence.
-- Attendance by branch.
-- Employee shift history.
-- Daily attendance report.
+- Overtime.
+- Attendance reports.
 - Leave balances and approvals.
 
-Integrate with the existing shifts model where appropriate instead of creating duplicate shift logic.
-
-## ERP-18 — Payroll — Later Phase
-
-- Salary structure.
-- Basic salary.
-- Allowances.
-- Deductions.
+### ERP-18 Payroll — Later Phase
+- Salary structures.
+- Allowances/deductions.
 - Overtime.
-- Commission.
-- Bonuses.
+- Commissions/bonuses.
 - Advances.
-- Payroll period.
-- Payroll approval.
-- Payslip.
-- Payroll journal posting.
+- Payroll periods and approvals.
+- Payslips and accounting posting.
 
-**Explicitly deferred** until ERP-16 and ERP-17 are stable.
+## P3 — Enterprise Controls
 
-# P3 — Enterprise Controls & Intelligence
-
-## ERP-19 — Approval Engine
-
-- Purchase approvals above configurable thresholds.
-- Discount approvals above configurable thresholds.
-- Stock adjustment approvals.
-- Expense approvals.
+### ERP-19 Approval Engine
+- Purchase approvals.
+- Large discounts.
+- Stock adjustments.
+- Large expenses.
 - Refund approvals.
-- Role/branch-aware approval chains.
+- Configurable thresholds by role/branch.
 
-Reuse the existing permission model and branch isolation.
-
-## ERP-20 — Advanced Audit Center
-
-- Who.
-- What.
-- When.
-- Branch.
-- Before/After values.
+### ERP-20 Advanced Audit Center
+- Who/what/when/branch.
+- Before/after values.
 - Document history.
 - Approval chain.
 - Device/IP metadata where appropriate and legally permitted.
 
-## ERP-21 — Head Office / Multi-Branch Intelligence
-
+### ERP-21 Head Office Intelligence
 - Branch comparison.
 - Sales ranking.
 - Food Cost ranking.
@@ -341,45 +355,41 @@ Reuse the existing permission model and branch isolation.
 - Gross margin.
 - Inventory variance.
 - Branch profitability.
-- Best/worst products.
-- Branch benchmarking.
+- Product benchmarking.
 
-Must respect the existing branch-isolation architecture and use authorized cross-branch access only for permitted head-office roles.
+## Recommended Priority
 
-# Dependency Order
+1. ERP-01 Inventory Control + Settings Control Center
+2. ERP-02 Product & Recipe Costing
+3. ERP-03 Purchasing Workflow
+4. ERP-04 Unified Accounting Posting
+5. ERP-05 Waste Center
+6. ERP-06 Production Variance
+7. ERP-07 Kitchen Display System
+8. ERP-08 Delivery & Driver Management
+9. ERP-09 Customer 360
+10. ERP-10 Loyalty
+11. ERP-11 Promotions Engine
+12. ERP-12 Menu Engineering
+13. ERP-13 Budgeting
+14. ERP-14 Fixed Assets
+15. ERP-15 Tax Center
+16. ERP-16 Employee Master
+17. ERP-17 Attendance & Leave
+18. ERP-18 Payroll
+19. ERP-19 Approval Engine
+20. ERP-20 Advanced Audit Center
+21. ERP-21 Head Office Intelligence
 
-The roadmap is intentionally dependency-driven:
+## Implementation Status
 
-**ERP-01 Inventory/Settings → ERP-02 Costing → ERP-03 Purchasing → ERP-04 Accounting → ERP-05 Waste → ERP-06 Production → ERP-07 KDS → ERP-08 Delivery → ERP-09 Customer 360 → ERP-10 Loyalty → ERP-11 Promotions → ERP-12 Menu Engineering → ERP-13 Budgeting → ERP-14 Fixed Assets → ERP-15 Tax → ERP-16 Employee → ERP-17 Attendance → ERP-18 Payroll → ERP-19 Approvals → ERP-20 Audit → ERP-21 Head Office Intelligence**
-
-# Recommended Priority
-
-1. ERP-01 — Inventory Control + Settings Control Center
-2. ERP-02 — Product & Recipe Costing
-3. ERP-03 — Purchasing Workflow
-4. ERP-04 — Unified Accounting Posting
-5. ERP-05 — Waste Center
-6. ERP-06 — Production Planning & Variance
-7. ERP-07 — Independent KDS
-8. ERP-08 — Delivery & Driver Management
-9. ERP-09 — Customer 360
-10. ERP-10 — Loyalty
-11. ERP-11 — Promotions Engine
-12. ERP-12 — Menu Engineering
-13. ERP-13 — Budgeting
-14. ERP-14 — Fixed Assets
-15. ERP-15 — Configurable Tax Center
-16. ERP-16 — Employee Master Data
-17. ERP-17 — Attendance & Leave
-18. ERP-18 — Payroll (later)
-19. ERP-19 — Approval Engine
-20. ERP-20 — Advanced Audit Center
-21. ERP-21 — Head Office / Multi-Branch Intelligence
-
-# Implementation Status
-
-- Roadmap formalized: 2026-08-14.
-- ERP-01: implementation underway on dedicated ERP branch; current status must be tracked separately in `docs/ERP-01_EXECUTION_PLAN.md`.
-- ERP-02 through ERP-21: PLANNED.
-- No ERP-02 implementation should begin until ERP-01 reaches VERIFIED/merged status.
-- Production/main must remain untouched by roadmap documentation changes.
+- ERP roadmap created: 2026-08-13.
+- ERP-01 Settings organization scope expanded: 2026-08-14.
+- ERP-01 implementation status: **VERIFICATION PENDING** — PHASE A–E implemented on branch `erp-01-settings-organization`; PHASE F **fully green in CI on PR #5** (verify ✅, db ✅ 154/154, browser-smoke ✅ 50/50, deploy preview ✅ — run 31813850004). Awaiting your final review + merge; PHASE G docs in progress. Not complete until merge + G closed.
+- Production/main code changes: NONE (feature branch not yet merged; PR #5 open).
+- ERP-01 implementation record (2026-08-14):
+  - Commits `469256b` (spec), `5e8444d` (settings audit), `b8a7459` (Settings Control Center + real consumer wiring), `b70ffed` (POS takeaway default), `6d8cae6` (bottom POS navigation), `363b608` (Resume/KDS incremental fix + migration `069_resume_order_kitchen_incremental.sql`), `a2bc51e` (full receipt review in payment), `1f38fcd` (report center contextual filters + Excel/CSV/print).
+  - Local gates (fresh `npm ci`): typecheck ✅, typecheck:all ✅, lint ✅ (0 errors), test:unit 236/236 ✅, build ✅. Fix recorded: `@playwright/test@^1.62.1` declared as devDependency (commit `32d2faa`).
+  - Live gates still pending (no `.env`/values in checkout): `test:integration` self-skips without `SUPABASE_DB_URL` (154/154 skipped); browser E2E needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`.
+  - Known limitations: no delivery fees/service, mixed payment unsupported, E3 explicit analysis modes not implemented, `test:integration` self-skips locally without a DB URL, `usePosSummary.ts` unused (pre-existing debt).
+- Next step: complete PHASE F verification (live Supabase `test:integration` incl. RLS/security + browser E2E), close PHASE G documentation, then final review/PR. Do NOT start ERP-02 until ERP-01 is fully closed.

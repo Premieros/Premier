@@ -37,8 +37,7 @@ const TreasuryPage = lazy(() => import('../features/accounting/pages/TreasuryPag
 const ReconciliationPage = lazy(() => import('../features/accounting/pages/ReconciliationPage').then(m => ({ default: m.ReconciliationPage })));
 const UsersPage = lazy(() => import('../features/admin/pages/UsersPage').then(m => ({ default: m.UsersPage })));
 const AuditLogPage = lazy(() => import('../features/reporting/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
-const SettingsPage = lazy(() => import('../features/admin/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const SystemControlCenterPage = lazy(() => import('../features/admin/pages/SystemControlCenterPage').then(m => ({ default: m.SystemControlCenterPage })));
+const SettingsControlCenterPage = lazy(() => import('../features/admin/pages/SettingsControlCenterPage').then(m => ({ default: m.SettingsControlCenterPage })));
 const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/SubscriptionsAdminPage').then(m => ({ default: m.SubscriptionsAdminPage })));
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 
@@ -95,9 +94,9 @@ export function AppRoutes() {
     <Route path={APP_ROUTES.users} element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.employees} element={<ProtectedRoute permission="users.view"><Navigate to={APP_ROUTES.users} replace /></ProtectedRoute>} />
     <Route path={APP_ROUTES.auditLog} element={<ProtectedRoute permission="audit.view"><AuditLogPage /></ProtectedRoute>} />
-    <Route path={APP_ROUTES.settings} element={<ProtectedRoute permission="settings.manage"><SystemControlCenterPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.settings} element={<ProtectedRoute permission="settings.manage"><SettingsControlCenterPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.subscriptions} element={<ProtectedRoute superAdminOnly><SubscriptionsAdminPage /></ProtectedRoute>} />
-    <Route path={APP_ROUTES.basicSettings} element={<ProtectedRoute permission="settings.manage"><SettingsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.basicSettings} element={<ProtectedRoute permission="settings.manage"><Navigate to={APP_ROUTES.settings} replace /></ProtectedRoute>} />
     <Route path={APP_ROUTES.systemHealth} element={<ProtectedRoute permission="settings.manage"><SystemHealthPage /></ProtectedRoute>} />
     <Route path="/" element={<Navigate to={APP_ROUTES.dashboard} replace />} />
     <Route path="*" element={<Navigate to={APP_ROUTES.dashboard} replace />} />

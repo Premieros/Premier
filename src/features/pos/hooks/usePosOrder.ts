@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -43,6 +43,8 @@ interface PersistResult {
 
 const EMPTY_CART: CartItem[] = [];
 
+const VALID_PAYMENT_METHODS: PosPaymentMethod[] = ['cash', 'card', 'transfer', 'credit'];
+
 export function usePosOrder(input: UsePosOrderInput) {
   const { branchId, orderId, customers, effSettings, isCashier, activeShift, products, stockMap, sellableStock, recipeMap } = input;
   const { t, lang } = useLanguage();
@@ -53,12 +55,20 @@ export function usePosOrder(input: UsePosOrderInput) {
   const [cart, setCart] = useState<CartItem[]>(EMPTY_CART);
   const [customerId, setCustomerId] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('cash');
+  const paymentTouched = useRef(false);
+  const defaultPayment = VALID_PAYMENT_METHODS.includes(effSettings?.pos_default_payment_method as PosPaymentMethod)
+    ? (effSettings?.pos_default_payment_method as PosPaymentMethod)
+    : 'cash';
+  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>(defaultPayment);
+  const setPaymentMethodSafe = useCallback((m: PosPaymentMethod) => {
+    paymentTouched.current = true;
+    setPaymentMethod(m);
+  }, []);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
   const [paidAmount, setPaidAmount] = useState(0);
 
-  const [orderType, setOrderType] = useState<OrderType>('dine_in');
+  const [orderType, setOrderType] = useState<OrderType>('takeaway');
   const [tableId, setTableId] = useState<string | null>(null);
   const [guestCount, setGuestCount] = useState<number | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(orderId);
@@ -74,13 +84,21 @@ export function usePosOrder(input: UsePosOrderInput) {
 
   const effCurrency = effSettings?.currency || 'EGP';
 
+  // Apply the configured default payment method once settings are loaded,
+  // unless the cashier already picked a method this session.
+  useEffect(() => {
+    if (paymentTouched.current) return;
+    const dm = effSettings?.pos_default_payment_method as PosPaymentMethod;
+    if (VALID_PAYMENT_METHODS.includes(dm)) setPaymentMethod(dm);
+  }, [effSettings?.pos_default_payment_method]);
+
   useEffect(() => {
     setActiveOrderId(orderId);
     if (!orderId) {
       setActiveOrderNumber(null);
       setTableId(null);
       setGuestCount(null);
-      setOrderType('dine_in');
+      setOrderType('takeaway');
       setCart(EMPTY_CART);
       setOrderNotes('');
       return;
@@ -513,7 +531,7 @@ export function usePosOrder(input: UsePosOrderInput) {
     setOrderNotes('');
     setDiscountAmount(0);
     setPaidAmount(0);
-    setOrderType('dine_in');
+    setOrderType('takeaway');
     setTableId(null);
     setGuestCount(null);
     setActiveOrderId(null);
@@ -526,7 +544,7 @@ export function usePosOrder(input: UsePosOrderInput) {
     cart,
     customerId, setCustomerId,
     orderNotes, setOrderNotes,
-    paymentMethod, setPaymentMethod,
+    paymentMethod, setPaymentMethod: setPaymentMethodSafe,
     discountAmount, setDiscountAmount,
     discountType, setDiscountType,
     paidAmount, setPaidAmount,
