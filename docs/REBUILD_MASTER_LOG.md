@@ -226,7 +226,7 @@ Audited gaps (from the completed branch-isolation audit):
 ### Pending
 - **6H + 6I visual rebuild: COMPLETE.** No further work in this bundle. Next work must be explicitly requested and isolated from the production baseline.
 - `src/features/pos/hooks/usePosSummary.ts` remains flagged as future technical debt; do not remove without a separate cleanup decision.
-- **ERP-01 PHASE F verification (in progress):** fresh `npm ci`; `npm run test:integration` against live Supabase (DB URL) incl. RLS/security suites; browser E2E `pos-actions`, `public-smoke`, `dashboard-navigation`; RLS review of migration `069`. Then close PHASE G docs, final review and PR. Do NOT start ERP-02 or open a PR until PHASE F and G are fully closed.
+- **ERP-01 PHASE F verification (in progress):** fresh `npm ci` ✅ + all local gates green (lint 0 errors, typecheck, typecheck:all, test:unit 236/236, build). **Fix recorded:** `@playwright/test@^1.62.1` declared as devDependency (commit `32d2faa`) — was used by `tests/e2e` but never declared; `npm ci`+`typecheck:all` now deterministic. **Blocked on live Supabase env (no `.env`, no values invented):** `npm run test:integration` self-skips without `SUPABASE_DB_URL` (154/154 skipped); browser E2E `pos-actions`/`public-smoke`/`dashboard-navigation` needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (Playwright+chromium installed). RLS review of migration `069` static-only pending live suite. Then close PHASE G docs, final review and PR. Do NOT start ERP-02 or open a PR until PHASE F and G are fully closed.
 
 ## Relationship Audit Note
 

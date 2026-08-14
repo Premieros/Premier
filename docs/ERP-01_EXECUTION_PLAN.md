@@ -646,19 +646,22 @@ Never bypass a stop condition just to make the UI appear complete.
 - `tests/components/pos-payment-panel.test.tsx` — payment receipt review contract.
 - `tests/integration/kitchen_sends.test.ts` — Resume/KDS incremental-send regression (live DB).
 
-## Local gate results (PHASE F, partial)
+## Local gate results (PHASE F) — verified on fresh install
 
-- `npm run typecheck:all` ✅
+- `npm ci` ✅ (fresh install, 477 packages) — exposed and fixed a missing-devDependency gap: `@playwright/test` was already used by `tests/e2e/*.spec.ts` and `playwright.config.ts` but never declared; declared as devDependency `@playwright/test@^1.62.1` (commit `32d2faa`) so `npm ci` and `typecheck:all` are deterministic.
 - `npm run lint` ✅ (0 errors; 16 pre-existing warnings)
+- `npm run typecheck` ✅
+- `npm run typecheck:all` ✅ (includes type-checking `tests/e2e`)
 - `npm run test:unit` ✅ 236/236 across 19 files
 - `npm run build` ✅
 
-## Verification still pending (PHASE F)
+## Verification still pending (PHASE F) — blocked on live Supabase environment
 
-- `npm ci` (fresh install gate).
-- `npm run test:integration` against a live Supabase database (DB URL required; suite self-skips locally without one) — covers migration `069`, RLS/security suites (`rls_branch_isolation`, `p0_security_hardening`, `rbac_hardening`, `phase4_security_contract`, `process_sale_*`, `update_order`, `floorplan_orders`, `order_lifecycle_guards`).
-- Browser smoke/E2E: `pos-actions`, `public-smoke`, `dashboard-navigation` (needs live Supabase env `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`).
-- RLS/security review of migration `069` (function-only replacement; no policy changes — to be re-confirmed by live suite).
+No Supabase environment values exist in this checkout (no `.env`; it is git-ignored) and none were invented. The remaining gates require user-provided values:
+
+1. **`npm run test:integration` against live Supabase** — confirmed the suite self-skips without a URL (154/154 skipped, 10 files): `SUPABASE_DB_URL` (or `DATABASE_URL`) is required. This covers migration `069` and the RLS/security suites (`rls_branch_isolation`, `p0_security_hardening`, `rbac_hardening`, `phase4_security_contract`, `process_sale_*`, `update_order`, `floorplan_orders`, `order_lifecycle_guards`).
+2. **Browser E2E** (`pos-actions`, `public-smoke`, `dashboard-navigation`) — Playwright 1.62.1 + chromium are installed and the specs mock the whole Supabase network, but the app build needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (`src/lib/supabase.ts`), so a `.env` is required before the specs can boot the app.
+3. **RLS/security review of migration `069`** — static review done (function-only replacement; no RLS/grants/schema-object changes); live confirmation requires the DB URL above.
 
 ## Known limitations & technical debt
 

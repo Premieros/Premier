@@ -389,6 +389,7 @@ ERP-01 now includes the organization of the Settings page because inventory beha
 - Production/main code changes: NONE (feature branch not yet merged; no PR opened).
 - ERP-01 implementation record (2026-08-14):
   - Commits `469256b` (spec), `5e8444d` (settings audit), `b8a7459` (Settings Control Center + real consumer wiring), `b70ffed` (POS takeaway default), `6d8cae6` (bottom POS navigation), `363b608` (Resume/KDS incremental fix + migration `069_resume_order_kitchen_incremental.sql`), `a2bc51e` (full receipt review in payment), `1f38fcd` (report center contextual filters + Excel/CSV/print).
-  - Local gates: typecheck:all ✅, lint ✅ (0 errors), test:unit 236/236 ✅, build ✅.
+  - Local gates (fresh `npm ci`): typecheck ✅, typecheck:all ✅, lint ✅ (0 errors), test:unit 236/236 ✅, build ✅. Fix recorded: `@playwright/test@^1.62.1` declared as devDependency (commit `32d2faa`).
+  - Live gates still pending (no `.env`/values in checkout): `test:integration` self-skips without `SUPABASE_DB_URL` (154/154 skipped); browser E2E needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`.
   - Known limitations: no delivery fees/service, mixed payment unsupported, E3 explicit analysis modes not implemented, `test:integration` self-skips locally without a DB URL, `usePosSummary.ts` unused (pre-existing debt).
 - Next step: complete PHASE F verification (live Supabase `test:integration` incl. RLS/security + browser E2E), close PHASE G documentation, then final review/PR. Do NOT start ERP-02 until ERP-01 is fully closed.
