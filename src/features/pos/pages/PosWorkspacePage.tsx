@@ -120,7 +120,7 @@ export function PosWorkspacePage() {
 
   useEffect(() => {
     if (orderIdParam) { setStartStep(null); return; }
-    if (initState.tableId) { setPreselectedTableId(initState.tableId); setStartStep('table'); } else setStartStep('type');
+    if (initState.tableId) { setPreselectedTableId(initState.tableId); setStartStep('table'); } else setStartStep(null);
   }, [orderIdParam, initState.tableId]);
 
   useEffect(() => {

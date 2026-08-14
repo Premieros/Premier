@@ -68,7 +68,7 @@ export function usePosOrder(input: UsePosOrderInput) {
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
   const [paidAmount, setPaidAmount] = useState(0);
 
-  const [orderType, setOrderType] = useState<OrderType>('dine_in');
+  const [orderType, setOrderType] = useState<OrderType>('takeaway');
   const [tableId, setTableId] = useState<string | null>(null);
   const [guestCount, setGuestCount] = useState<number | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(orderId);
@@ -98,7 +98,7 @@ export function usePosOrder(input: UsePosOrderInput) {
       setActiveOrderNumber(null);
       setTableId(null);
       setGuestCount(null);
-      setOrderType('dine_in');
+      setOrderType('takeaway');
       setCart(EMPTY_CART);
       setOrderNotes('');
       return;
@@ -531,7 +531,7 @@ export function usePosOrder(input: UsePosOrderInput) {
     setOrderNotes('');
     setDiscountAmount(0);
     setPaidAmount(0);
-    setOrderType('dine_in');
+    setOrderType('takeaway');
     setTableId(null);
     setGuestCount(null);
     setActiveOrderId(null);
