@@ -19,7 +19,7 @@
 
 ### ERP-01 Inventory Control + Settings Control Center
 
-> **Status: ⏳ VERIFICATION PENDING** — implementation on branch `erp-01-settings-organization` (commits `469256b`..`1f38fcd`) is complete for PHASE A–E; PHASE F verification (fresh install, live database, browser E2E) and PHASE G documentation are in progress. ERP-01 is NOT complete until F and G are fully closed. See `docs/ERP-01_EXECUTION_PLAN.md` → `# CURRENT STATUS` for the full completion record (commits, migration `069`, tests, limitations, rollback).
+> **Status: ⏳ VERIFICATION PENDING** — implementation on branch `erp-01-settings-organization` (commits `469256b`..`fde107f`) is complete for PHASE A–E; PHASE F verification is **fully green in CI on PR #5** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — run 31813850004). ERP-01 is NOT complete until your final review + merge of PR #5 and PHASE G closure. See `docs/ERP-01_EXECUTION_PLAN.md` → `# CURRENT STATUS` for the full completion record (commits, migration `069`, tests, limitations, rollback).
 
 ERP-01 now includes the organization of the Settings page because inventory behavior, branch defaults, tax/currency, purchasing, receipts, POS rules, and operational policies must have one clear administrative control surface.
 
@@ -385,8 +385,8 @@ ERP-01 now includes the organization of the Settings page because inventory beha
 
 - ERP roadmap created: 2026-08-13.
 - ERP-01 Settings organization scope expanded: 2026-08-14.
-- ERP-01 implementation status: **VERIFICATION PENDING** — PHASE A–E implemented on branch `erp-01-settings-organization`; PHASE F (fresh install, live DB, browser E2E) and PHASE G documentation in progress. Not complete until F and G are closed.
-- Production/main code changes: NONE (feature branch not yet merged; no PR opened).
+- ERP-01 implementation status: **VERIFICATION PENDING** — PHASE A–E implemented on branch `erp-01-settings-organization`; PHASE F **fully green in CI on PR #5** (verify ✅, db ✅ 154/154, browser-smoke ✅ 50/50, deploy preview ✅ — run 31813850004). Awaiting your final review + merge; PHASE G docs in progress. Not complete until merge + G closed.
+- Production/main code changes: NONE (feature branch not yet merged; PR #5 open).
 - ERP-01 implementation record (2026-08-14):
   - Commits `469256b` (spec), `5e8444d` (settings audit), `b8a7459` (Settings Control Center + real consumer wiring), `b70ffed` (POS takeaway default), `6d8cae6` (bottom POS navigation), `363b608` (Resume/KDS incremental fix + migration `069_resume_order_kitchen_incremental.sql`), `a2bc51e` (full receipt review in payment), `1f38fcd` (report center contextual filters + Excel/CSV/print).
   - Local gates (fresh `npm ci`): typecheck ✅, typecheck:all ✅, lint ✅ (0 errors), test:unit 236/236 ✅, build ✅. Fix recorded: `@playwright/test@^1.62.1` declared as devDependency (commit `32d2faa`).

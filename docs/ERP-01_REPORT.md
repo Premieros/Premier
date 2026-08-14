@@ -22,7 +22,7 @@
 
 > ملاحظة تسجيل: عدد الحزم الفعلي بعد `npm ci` اليوم هو 480 (التقرير السابق دوّن 477). الفرق نتيجة اختلاف دقّة إصدار npm في الحل، وليس تغييرًا في التبعيات.
 
-## 2. `npm run test:integration` — ⚠️ NOT EXECUTED — ENVIRONMENT BLOCKED
+## 2. `npm run test:integration` — ✅ VERIFIED في CI (المحلي: BLOCKED BY ENVIRONMENT)
 
 - أُعيد تشغيله اليوم: **10 ملفات / 154 اختبارًا، كلها skipped (154/154)**.
 - السبب: لا يوجد `.env` في الشجرة (مُستثنى عبر git)، ولا Postgres محلي مثبّت، ولا Docker، ولا قيمة `SUPABASE_DB_URL`/`DATABASE_URL`/`POSTGRES_URL`. `getDbUrl()` (tests/integration/db.ts) يقرأ من البيئة أو `.env` فقط، و`describe.skipIf(skip)` يُسكّت المجموعة كاملة عند غيابها.
@@ -35,13 +35,13 @@
 - **`npm ci` فشل في `verify` job** رغم نجاحه محليًا: lockfile المولّد محليًا بـ npm 11 فقد حزم `esbuild@0.28.x` المطلوبة من rolldown-vite (الذي يجره vitest 4.x)، وnpm 10 في CI (Node 22) يرفضها (EUSAGE). **الإصلاح:** أُعيد توليد `package-lock.json` بـ npm 10.9.9 → `npm ci` متوافق محليًا وفي CI (commit `2382280`).
 - **`db` job شغّل حزمة integration حيًا: 154 اختبارًا → 153 نجحت / 1 فشل** — «resume + add item + send + payment: only the new line reaches KDS (ERP-01)». لم تلتقطها القراءة الثابتة (القسم 4):
   - السبب: في إعادة كتابة 069، الأسطر **الجديدة** المدرَجة في `order_items` لم تُسجَّل في `_upd_matched`، فحذفها سَيرُ الحذف فورًا (`DELETE ... NOT EXISTS (_upd_matched)`) → اختفت السلعة المضافة من السلة → `items_sent_count` = 0 بدل 1.
-  - **الإصلاح:** `INSERT ... RETURNING id INTO v_matched_id` ثم تسجيل السطر الجديد في `_upd_matched`. إعادة تشغيل CI معلّقة حتى هذه الكتابة.
+  - **الإصلاح:** `INSERT ... RETURNING id INTO v_matched_id` ثم تسجيل السطر الجديد في `_upd_matched` (commit `d4c5e84`). **إعادة تشغيل CI النهائية: 154/154 ✅ (run 31813850004).**
 
 ### 2.2. أول تشغيل لـ browser-smoke (E2E) — فشل 9/50 بسبب مواصفة قديمة → حُدِّثت
 
 - **41/50 نجحت** (public-smoke 38 + dashboard-navigation 3)؛ فشلت الـ9 في `pos-actions.spec.ts` كلها في نفس السطر (`beforeEach`): كانت تنتظر `pos-order-type-picker` فور الدخول إلى `/pos`.
 - السبب: تغيير ERP-01 (بند B) جعل الـPOS يفتح مباشرة على Takeaway، والمُنتقي (`OrderStartWizard` → `OrderTypePicker`) لا يظهر إلا عبر زر **New Order** (`setStartStep('type')`). المواصفة كُتبت قبل التغيير.
-- **الإصلاح:** أُضيف `data-testid="pos-action-new-order"` إلى زر New Order في `PosTopBar`، وحدّث `beforeEach` لفتح المُنتقي عبره قبل تأكيد ظهوره. كل testids المستخدمة في المواصفة موجودة في الكود الجديد (تحقّق بالقراءة). إعادة تشغيل معلّقة.
+- **الإصلاح:** أُضيف `data-testid="pos-action-new-order"` إلى زر New Order في `PosTopBar`، وحدّث `beforeEach` لفتح المُنتقي عبره قبل تأكيد ظهوره. كل testids المستخدمة في المواصفة موجودة في الكود الجديد (تحقّق بالقراءة). **إعادة تشغيل CI النهائية: 50/50 ✅ (run 31813850004).**
 
 ## 3. E2E — ⚠️ BLOCKED BY ENVIRONMENT (المتطلبات محددّة بالضبط)
 
@@ -71,7 +71,7 @@
   - **عزل الفرع/RBAC**: الحراس `is_pos_admin()` / `get_branch_id()` (مُعرَّفان في 001/004/006) لم تُمس؛ شرط `BRANCH_MISMATCH` في 069 مطابق حرفيًا لـ046.
 - **توافق الواجهة الأمامية**: `src/api/modules.ts` ينادي `update_order` بنفس أسماء المعاملات → لا انحراف تعاقدي. `verify-schema.js` لا يتضمن `update_order` بالاسم → لا أثر على فحص schema.
 - **التغطية**: `tests/integration/kitchen_sends.test.ts` (7) — إرسال أول، إعادة إرسال no-op، حفظ نفس السلة لا يُعيد الإرسال، resume+إضافة يُرسل الجديد فقط ثم `process_sale` يسوّي السلة كاملة، رفض completed، H4، قراءة RLS داخل الفرع؛ `update_order.test.ts` (7) — C2/H2/M4/H4؛ بجانب `rls_branch_isolation` (110) و`floorplan_orders` (3) وغيرها.
-- **الخلاصة**: القراءة الثابتة لم ترصد regression، لكن **التشغيل الحي في CI (القسم 2.1) رصد خللًا حقيقيًا في مسار «الأسطر الجديدة»** (سَير الحذف كان يمسح السطر المُضاف) وعولج بتسجيله في `_upd_matched`. إعادة التحقق النهائية معلّقة على إعادة تشغيل CI.
+- **الخلاصة**: القراءة الثابتة لم ترصد regression، لكن **التشغيل الحي في CI (القسم 2.1) رصد خللًا حقيقيًا في مسار «الأسطر الجديدة»** (سَير الحذف كان يمسح السطر المُضاف) وعولج بتسجيله في `_upd_matched`. **إعادة التحقق النهائية في CI: 154/154 ✅.**
 
 ## 5. ملخص الحالات الثلاث
 
@@ -83,20 +83,20 @@
 | `npm run typecheck:all` | ✅ VERIFIED |
 | `npm run test:unit` | ✅ VERIFIED (236/236, 19 ملفًا) |
 | `npm run build` | ✅ VERIFIED |
-| `npm run test:integration` | ⚠️ محليًا NOT EXECUTED (لا DB) — **في CI: 154 اختبارًا، 153 ✅ / 1 ❌ (069) → عولج** |
-| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | محليًا BLOCKED BY ENVIRONMENT؛ **أول تشغيل CI: 41/50 ✅، 9 ❌ (مواصفة قديمة) → حُدِّثت، إعادة تشغيل معلّقة** |
-| مراجعة هجرة 069 + RLS/RBAC | ✅ قراءة ثابتة سليمة لكنها لم تكشف الخلل؛ **التشغيل الحي في CI كشفه وعولج** |
-| ❌ FAILED | 1 فشل integration واحد في أول تشغيل CI (069 — سطر جديد يُمحى) → مُصلَح؛ إعادة تشغيل جارية |
+| `npm run test:integration` | ✅ **VERIFIED في CI: 154/154** (run 31813850004)؛ محليًا BLOCKED BY ENVIRONMENT (لا DB) |
+| E2E (`pos-actions`/`public-smoke`/`dashboard-navigation`) | ✅ **VERIFIED في CI: 50/50** (run 31813850004)؛ محليًا BLOCKED BY ENVIRONMENT |
+| مراجعة هجرة 069 + RLS/RBAC | ✅ قراءة ثابتة سليمة لكنها لم تكشف الخلل؛ **التشغيل الحي في CI كشفه وعولج (154/154)** |
+| ❌ FAILED (سجل) | أول تشغيل CI: db 1 ❌ (069 — سطر جديد يُمحى) و browser-smoke 9 ❌ (مواصفة قديمة) → كلاهما مُصلَح والتحقق النهائي أخضر |
 
 ## 6. الالتزامات المحفوظة
 
 - لا قيمة `SUPABASE_DB_URL`/`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` مخترَعة أو مضافة إلى `.env` أو إلى أي commit.
 - لم يُطلب أي secret داخل Git.
 - `main` لم يُلمس؛ **PR #5 مفتوح وغير مدمج**؛ ERP-02 لم يُبدأ.
-- خللان كشفهما CI وعولجا: lockfile (esbuild@0.28.x) + 069 (مسح السطر الجديد).
-- تحديثات التوثيق في هذه الجلسة غير مرفوعة/غير committed بانتظار مراجعتك (أو يُلتزَم بها في commit عند طلبك صراحة).
+- خللان كشفهما CI وعولجا: lockfile (esbuild@0.28.x) + 069 (مسح السطر الجديد) + مواصفة E2E قديمة (pos-actions) — وكلها مثبّتة بتحقق CI أخضر (run 31813850004).
+- توثيق هذه الجلسة committed على الفرع (التحقق النهائي الأخضر يسجَّل بهذا commit).
 
 ## 7. الحالة والتالي
 
-- **ERP-01: VERIFICATION PENDING** — البوابات المحلية خضراء (القسم 1)؛ أول تشغيل حي في CI كشف خللين وعولجا (lockfile + 069) وتجري إعادة التشغيل (القسم 2.1)؛ E2E محجوب محليًا ويُشغَّل في CI `browser-smoke`.
-- لإغلاق F: اكتمال بوابات PR #5 (verify + db + browser-smoke) خضراء، ثم المراجعة النهائية والدمج (لا يُدمج قبل موافقتك).
+- **ERP-01: VERIFICATION PENDING** — كل بوابات CI خضراء: `verify` ✅ (unit 236/236)، `db` ✅ (integration 154/154)، `browser-smoke` ✅ (E2E 50/50)، وNetlify deploy preview ✅ (run 31813850004).
+- لإغلاق F: مراجعتك النهائية ثم دمج PR #5 (لا يُدمج قبل موافقتك)؛ ERP-02 لا يُبدأ قبل إغلاق ERP-01.

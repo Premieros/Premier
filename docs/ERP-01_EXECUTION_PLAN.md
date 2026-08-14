@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: **VERIFICATION PENDING** — implementation of PHASE A–E is complete and committed; PHASE F verification (fresh install, live database, browser E2E) and PHASE G documentation are in progress. ERP-01 is NOT complete until F and G are fully closed.
+- Status: **VERIFICATION PENDING** — implementation of PHASE A–E is complete and committed; PHASE F verification is **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, Netlify deploy preview ✅ — run 31813850004 on PR #5); PHASE G documentation in progress. ERP-01 is NOT complete until your final review and merge of PR #5, then G is closed.
 - Branch: `erp-01-settings-organization`
 - Base: production `main` after P7 merge
 - Scope: ERP-01 only
@@ -19,7 +19,7 @@
 | C | Resume / Kitchen incremental sending | ✅ Implemented | `363b608` + migration `069` |
 | D | Payment & full receipt review | ✅ Implemented | `a2bc51e` |
 | E | Report Center filters + export | ✅ Implemented | `1f38fcd` |
-| F | Tests & verification | ⏳ VERIFICATION PENDING | local gates green; fresh install / live DB / E2E pending |
+| F | Tests & verification | ✅ CI GREEN | verify ✅ (unit 236/236), db ✅ (integration 154/154), browser-smoke ✅ (E2E 50/50), deploy preview ✅ — PR #5 run 31813850004; awaits your review + merge |
 | G | Documentation & audit | ⏳ In progress | this update |
 
 Full completion record: see `# CURRENT STATUS` at the end of this file.
@@ -493,26 +493,16 @@ Support existing infrastructure for:
 
 Exports must match the selected filters and displayed report.
 
-# PHASE F — Tests & Verification ⏳ VERIFICATION PENDING
+# PHASE F — Tests & Verification ✅ CI GREEN (PR #5, run 31813850004)
 
-For every sub-phase:
-
-- unit tests
-- component contract tests
-- page smoke tests where applicable
-- regression tests for changed behavior
-
-Full gate before ERP-01 completion:
-
-1. `npm ci`
-2. `npm run lint`
-3. `npm run typecheck`
-4. `npm run typecheck:all`
-5. `npm run test:unit`
-6. build
-7. database/schema checks
-8. RLS/security tests
-9. browser smoke/E2E
+- `verify` ✅ — `npm ci` (lockfile fixed at `2382280`, see PHASE F notes below), lint, typecheck:all, test:unit **236/236**, build.
+- `db` ✅ — Postgres + migrations + `verify-schema.js` + `stub_auth.sql` + security/RLS regression: **integration 154/154**.
+- `browser-smoke` ✅ — `npx playwright test --project=chromium`: **50/50** (public-smoke 38 + dashboard-navigation 3 + pos-actions 9).
+- Netlify deploy preview ✅.
+- PHASE F note — defects found ONLY by live CI (CI is authoritative):
+  1. lockfile: locally regenerated with npm 11 dropped `esbuild@0.28.x` → CI npm 10 rejected (`npm ci` EUSAGE). Fixed by regenerating with npm 10.9.9 (`2382280`).
+  2. migration 069: new order_item lines were not registered in `_upd_matched`, so the deletion sweep removed the added line (kitchen_sends `items_sent_count` 0). Fixed with `RETURNING id INTO v_matched_id` + insert (`d4c5e84`).
+  3. E2E pos-actions: spec expected the order-type picker on entry to `/pos`, but ERP-01 change B opens POS on Takeaway (picker now via New Order). Added `data-testid="pos-action-new-order"` and updated `beforeEach` (`fde107f`).
 
 If CI differs from local results, CI is authoritative.
 
@@ -585,7 +575,7 @@ Never bypass a stop condition just to make the UI appear complete.
 
 # CURRENT STATUS
 
-- Status: **VERIFICATION PENDING** — implementation of PHASE A–E is complete and committed; PHASE F verification (fresh install, live database, browser E2E) and PHASE G documentation are in progress. ERP-01 is NOT marked complete until F and G are fully closed.
+- Status: **VERIFICATION PENDING** — PHASE A–E complete and committed; PHASE F verification **fully green in CI** (verify ✅ 236/236 unit, db ✅ 154/154 integration, browser-smoke ✅ 50/50 E2E, deploy preview ✅ — PR #5 run 31813850004). ERP-01 is NOT marked complete until your final review + merge of PR #5 and PHASE G closure.
 - Branch: `erp-01-settings-organization`
 - Production/main: untouched by ERP-01 (feature branch not yet merged; no PR opened).
 
@@ -663,7 +653,7 @@ No environment values exist in this checkout (no `.env`; git-ignored) and none w
 2. **Browser E2E** (`pos-actions` 9, `public-smoke` 38 — 2 + 36 protected routes, `dashboard-navigation` 3 = 50 tests) — locally **BLOCKED BY ENVIRONMENT**, but **the first CI `browser-smoke` run executed it: 41/50 passed** (public-smoke + dashboard-navigation), **9 failed** — all in `pos-actions.spec.ts` at the same `beforeEach` step, which expected `pos-order-type-picker` immediately on entering `/pos`. ERP-01 change B (POS opens directly on Takeaway; the order-type picker now opens via the **New Order** button, `setStartStep('type')`) made that precondition stale. **Fixed:** added `data-testid="pos-action-new-order"` to the New Order button (`PosTopBar`) and updated `beforeEach` to open the picker through it; every testid the spec relies on exists in the current code. Re-run pending. Requirements to run it locally: a git-ignored `.env` with `VITE_SUPABASE_URL` set **exactly** to the specs' mock origin `https://lwnsdsncmlsroiswgoga.supabase.co` (`SUPABASE_ORIGIN` in `pos-actions.spec.ts` / `dashboard-navigation.spec.ts`, so `page.route()` interceptors match) and a non-empty `VITE_SUPABASE_ANON_KEY`.
    - Why required locally: `src/lib/supabase.ts` calls `createClient(...)` at module scope and `@supabase/supabase-js` throws synchronously (`supabaseUrl is required.` / `supabaseKey is required.`) when either is missing; this module is imported eagerly by `AuthContext`/`SettingsContext`/`RolesContext`/`api/client.ts`, so the whole app (including the `public-smoke` login page) fails to boot without the values at build time.
    - Then `npm run build` (with the values) → `npx playwright test` (`playwright.config.ts` auto-starts `npm run preview -- --host 127.0.0.1 --port 4173` serving `dist/`). `@playwright/test@^1.62.1` and chromium revision 1234 (matching the installed version) are already present.
-3. **RLS/security review of migration `069`** — static review passed (function-only replacement; no RLS/grants/schema-object changes; branch guard byte-identical to 046; send boundary `order_kitchen_sends` + `send_to_kitchen` untouched). **However, the live `db` gate found a logic bug the static review missed** (new lines swept by the deletion pass — see item 1), now fixed; live confirmation of the corrected migration is the pending `db` re-run.
+3. **RLS/security review of migration `069`** — static review passed (function-only replacement; no RLS/grants/schema-object changes; branch guard byte-identical to 046; send boundary `order_kitchen_sends` + `send_to_kitchen` untouched). **However, the live `db` gate found a logic bug the static review missed** (new lines swept by the deletion pass — see item 1), now fixed at `d4c5e84`; **live confirmation: `db` gate ✅ 154/154 (run 31813850004).**
 
 ## Known limitations & technical debt
 
