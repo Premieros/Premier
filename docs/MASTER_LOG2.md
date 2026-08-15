@@ -112,3 +112,33 @@ At every phase closure report exactly:
 
 ### NEXT
 - Proceeding to P0 item 2: product/recipe costing (recipe cost, component cost, unit cost, actual/theoretical cost, food cost %, gross margin, product/order/branch profit, actual-vs-recipe variance, supplier-price impact, cost history) - same rule: implement -> focused tests -> fix -> full verification -> CI -> log.
+
+## Phase closure: P0 item 2 — Product / Recipe Costing slice
+
+### DONE
+- Costing Center screen (`/costing`, permission `reports.costing`, group finance, icon Calculator) wired end-to-end (routes.ts, routes.tsx lazy route + ProtectedRoute, menu.config.ts, Layout icon, i18n ar/en keys). Three tabs:
+  - Costing Overview: per-product cost grid (sale price, weighted-average batch unit cost, theoretical/BOM cost, actual/recipe cost, margin %, actual-vs-theoretical variance), summary cards (product count, average food cost %, highest-cost-ratio product), search + branch filter, Excel export, row click opens a deep-detail modal.
+  - Order Margin: gross margin per sale invoice computed from COGS derived from inventory_ledger (entry_type='sale', reference_id = sale.id), date-range + branch filters, Excel export.
+  - Supplier Price Impact: first/last/avg purchase cost + change % per supplier item (product and raw_material), supplier filter, Excel export.
+- Detail modal per product: sale price / unit / theoretical / actual cost cards, food cost %, margin %, BOM component lines (quantity x component unit cost), recipe lines (quantity x (1 + wastage%) x raw material cost), and full cost history.
+- Database (additive migration `074_product_costing.sql`): `product_cost_history` table + `track_product_cost_history` trigger (SECURITY DEFINER, records any cost_price change with changed_by/source, RLS with select+insert policies); 5 SECURITY DEFINER branch-scoped RPCs - `get_costing_overview`, `get_product_costing_detail` (jsonb deep detail incl. history), `get_cost_history`, `get_supplier_price_impact` (product + raw_material union), `get_order_margin` (COGS from the ledger, admin may pass NULL branch, non-admin locked to own branch via is_pos_admin() pattern).
+- Client maths isolated in `src/lib/costing.ts` (safeDiv, weightedAvgCost, foodCostPct, grossMargin, marginPct, variancePct) with pure unit tests.
+- Tests: new unit suite `tests/unit/lib/costing.test.ts` (6 tests); `CostingCenterPage` added to `tests/components/pages.smoke.test.tsx` (36 pages rendered); permission added to `Permission` union, `ALL_PERMISSIONS`, `PERMISSION_LABELS`, reports group, and branch_manager/accountant default roles.
+
+### REMAINING
+- No DB integration coverage for the 5 RPCs in this environment (no SUPABASE_DB_URL configured; 154 integration tests skip by design). Migration 074 is untested against a live Postgres here.
+- Costing center is read-only; editing product cost / BOM / recipe components happens on their existing screens (Products / Components / Recipes) and is captured in cost history via the trigger.
+- Order margin tab caps at 500 invoices (LIMIT 500 in get_order_margin) with no pager yet - cosmetic.
+
+### BLOCKED / RISKS
+- Integration DB suite cannot run locally without SUPABASE_DB_URL; skipped as pre-existing behaviour.
+- Weighted-average batch cost helpers fall back to raw_materials.default_cost for raw materials with no batches; products with no batches report 0 unit cost (no products.cost_price fallback) - documented behaviour, revisit if product-level costing without batches is required.
+- `_product_bom_cost` / `_product_recipe_cost` are per-unit costs; they do not divide by recipes.yield_quantity (recipe_item quantities are already per yield unit by schema convention).
+
+### EVIDENCE
+- Commit: `82c7b1c` `feat(costing): add product costing center with recipe cost, order margin and supplier impact` (on `development/master-log2`; no merge to main).
+- `npm run verify:full` green (EXIT_CODE=0) at head `82c7b1c`: typecheck:all, lint (0 errors), build, test:unit 257 passed (21 files), test:integration 154 skipped (no DB URL).
+- Focused: tests/unit/lib/costing.test.ts 6 passed; tests/components/pages.smoke.test.tsx 36 passed.
+
+### NEXT
+- Proceeding to P0 item 3: purchasing workflow (same rule: implement -> focused tests -> fix -> full verification -> CI -> log).
