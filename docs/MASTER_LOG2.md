@@ -283,3 +283,34 @@ Every branch below was compared against `development/master-log2` (unique-commit
 - Local pre-push verification green: lint (0 errors), `typecheck:all`, 257 unit, `npm run build`, 162 integration (isolated cluster, port 55432), 50 Playwright e2e (dist preview on 127.0.0.1:4173).
 - Pages deployment created for `29e2ec6` (github-pages environment, created 2026-08-15T19:42:40Z).
 - Live site: https://premieros.github.io/Premier/ — HTTP 200, title "Premier | Business Management Platform".
+
+
+## P0: Production PGRST202 `get_stock_valuation` — root cause, migration fix `076`, and deploy parity gate (2026-08-15)
+
+### SYMPTOM
+- Live site `/stock-valuation` failed: `Could not find the function public.get_stock_valuation(p_branch_id, p_warehouse_id) in the schema cache` (PGRST202).
+
+### ROOT CAUSE
+1. **Frontend is newer than the Production database.** The deployed bundle (`assets/index-NdNTpBAi.js`, published from `development/master-log2`) contains the same Supabase URL/anon key and calls RPCs from migrations `071`–`075`. `main` — the previously-published baseline — never contained those migrations. Production was never migrated past the ~022–035 range: `orders` exists but `floorplan_*`, `subscriptions`, `instapay_payments`, `stock_counts`, `procurement_*`, `costing_*`, `purchase_orders` do not; `get_active_shift` exists (permission denied to anon, proving the schema stops mid-range); `get_stock_valuation`, `get_stock_valuation_summary`, `get_costing_overview`, `get_supplier_evaluation`, `get_expiring_batches`, `get_low_stock_alerts` all return PGRST202.
+2. **Production was never touched during development** (isolated local clusters + CI service containers only), so the mismatch went unnoticed until the live page was opened.
+
+### FIXES
+1. `supabase/migrations/076_fix_stock_valuation_ambiguity.sql` (additive-only, never applied anywhere before, so editing is legal): migration `072_stock_valuation.sql` declared `RETURNS TABLE(... branch_id ...)` making `branch_id` a PL/pgSQL variable, so the staff path (`SELECT branch_id INTO v_user_branch FROM public.users`) failed with `column reference "branch_id" is ambiguous`. 076 re-declares the same signature `(p_branch_id uuid, p_warehouse_id uuid)` with `u.branch_id` qualified. Applied to the isolated cluster (55432): `Done: 1 applied, 0 skipped`; `get_stock_valuation(NULL,NULL)` verified working.
+2. `tests/integration/stock_valuation.test.ts` (5 tests): identity-arg signature `p_branch_id uuid, p_warehouse_id uuid`, admin all-branches weighted-average math, admin branch filter, staff branch-locked regression (076), summary consistency — all green.
+3. `scripts/db/check-production-parity.js` + `.github/workflows/deploy.yml` parity job: the deploy chain is now `verify -> db -> e2e -> parity -> deploy`. The parity job probes the **Production** PostgREST schema cache with the exact RPC calls (name + `p_` params from `src/api/modules.ts`) and `supabase.from()` table reads from `src`. Any 404 PGRST202/PGRST205 aborts the chain — the frontend cannot be published ahead of the database again. (Only ever probes; never mutates Production.)
+
+### PARITY GATE RESULT (as of this record)
+- 90 RPCs and 38 tables probed against `https://lwnsdsncmlsroiswgoga.supabase.co`.
+- **33 RPCs missing** (stock valuation & summary, costing overview/product detail/cost history/supplier price impact/order margin, expiring batches, low-stock alerts/summary, add_inventory_batch, the full stock-count lifecycle, the full procurement chain create_purchase_request..get_supplier_evaluation, register_branch).
+- **2 tables missing**: `purchase_requests`, `purchase_request_items`.
+- The gate correctly FAILS today: Production is behind the frontend and must NOT be published to until migrated.
+
+### EVIDENCE
+- Local `npm run verify:full` green (EXIT_CODE=0): typecheck:all, lint 0 errors, build, 257 unit, **167 integration (12 files)** incl. `stock_valuation.test.ts`.
+- Local `npx playwright test`: 50 passed (2.0m).
+- Parity script exit code 1 locally against Production with the 33/2 missing objects listed above.
+- Commits for this record: `076_fix_stock_valuation_ambiguity.sql`, `stock_valuation.test.ts`, `check-production-parity.js`, `deploy.yml` parity job (see CI record below).
+
+### REMAINING (needs Production DB credentials — deliberately NOT done by script)
+- Run the official migration chain on Production once a `SUPABASE_DB_URL` for the production database is available (via `scripts/db/apply-migration.js` — additive-only, checksummed, `--dry-run` available). Current schema boundary is ~022–035; migrations `036`–`075` + `076` must be applied so the frontend and database are in parity.
+- After migration: re-run the parity gate (must pass), then the next push to `development/master-log2` deploys.

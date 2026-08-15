@@ -23,12 +23,16 @@ concurrency:
 # after every gate below passes; any failing test aborts the chain and no
 # deployment happens.
 #
-#   verify -> db -> e2e -> deploy
+#   verify -> db -> e2e -> parity -> deploy
 #
 #   verify : lint, typecheck (app + test suites), unit tests, production build
 #   db     : apply migrations + verify schema + integration tests against an
 #            ISOLATED postgres:18 service container (never Production DB)
 #   e2e    : Playwright browser tests against the production build
+#   parity : probe the PRODUCTION PostgREST schema cache with the exact RPC
+#            calls and table reads the frontend makes. FAILS (and blocks
+#            deploy) if any function/table is missing - the database is behind
+#            the frontend and publishing would reproduce PGRST202/PGRST205.
 #   deploy : publish the dist artifact to GitHub Pages
 # =============================================================================
 
@@ -119,8 +123,24 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  deploy:
+  parity:
     needs: e2e
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bnNkc25jbWxzcm9pc3dnb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Enforce frontend/database schema parity against Production
+        run: node scripts/db/check-production-parity.js
+
+  deploy:
+    needs: parity
     runs-on: ubuntu-latest
     environment:
       name: github-pages
