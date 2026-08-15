@@ -1,8 +1,8 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowLeftRight, BarChart3, Boxes, BookOpenText, Building2, ChefHat,
-  ChevronDown, CreditCard, Factory, FileSpreadsheet, FileText, FlaskConical,
+  Activity, AlertTriangle, ArrowLeftRight, BarChart3, BadgeDollarSign, Boxes, BookOpenText, Building2, ChefHat,
+  ChevronDown, ClipboardCheck, CreditCard, Factory, FileSpreadsheet, FileText, FlaskConical,
   Globe, HandCoins, Landmark, Layers, LayoutDashboard, LogOut, Menu, Moon, NotebookPen,
   Package, Receipt, Scale, ScrollText, Settings, ShoppingCart, Sparkles, Store, Sun,
   Tags, Timer, Truck, UserCog, Users, Wallet, Warehouse, X,
@@ -33,6 +33,10 @@ const ICONS: Record<MenuIcon, ReactNode> = {
   production: <Factory className="h-5 w-5" />,
   transfers: <ArrowLeftRight className="h-5 w-5" />,
   inventoryLedger: <BookOpenText className="h-5 w-5" />,
+  stockCounts: <ClipboardCheck className="h-5 w-5" />,
+  inventoryBatches: <Layers className="h-5 w-5" />,
+  stockValuation: <BadgeDollarSign className="h-5 w-5" />,
+  lowStockAlerts: <AlertTriangle className="h-5 w-5" />,
   branches: <Store className="h-5 w-5" />,
   purchases: <Truck className="h-5 w-5" />,
   customers: <Users className="h-5 w-5" />,

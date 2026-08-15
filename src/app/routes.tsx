@@ -21,6 +21,10 @@ const RecipesPage = lazy(() => import('../features/manufacturing/pages/RecipesPa
 const ProductionOrdersPage = lazy(() => import('../features/manufacturing/pages/ProductionOrdersPage').then(m => ({ default: m.ProductionOrdersPage })));
 const TransfersPage = lazy(() => import('../features/inventory/pages/TransfersPage').then(m => ({ default: m.TransfersPage })));
 const InventoryLedgerPage = lazy(() => import('../features/inventory/pages/InventoryLedgerPage').then(m => ({ default: m.InventoryLedgerPage })));
+const StockCountsPage = lazy(() => import('../features/inventory/pages/StockCountsPage').then(m => ({ default: m.StockCountsPage })));
+const InventoryBatchesPage = lazy(() => import('../features/inventory/pages/InventoryBatchesPage').then(m => ({ default: m.InventoryBatchesPage })));
+const StockValuationPage = lazy(() => import('../features/inventory/pages/StockValuationPage').then(m => ({ default: m.StockValuationPage })));
+const LowStockAlertsPage = lazy(() => import('../features/inventory/pages/LowStockAlertsPage').then(m => ({ default: m.LowStockAlertsPage })));
 const BranchesPage = lazy(() => import('../features/admin/pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
 const PurchasesPage = lazy(() => import('../features/trade/pages/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
 const CustomersPage = lazy(() => import('../features/parties/pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
@@ -76,6 +80,10 @@ export function AppRoutes() {
     <Route path={APP_ROUTES.production} element={<ProtectedRoute permission="production.view"><ProductionOrdersPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.transfers} element={<ProtectedRoute permission="inventory.transfers"><TransfersPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.inventoryLedger} element={<ProtectedRoute permission="inventory.ledger.view"><InventoryLedgerPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.stockCounts} element={<ProtectedRoute permission="inventory.manage"><StockCountsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.inventoryBatches} element={<ProtectedRoute permission="inventory.view"><InventoryBatchesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.stockValuation} element={<ProtectedRoute permission="inventory.ledger.view"><StockValuationPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.lowStockAlerts} element={<ProtectedRoute permission="inventory.view"><LowStockAlertsPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.branches} element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.purchases} element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.customers} element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />

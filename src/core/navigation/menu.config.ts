@@ -6,7 +6,8 @@ export type MenuGroup = 'main' | 'catalog' | 'operations' | 'people' | 'finance'
 export type MenuIcon =
   | 'dashboard' | 'subscription' | 'pos' | 'products' | 'categories' | 'components'
   | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
-  | 'inventoryLedger' | 'branches' | 'purchases' | 'customers' | 'suppliers' | 'expenses'
+  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation' | 'lowStockAlerts' | 'branches'
+  | 'purchases' | 'customers' | 'suppliers' | 'expenses'
   | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation' | 'financialReports'
   | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
 
@@ -49,6 +50,10 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'production', route: APP_ROUTES.production, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'operations' },
   { id: 'transfers', route: APP_ROUTES.transfers, icon: 'transfers', labelKey: 'warehouseTransfers', permission: 'inventory.transfers', group: 'operations' },
   { id: 'inventory-ledger', route: APP_ROUTES.inventoryLedger, icon: 'inventoryLedger', labelKey: 'inventoryLedger', permission: 'inventory.ledger.view', group: 'operations' },
+  { id: 'stock-counts', route: APP_ROUTES.stockCounts, icon: 'stockCounts', labelKey: 'stockCounts', permission: 'inventory.manage', group: 'operations' },
+  { id: 'inventory-batches', route: APP_ROUTES.inventoryBatches, icon: 'inventoryBatches', labelKey: 'inventoryBatches', permission: 'inventory.view', group: 'operations' },
+  { id: 'low-stock-alerts', route: APP_ROUTES.lowStockAlerts, icon: 'lowStockAlerts', labelKey: 'lowStockAlerts', permission: 'inventory.view', group: 'operations' },
+  { id: 'stock-valuation', route: APP_ROUTES.stockValuation, icon: 'stockValuation', labelKey: 'stockValuation', permission: 'inventory.ledger.view', group: 'operations' },
   { id: 'branches', route: APP_ROUTES.branches, icon: 'branches', labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
   { id: 'purchases', route: APP_ROUTES.purchases, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
 

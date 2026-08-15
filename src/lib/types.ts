@@ -636,6 +636,99 @@ export interface StockTransaction {
   warehouse?: Warehouse;
 }
 
+export type StockCountType = 'full' | 'partial' | 'cycle';
+export type StockCountStatus = 'draft' | 'submitted' | 'approved' | 'applied' | 'rejected';
+
+export interface StockCount {
+  id: string;
+  count_number: string | null;
+  branch_id: string;
+  warehouse_id: string;
+  status: StockCountStatus;
+  count_type: StockCountType;
+  notes: string | null;
+  rejection_reason: string | null;
+  created_by: string | null;
+  submitted_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+  applied_at: string | null;
+  branch?: Branch;
+  warehouse?: Warehouse;
+  created_user?: { id: string; full_name: string | null; email: string | null } | null;
+  items?: StockCountItem[];
+}
+
+export interface StockCountItem {
+  id: string;
+  stock_count_id: string;
+  product_id: string;
+  system_quantity: number;
+  counted_quantity: number;
+  variance_quantity: number;
+  unit_cost: number;
+  variance_value: number;
+  reason: string | null;
+  product?: Product;
+}
+
+export interface LowStockAlertRow {
+  product_id: string;
+  product_name: string;
+  barcode: string | null;
+  sku: string | null;
+  warehouse_id: string | null;
+  warehouse_name: string | null;
+  branch_id: string | null;
+  quantity: number;
+  min_stock: number;
+  max_stock: number;
+  reorder_point: number;
+  low_stock_threshold: number;
+  shortage_qty: number;
+  status: 'out' | 'low' | 'ok';
+}
+
+export interface StockValuationRow {
+  product_id: string;
+  product_name: string;
+  barcode: string | null;
+  sku: string | null;
+  warehouse_id: string;
+  warehouse_name: string | null;
+  branch_id: string;
+  quantity: number;
+  unit_cost: number;
+  total_value: number;
+}
+
+export interface StockValuationSummaryRow {
+  branch_id: string;
+  branch_name: string | null;
+  total_quantity: number;
+  total_value: number;
+  item_count: number;
+}
+
+export interface ExpiringBatchRow {
+  batch_id: string;
+  batch_number: string;
+  product_id: string;
+  product_name: string;
+  barcode: string | null;
+  warehouse_id: string;
+  warehouse_name: string | null;
+  branch_id: string;
+  quantity: number;
+  unit_cost: number;
+  production_date: string | null;
+  expiry_date: string | null;
+  days_to_expiry: number | null;
+  status: 'expired' | 'expiring' | 'ok' | 'none';
+}
+
 export interface RpcResult {
   success: boolean;
   error?: string;
