@@ -142,3 +142,47 @@ At every phase closure report exactly:
 
 ### NEXT
 - Proceeding to P0 item 3: purchasing workflow (same rule: implement -> focused tests -> fix -> full verification -> CI -> log).
+
+## Branch unification audit (2026-08-15) — single development branch `development/master-log2`
+
+### DECISION
+- From now on **`development/master-log2` is the ONLY development branch**. No new feature branches. Every new feature is logged in MASTER_LOG2 and follows the cycle: implement -> test -> fix -> verify -> CI -> publish. `main` remains the production/published baseline (never developed on directly).
+
+### DONE — branches reviewed vs `development/master-log2`
+Every branch below was compared against `development/master-log2` (unique-commit analysis + merge-base ancestor checks + per-file content diffs).
+
+| Branch (local + remote) | Unique commits vs master-log2 | Verdict | Notes |
+|---|---|---|---|
+| `main` / `origin/main` | 0 | **KEEP** (production baseline) | Strict ancestor of master-log2 |
+| `origin/development/master-log2-current` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/erp-01-settings-organization` (+ local) | 0 | SAFE TO DELETE | Strict ancestor (ERP-01 merged via PR #5) |
+| `origin/feature/dashboard-redesign` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/feature/pos-action-level-2026` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/feature/pos-active-orders` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/stabilization/final-system-fix` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/ui-rebuild-foodics-2026` (+ local) | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/ui-rebuild-phase3-checkpoint-2026-08-13` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/ui-rebuild-phase4-checkpoint-2026-08-13` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/ui-rebuild-phase5-checkpoint-2026-08-13` | 0 | SAFE TO DELETE | Strict ancestor |
+| `origin/deploy-060-branch-isolation` | 1 (`3aac4b3`) | SAFE TO DELETE — content already in master-log2 | `3aac4b3` migration `060_branch_isolate_raw_materials.sql` is **byte-identical** to master-log2's `c549f82`; master-log2 then superseded it with `8c0070f` (canonical `is_pos_admin()`/`get_branch_id()` helpers) and `56515c0` (portable backfill). No unique work |
+| `origin/erp-roadmap-safe` | 2 (`42b203b`, `e7ca527`) | SAFE TO DELETE — superseded | Both only touch `docs/ERP_DEVELOPMENT_ROADMAP.md`; master-log2's version is strictly newer (ERP-01 status COMPLETE-MERGED + CI record vs branch's older "STARTED" draft). No unique content |
+| `origin/ui-visual-rebuild-6h` (+ local) | 1 (`6863991`) | SAFE TO DELETE — superseded | Only touches `docs/REBUILD_MASTER_LOG.md`; master-log2's version is strictly newer (6H+6I merged `d390c47` + deployed + ERP-01/PR #5 record vs branch's older pending draft). No unique content |
+| `origin/erp-02-recipe-costing` (+ local) | 3 (`087768a`, `b0a5455`, `8f5414a`) | SAFE TO DELETE — feature superseded; **unique artifact MOVED** (below) | Parallel/older costing implementation. master-log2's `82c7b1c` (migration `074_product_costing.sql` + `CostingCenterPage.tsx`) is a strict functional superset of the branch's draft migration `070` RPCs (`compute_recipe_cost`, `recipe_costing_report`, `raw_material_cost_history`, `costing_profitability_report`) and old 3-tab UI. All 8 ERP-02 roadmap bullets covered by the master-log2 implementation. The branch's integration/contract tests target the **removed** `070` RPC set and were NOT ported (would be broken against 074; see REMAINING). Its i18n keys have zero references in master-log2 src/tests (superseded label set) |
+
+### MOVED (unique work preserved from other branches)
+- `docs/ERP-02_EXECUTION_PLAN.md` — preserved from `erp-02-recipe-costing` `087768a` into `development/master-log2` with a **SUPERSEDED** status header pointing to the 074 implementation (commit `dc18e66`). Only non-superseded unique artifact found in the whole audit.
+
+### REMAINING
+- Equivalent DB integration coverage for the `074` costing RPCs should be written against the live schema when a `SUPABASE_DB_URL` environment is available (the erp-02 draft tested the removed `070` RPCs). Not blocking: the 074 implementation has unit (`tests/unit/lib/costing.test.ts`) + smoke coverage, and the pre-existing 154 integration tests self-skip without a DB URL.
+
+### BLOCKED / RISKS
+- Integration DB suite cannot run locally without `SUPABASE_DB_URL`; skipped as pre-existing behaviour.
+- No unique commits were left un-preserved: every commit reachable from any deleted branch is present in `development/master-log2` (as an ancestor, or superseded by identical/newer content, or preserved via `dc18e66`).
+
+### EVIDENCE
+- Preserve commit: `dc18e66` `docs(costing): preserve ERP-02 execution plan from erp-02-recipe-costing (superseded by 074 implementation)`.
+- `npm run verify:full` green (EXIT_CODE=0) at head `dc18e66`: typecheck:all, lint (0 errors, 16 pre-existing warnings), build, test:unit 257 passed (21 files), test:integration 154 skipped (no DB URL).
+- Final docs commit (this record) and remote branch deletions follow this entry.
+
+### NEXT
+- P0 item 3: purchasing workflow on `development/master-log2` (no new branch).
