@@ -77,3 +77,38 @@ At every phase closure report exactly:
 - CI must be associated with the current head before a phase is closed.
 - Working rule: **Feature-first, test-fast, CI-gated** — add new capabilities first; run focused tests immediately after each feature group; use full CI as the phase gate unless a change requires broader regression.
 - Next priority after the POS slice closes: P0 Inventory Lifecycle, beginning with Stock Count + Variance + Approval + Adjustment + Movement History as one cohesive feature group.
+
+## Phase closure: P0 Inventory Lifecycle slice — Stock Count / Batches / Valuation / Low-Stock
+
+### DONE
+- 4 new operational screens wired end-to-end (routes, menu, layout icons, lazy loading, permissions):
+  - StockCountsPage (`/stock-counts`, `inventory.manage`): create full/partial/cycle counts with items, edit items (add/update/remove), submit/approve/reject (with reason)/apply workflow, item viewer, status/type pills, search/status/branch filters.
+  - InventoryBatchesPage (`/inventory-batches`, `inventory.view`): batch table with product/warehouse/branch embeds, expiry status (expired / expiring within 90 days), expiry/value summary cards, new-batch modal via add_inventory_batch, branch/warehouse filters.
+  - StockValuationPage (`/stock-valuation`, `inventory.ledger.view`): valuation table + summary cards + per-branch grid via get_stock_valuation(+summary), Excel export, search, branch/warehouse filters.
+  - LowStockAlertsPage (`/low-stock-alerts`, `inventory.view`): out/low/ok cards + alerts via get_low_stock_alerts(+summary), status filter, Excel export, branch/warehouse filters.
+- Database (additive migrations 070-073): stock_counts/stock_count_items tables + create/add/update/remove/submit/approve/reject/apply RPCs (SECURITY DEFINER, permission inventory.manage, server-side branch isolation); min/max/reorder_point columns + low-stock RPCs; stock valuation RPCs; inventory_batches table + add_inventory_batch + expiry tracking.
+- Verification/repair pass:
+  - Fixed loading-forever bug when the branches query fails (StockValuationPage, LowStockAlertsPage) - now sets error state, clears loading, surfaces toast.
+  - Removed redundant double-fetch when a single branch is auto-selected (effective branch computed inline before RPC calls).
+  - Branch isolation in UI: branch dropdowns (list filters + create/edit modals) restricted to the user's branch when branchFilter applies (StockCounts, InventoryBatches, StockValuation, LowStockAlerts).
+  - StockCountsPage save-edit: NaN quantity guard - new lines without a count are skipped; clearing a count on an existing item sends null instead of NaN (updateStockCountItem typed `number | null`).
+  - Extracted timezone-safe expiry math to src/lib/inventoryExpiry.ts (date-only parsed as local midnight), replacing the UTC-parse day-shift bug in InventoryBatchesPage.
+- Tests: 4 new pages added to tests/components/pages.smoke.test.tsx (35 pages rendered); new unit suite tests/unit/lib/inventoryExpiry.test.ts (10 tests).
+
+### REMAINING
+- StockCountsPage has no Excel export (ledger/valuation/alerts do). Adding it would be a new feature - deferred, not required by this verification phase.
+- No DB integration coverage for the 4 screens in this environment (no SUPABASE_DB_URL configured; 154 integration tests skip by design).
+- Valuation per-branch summary shows branch id, not name (summary RPC has no branch join) - cosmetic.
+
+### BLOCKED / RISKS
+- Integration DB suite cannot run locally without SUPABASE_DB_URL; skipped as pre-existing behaviour.
+- Reverse FK embeds `items:stock_count_items(product:products(*))` and `created_user:users!stock_counts_created_by_fkey(...)` rely on PostgREST relationship naming; verified against existing ledger embeds but not exercised against a live DB.
+- Branch-scoped RLS + SECURITY DEFINER RPCs are the real isolation boundary; UI dropdown restriction is defence-in-depth, not a substitute.
+
+### EVIDENCE
+- Commit: `1cf745c` `feat(inventory): add stock counts, batches, valuation and low-stock screens` (on `development/master-log2`; no merge to main).
+- `npm run verify:full` green (EXIT_CODE=0) at head `1cf745c`: typecheck:all, lint (0 errors), build, test:unit 250 passed (20 files), test:integration 154 skipped (no DB URL).
+- Focused: tests/unit/lib/inventoryExpiry.test.ts 10 passed; tests/components/pages.smoke.test.tsx 35 passed.
+
+### NEXT
+- Proceeding to P0 item 2: product/recipe costing (recipe cost, component cost, unit cost, actual/theoretical cost, food cost %, gross margin, product/order/branch profit, actual-vs-recipe variance, supplier-price impact, cost history) - same rule: implement -> focused tests -> fix -> full verification -> CI -> log.
