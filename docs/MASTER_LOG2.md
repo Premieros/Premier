@@ -216,3 +216,15 @@ Every branch below was compared against `development/master-log2` (unique-commit
 
 ### NEXT
 - P0 item 3: purchasing workflow on `development/master-log2` (implement -> focused tests -> fix -> full verification incl. integration against the isolated cluster -> CI -> log).
+
+
+## CI record: integration-suite fix `eed94cb` (2026-08-15)
+
+### EVIDENCE
+- Commit: `eed94cb` `fix(costing): repair migration 074 SQL bugs found by live integration tests` (on `development/master-log2`; no merge to main).
+- Pushed to `origin/development/master-log2` (196efc0..eed94cb).
+- GitHub Actions "Verify main" run 31899146903 (triggered via the open PR from this branch to main, head_sha `eed94cb`): **conclusion success** - jobs `verify`, `db`, `browser-smoke` all success. Run URL: https://github.com/Premieros/Premier/actions/runs/31899146903
+- Local `npm run verify:full` was green (EXIT_CODE=0) before the commit (see prior phase-closure entry).
+
+### NEXT
+- P0 item 3: purchasing workflow - begin with an audit of the current schema/APIs/screens BEFORE any migration or new code.
