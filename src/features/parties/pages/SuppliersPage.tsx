@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
-import { Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, Trophy } from 'lucide-react';
 import { supabase } from '@/api';
+import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
@@ -12,7 +13,7 @@ import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { formatCurrency } from '@/lib/format';
+import { formatDate, formatCurrency } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
 import { logAudit } from '@/lib/audit';
 import { useBranchFilter } from '@/lib/useBranchFilter';
@@ -20,7 +21,7 @@ import { useCan } from '@/lib/permissions';
 import { useSettings } from '@/context/SettingsContext';
 import { useBranches } from '@/hooks/useBranches';
 import { usePaginatedRows } from '@/hooks/usePaginatedRows';
-import type { Supplier } from '@/lib/types';
+import type { Supplier, SupplierEvaluationRow } from '@/lib/types';
 
 export function SuppliersPage() {
   const { t, lang } = useLanguage();
@@ -38,6 +39,9 @@ export function SuppliersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [evaluation, setEvaluation] = useState<SupplierEvaluationRow[]>([]);
+  const [evLoading, setEvLoading] = useState(false);
   const { effectiveSettings } = useSettings();
   const { branches } = useBranches();
   const currency = effectiveSettings(branchFilter)?.currency || 'EGP';
@@ -75,6 +79,19 @@ export function SuppliersPage() {
 
   const handleExport = () => exportToExcel(items.map((s) => ({ Name: s.name, Phone: s.phone || '', Email: s.email || '', Address: s.address || '', TaxNumber: s.tax_number || '', Balance: s.balance })), 'suppliers');
 
+  const loadEvaluation = async () => {
+    setEvLoading(true);
+    const { data } = await api.procurement.getSupplierEvaluation({ p_branch_id: branchFilter || null });
+    setEvaluation(((data as SupplierEvaluationRow[]) || []).map((r) => ({ ...r, id: r.supplier_id })));
+    setEvLoading(false);
+  };
+
+  const toggleEvaluation = () => {
+    const next = !showEvaluation;
+    setShowEvaluation(next);
+    if (next) loadEvaluation();
+  };
+
   const columns: Column<Supplier>[] = [
     { key: 'name', header: t('name'), render: (s) => <span className="font-medium text-slate-800 dark:text-slate-200">{s.name}</span> },
     { key: 'phone', header: t('phone'), render: (s) => s.phone || '-' },
@@ -93,6 +110,17 @@ export function SuppliersPage() {
     )},
   ];
 
+  const evaluationColumns: Column<SupplierEvaluationRow>[] = [
+    { key: 'supplier_name', header: t('supplier'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.supplier_name}</span> },
+    { key: 'orders_count', header: t('ordersCount'), render: (r) => r.orders_count },
+    { key: 'total_purchased', header: t('totalPurchases'), render: (r) => <span className="font-semibold">{formatCurrency(r.total_purchased, currency, lang)}</span> },
+    { key: 'total_returned', header: t('totalReturned'), render: (r) => formatCurrency(r.total_returned, currency, lang) },
+    { key: 'return_rate', header: t('returnRate'), render: (r) => `${r.return_rate}%` },
+    { key: 'avg_order_value', header: t('avgOrderValue'), render: (r) => formatCurrency(r.avg_order_value, currency, lang) },
+    { key: 'quotations_count', header: t('quotationsCount'), render: (r) => r.quotations_count },
+    { key: 'last_purchase_at', header: t('lastPurchaseAt'), render: (r) => (r.last_purchase_at ? formatDate(r.last_purchase_at, lang) : '-') },
+  ];
+
   return (
     <DesignSurface testId="suppliers-page">
       <DesignPageHeader title={t('suppliers')} actions={
@@ -100,18 +128,29 @@ export function SuppliersPage() {
           {can('suppliers.manage') && (
             <Button variant="outline" size="sm" onClick={handleExport} data-testid="suppliers-export"><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
           )}
+          {can('purchases.evaluation') && (
+            <Button variant="outline" size="sm" onClick={toggleEvaluation} data-testid="suppliers-evaluation"><Trophy className="w-4 h-4" /> {t('supplierEvaluation')}</Button>
+          )}
           {can('suppliers.manage') && (
             <Button size="sm" onClick={openAdd} data-testid="suppliers-add"><Plus className="w-4 h-4" /> {t('add')}</Button>
           )}
         </>
       } />
-      <DesignPanel testId="suppliers-search-panel">
-        <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="suppliers-search" />
-      </DesignPanel>
-      <DesignPanel testId="suppliers-table-panel">
-        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('suppliers.manage') ? openEdit : undefined} />
-        <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
-      </DesignPanel>
+      {showEvaluation ? (
+        <DesignPanel testId="suppliers-evaluation-panel">
+          <DataTable columns={evaluationColumns} data={evaluation} loading={evLoading} emptyMessage={t('noData')} />
+        </DesignPanel>
+      ) : (
+        <>
+          <DesignPanel testId="suppliers-search-panel">
+            <DesignSearch value={search} onChange={setSearch} placeholder={t('search')} label={t('search')} testId="suppliers-search" />
+          </DesignPanel>
+          <DesignPanel testId="suppliers-table-panel">
+            <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('noData')} onRowClick={can('suppliers.manage') ? openEdit : undefined} />
+            <DesignPagination loaded={items.length} total={total} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} />
+          </DesignPanel>
+        </>
+      )}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('edit') : t('add')}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

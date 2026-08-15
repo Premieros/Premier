@@ -26,6 +26,7 @@ export type Permission =
   | 'categories.view' | 'categories.manage'
   | 'components.view' | 'components.manage'
   | 'purchases.view' | 'purchases.manage'
+  | 'purchases.requests' | 'purchases.rfq' | 'purchases.receiving' | 'purchases.evaluation'
   | 'inventory.view' | 'inventory.manage'
   | 'inventory.transfers' | 'inventory.transfers.approve'
   | 'inventory.ledger.view'
@@ -64,6 +65,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'categories.view', 'categories.manage',
   'components.view', 'components.manage',
   'purchases.view', 'purchases.manage',
+  'purchases.requests', 'purchases.rfq', 'purchases.receiving', 'purchases.evaluation',
   'inventory.view', 'inventory.manage',
   'inventory.transfers', 'inventory.transfers.approve',
   'inventory.ledger.view',
@@ -115,6 +117,10 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> =
   'components.manage': { ar: 'إدارة مكونات المنتجات', en: 'Manage Components' },
   'purchases.view': { ar: 'عرض المشتريات', en: 'View Purchases' },
   'purchases.manage': { ar: 'إدارة المشتريات', en: 'Manage Purchases' },
+  'purchases.requests': { ar: 'طلبات الشراء', en: 'Purchase Requests' },
+  'purchases.rfq': { ar: 'عروض الأسعار (RFQ)', en: 'RFQ & Quotations' },
+  'purchases.receiving': { ar: 'استلام المشتريات', en: 'Purchase Receiving' },
+  'purchases.evaluation': { ar: 'تقييم الموردين', en: 'Supplier Evaluation' },
   'inventory.view': { ar: 'عرض المخزون', en: 'View Inventory' },
   'inventory.manage': { ar: 'إدارة المخزون', en: 'Manage Inventory' },
   'inventory.transfers': { ar: 'إنشاء تحويلات المخازن', en: 'Create Warehouse Transfers' },
@@ -198,7 +204,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'purchases',
     ar: 'المشتريات',
     en: 'Purchases',
-    permissions: ['purchases.view', 'purchases.manage', 'purchases.print'],
+    permissions: ['purchases.view', 'purchases.manage', 'purchases.print',
+      'purchases.requests', 'purchases.rfq', 'purchases.receiving', 'purchases.evaluation'],
   },
   {
     key: 'inventory',
@@ -294,6 +301,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'categories.view', 'categories.manage',
     'components.view', 'components.manage',
     'purchases.view', 'purchases.manage', 'purchases.print',
+    'purchases.requests', 'purchases.rfq', 'purchases.receiving', 'purchases.evaluation',
     'inventory.view', 'inventory.manage',
     'warehouses.view', 'warehouses.manage',
     'customers.view', 'customers.manage', 'customers.print', 'customers.export',
@@ -321,6 +329,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'inventory.view', 'inventory.manage',
     'warehouses.view', 'warehouses.manage',
     'purchases.view', 'purchases.manage', 'purchases.print',
+    'purchases.requests', 'purchases.rfq', 'purchases.receiving', 'purchases.evaluation',
     'suppliers.view', 'suppliers.manage', 'suppliers.print',
     'shifts.view',
   ],

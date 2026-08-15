@@ -30,6 +30,8 @@ const EXPECTED_TABLES = [
   'customer_payments', 'supplier_payments', 'treasury_accounts', 'treasury_transactions',
   'bank_reconciliations', 'bank_statement_lines', 'dining_areas', 'dining_tables',
   'orders', 'order_items', 'order_kitchen_sends', 'schema_migrations', 'login_as_log',
+  'purchase_requests', 'purchase_request_items', 'rfqs', 'rfq_items',
+  'supplier_quotations', 'supplier_quotation_items', 'purchase_receipts', 'purchase_receipt_items',
 ];
 
 const EXPECTED_FUNCTIONS = [
@@ -48,6 +50,11 @@ const EXPECTED_FUNCTIONS = [
   'create_order', 'set_order_status', 'set_table_status',
   'send_to_kitchen',
   'login_as_user', 'return_from_login_as', 'record_login_failure', 'record_login_success',
+  'create_purchase_request', 'update_purchase_request_status', 'create_rfq', 'update_rfq_status',
+  'record_supplier_quotation', 'select_supplier_quotation', 'get_rfq_comparison',
+  'create_purchase_order', 'update_purchase_order_status', 'receive_purchase_order',
+  'get_purchase_backorders', 'get_purchase_receipts', 'get_supplier_evaluation',
+  'get_supplier_price_impact',
 ];
 
 function loadEnv(filePath) {

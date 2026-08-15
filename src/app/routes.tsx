@@ -28,6 +28,9 @@ const LowStockAlertsPage = lazy(() => import('../features/inventory/pages/LowSto
 const CostingCenterPage = lazy(() => import('../features/costing/pages/CostingCenterPage').then(m => ({ default: m.CostingCenterPage })));
 const BranchesPage = lazy(() => import('../features/admin/pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
 const PurchasesPage = lazy(() => import('../features/trade/pages/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
+const PurchaseRequestsPage = lazy(() => import('../features/trade/pages/PurchaseRequestsPage').then(m => ({ default: m.PurchaseRequestsPage })));
+const RfqsPage = lazy(() => import('../features/trade/pages/RfqsPage').then(m => ({ default: m.RfqsPage })));
+const ReceivingPage = lazy(() => import('../features/trade/pages/ReceivingPage').then(m => ({ default: m.ReceivingPage })));
 const CustomersPage = lazy(() => import('../features/parties/pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
 const SuppliersPage = lazy(() => import('../features/parties/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const ExpensesPage = lazy(() => import('../features/trade/pages/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
@@ -88,6 +91,9 @@ export function AppRoutes() {
     <Route path={APP_ROUTES.costingCenter} element={<ProtectedRoute permission="reports.costing"><CostingCenterPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.branches} element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.purchases} element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.purchaseRequests} element={<ProtectedRoute permission="purchases.requests"><PurchaseRequestsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.rfqs} element={<ProtectedRoute permission="purchases.rfq"><RfqsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.receiving} element={<ProtectedRoute permission="purchases.receiving"><ReceivingPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.customers} element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.suppliers} element={<ProtectedRoute permission="suppliers.view"><SuppliersPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.expenses} element={<ProtectedRoute permission="expenses.view"><ExpensesPage /></ProtectedRoute>} />

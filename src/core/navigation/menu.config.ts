@@ -57,6 +57,9 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'costing-center', route: APP_ROUTES.costingCenter, icon: 'costingCenter', labelKey: 'costingCenter', permission: 'reports.costing', group: 'finance' },
   { id: 'branches', route: APP_ROUTES.branches, icon: 'branches', labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
   { id: 'purchases', route: APP_ROUTES.purchases, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
+  { id: 'purchase-requests', route: APP_ROUTES.purchaseRequests, icon: 'purchases', labelKey: 'purchaseRequests', permission: 'purchases.requests', group: 'operations' },
+  { id: 'rfqs', route: APP_ROUTES.rfqs, icon: 'purchases', labelKey: 'rfqs', permission: 'purchases.rfq', group: 'operations' },
+  { id: 'receiving', route: APP_ROUTES.receiving, icon: 'purchases', labelKey: 'receiving', permission: 'purchases.receiving', group: 'operations' },
 
   { id: 'customers', route: APP_ROUTES.customers, icon: 'customers', labelKey: 'customers', permission: 'customers.view', group: 'people' },
   { id: 'suppliers', route: APP_ROUTES.suppliers, icon: 'suppliers', labelKey: 'suppliers', permission: 'suppliers.view', group: 'people' },

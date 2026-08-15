@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
-import { Plus, Trash2, Eye, Download } from 'lucide-react';
+import { Plus, Trash2, Eye, Download, Send, Check, X, PackageOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -37,6 +38,7 @@ export function PurchasesPage() {
   const branchFilter = useBranchFilter();
   const { show } = useToast();
   const can = useCan();
+  const navigate = useNavigate();
   const { rows: items, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadPurchases } = usePaginatedRows<Purchase>({
     table: 'purchases',
     select: '*, supplier:suppliers(*)',
@@ -156,6 +158,15 @@ export function PurchasesPage() {
 
   const handleExport = () => exportToExcel(items.map((p) => ({ Invoice: p.invoice_number, Date: formatDate(p.created_at, lang), Supplier: (p as Purchase & { supplier?: Supplier }).supplier?.name || '', Total: p.total, Status: p.status })), 'purchases');
 
+  const changeOrderStatus = async (p: Purchase, status: string) => {
+    const { data, error: err } = await api.procurement.updatePurchaseOrderStatus({ p_purchase_id: p.id, p_status: status });
+    if (err) { show(err.message, 'error'); return; }
+    const result = data as RpcResult | null;
+    if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
+    show(t('saveSuccess'), 'success');
+    reloadPurchases();
+  };
+
   const columns: Column<Purchase>[] = [
     { key: 'invoice_number', header: t('invoice'), render: (p) => <span className="font-medium text-slate-800 dark:text-slate-200">{p.invoice_number}</span> },
     { key: 'supplier', header: t('supplier'), render: (p) => (p as Purchase & { supplier?: Supplier }).supplier?.name || '-' },
@@ -163,7 +174,21 @@ export function PurchasesPage() {
     { key: 'total', header: t('total'), render: (p) => <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(p.total, currency, lang)}</span> },
     { key: 'status', header: t('status'), render: (p) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 capitalize">{p.status}</span> },
     { key: 'actions', header: t('actions'), render: (p) => (
-      <button onClick={() => viewPurchase(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Eye className="w-4 h-4" /></button>
+      <div className="flex items-center gap-1 justify-end">
+        {p.status === 'draft' && can('purchases.manage') && (
+          <button title={t('submitOrder')} onClick={() => changeOrderStatus(p, 'submitted')} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Send className="w-4 h-4" /></button>
+        )}
+        {p.status === 'submitted' && can('purchases.manage') && (
+          <button title={t('approveOrder')} onClick={() => changeOrderStatus(p, 'approved')} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500"><Check className="w-4 h-4" /></button>
+        )}
+        {['draft', 'submitted'].includes(p.status) && can('purchases.manage') && (
+          <button title={t('cancel')} onClick={() => changeOrderStatus(p, 'cancelled')} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button>
+        )}
+        {['approved', 'submitted', 'partial'].includes(p.status) && can('purchases.receiving') && (
+          <button title={t('receive')} onClick={() => navigate('/purchases/receiving')} className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500"><PackageOpen className="w-4 h-4" /></button>
+        )}
+        <button onClick={() => viewPurchase(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Eye className="w-4 h-4" /></button>
+      </div>
     )},
   ];
 
