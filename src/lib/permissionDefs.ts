@@ -40,6 +40,7 @@ export type Permission =
   | 'refunds.approve'
   | 'reports.view'
   | 'reports.financial'
+  | 'reports.costing'
   | 'accounts.view' | 'accounts.manage'
   | 'shifts.view' | 'shifts.open' | 'shifts.close' | 'shifts.manage'
   | 'users.view' | 'users.manage'
@@ -77,6 +78,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'refunds.approve',
   'reports.view',
   'reports.financial',
+  'reports.costing',
   'accounts.view', 'accounts.manage',
   'shifts.view', 'shifts.open', 'shifts.close', 'shifts.manage',
   'users.view', 'users.manage',
@@ -137,6 +139,7 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string }> =
   'refunds.approve': { ar: 'الموافقة على المرتجعات', en: 'Approve Refunds' },
   'reports.view': { ar: 'عرض التقارير', en: 'View Reports' },
   'reports.financial': { ar: 'التقارير المالية', en: 'Financial Reports' },
+  'reports.costing': { ar: 'التكلفة والربحية', en: 'Costing & Profitability' },
   'accounts.view': { ar: 'عرض الحسابات والقيود', en: 'View Accounts & Journal' },
   'accounts.manage': { ar: 'إدارة الحسابات', en: 'Manage Accounts' },
   'shifts.view': { ar: 'عرض الشيفتات', en: 'View Shifts' },
@@ -271,7 +274,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'reports',
     ar: 'التقارير',
     en: 'Reports',
-    permissions: ['reports.view', 'reports.financial', 'reports.print', 'reports.export'],
+    permissions: ['reports.view', 'reports.financial', 'reports.costing', 'reports.print', 'reports.export'],
   },
   {
     key: 'admin',
@@ -297,7 +300,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'suppliers.view', 'suppliers.manage', 'suppliers.print',
     'expenses.view', 'expenses.manage', 'expenses.print',
     'sales.view', 'refunds.approve', 'sales.print', 'sales.export',
-    'reports.view', 'reports.financial', 'reports.print', 'reports.export',
+    'reports.view', 'reports.financial', 'reports.costing', 'reports.print', 'reports.export',
     'accounts.view', 'accounts.manage',
     'shifts.view', 'shifts.open', 'shifts.close', 'shifts.manage',
     'users.view', 'users.manage',
@@ -329,7 +332,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'inventory.view',
     'customers.view', 'customers.print', 'customers.export',
     'suppliers.view', 'suppliers.print',
-    'reports.view', 'reports.financial', 'reports.print', 'reports.export',
+    'reports.view', 'reports.financial', 'reports.costing', 'reports.print', 'reports.export',
     'accounts.view', 'accounts.manage',
     'shifts.view',
   ],

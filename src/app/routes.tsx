@@ -25,6 +25,7 @@ const StockCountsPage = lazy(() => import('../features/inventory/pages/StockCoun
 const InventoryBatchesPage = lazy(() => import('../features/inventory/pages/InventoryBatchesPage').then(m => ({ default: m.InventoryBatchesPage })));
 const StockValuationPage = lazy(() => import('../features/inventory/pages/StockValuationPage').then(m => ({ default: m.StockValuationPage })));
 const LowStockAlertsPage = lazy(() => import('../features/inventory/pages/LowStockAlertsPage').then(m => ({ default: m.LowStockAlertsPage })));
+const CostingCenterPage = lazy(() => import('../features/costing/pages/CostingCenterPage').then(m => ({ default: m.CostingCenterPage })));
 const BranchesPage = lazy(() => import('../features/admin/pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
 const PurchasesPage = lazy(() => import('../features/trade/pages/PurchasesPage').then(m => ({ default: m.PurchasesPage })));
 const CustomersPage = lazy(() => import('../features/parties/pages/CustomersPage').then(m => ({ default: m.CustomersPage })));
@@ -84,6 +85,7 @@ export function AppRoutes() {
     <Route path={APP_ROUTES.inventoryBatches} element={<ProtectedRoute permission="inventory.view"><InventoryBatchesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.stockValuation} element={<ProtectedRoute permission="inventory.ledger.view"><StockValuationPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.lowStockAlerts} element={<ProtectedRoute permission="inventory.view"><LowStockAlertsPage /></ProtectedRoute>} />
+    <Route path={APP_ROUTES.costingCenter} element={<ProtectedRoute permission="reports.costing"><CostingCenterPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.branches} element={<ProtectedRoute permission="branches.manage"><BranchesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.purchases} element={<ProtectedRoute permission="purchases.view"><PurchasesPage /></ProtectedRoute>} />
     <Route path={APP_ROUTES.customers} element={<ProtectedRoute permission="customers.view"><CustomersPage /></ProtectedRoute>} />

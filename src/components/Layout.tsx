@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, AlertTriangle, ArrowLeftRight, BarChart3, BadgeDollarSign, Boxes, BookOpenText, Building2, ChefHat,
+  Activity, AlertTriangle, ArrowLeftRight, BarChart3, BadgeDollarSign, Boxes, BookOpenText, Building2, Calculator, ChefHat,
   ChevronDown, ClipboardCheck, CreditCard, Factory, FileSpreadsheet, FileText, FlaskConical,
   Globe, HandCoins, Landmark, Layers, LayoutDashboard, LogOut, Menu, Moon, NotebookPen,
   Package, Receipt, Scale, ScrollText, Settings, ShoppingCart, Sparkles, Store, Sun,
@@ -37,6 +37,7 @@ const ICONS: Record<MenuIcon, ReactNode> = {
   inventoryBatches: <Layers className="h-5 w-5" />,
   stockValuation: <BadgeDollarSign className="h-5 w-5" />,
   lowStockAlerts: <AlertTriangle className="h-5 w-5" />,
+  costingCenter: <Calculator className="h-5 w-5" />,
   branches: <Store className="h-5 w-5" />,
   purchases: <Truck className="h-5 w-5" />,
   customers: <Users className="h-5 w-5" />,

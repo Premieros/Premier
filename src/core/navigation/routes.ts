@@ -26,6 +26,7 @@ export const APP_ROUTES = {
   inventoryBatches: '/inventory-batches',
   stockValuation: '/stock-valuation',
   lowStockAlerts: '/low-stock-alerts',
+  costingCenter: '/costing',
   branches: '/branches',
   purchases: '/purchases',
   customers: '/customers',

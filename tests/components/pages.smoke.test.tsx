@@ -139,6 +139,7 @@ import { StockCountsPage } from '@/features/inventory/pages/StockCountsPage';
 import { InventoryBatchesPage } from '@/features/inventory/pages/InventoryBatchesPage';
 import { StockValuationPage } from '@/features/inventory/pages/StockValuationPage';
 import { LowStockAlertsPage } from '@/features/inventory/pages/LowStockAlertsPage';
+import { CostingCenterPage } from '@/features/costing/pages/CostingCenterPage';
 import { AccountsPage } from '@/features/accounting/pages/AccountsPage';
 import { PaymentsPage } from '@/features/accounting/pages/PaymentsPage';
 import { JournalPage } from '@/features/accounting/pages/JournalPage';
@@ -176,6 +177,7 @@ const pages: Array<[string, React.ComponentType]> = [
   ['InventoryBatchesPage', InventoryBatchesPage],
   ['StockValuationPage', StockValuationPage],
   ['LowStockAlertsPage', LowStockAlertsPage],
+  ['CostingCenterPage', CostingCenterPage],
   ['AccountsPage', AccountsPage],
   ['PaymentsPage', PaymentsPage],
   ['JournalPage', JournalPage],

@@ -55,6 +55,14 @@ export const inventory = {
   getExpiringBatches(p: { p_branch_id?: string | null; p_warehouse_id?: string | null; p_horizon_days?: number }): ApiResult<import('@/lib/types').ExpiringBatchRow[]> { return rpc('get_expiring_batches', p); },
 };
 
+export const costing = {
+  getOverview(p: { p_branch_id?: string | null }): ApiResult<import('@/lib/types').CostingOverviewRow[]> { return rpc('get_costing_overview', p); },
+  getProductDetail(p: { p_product_id: string; p_branch_id?: string | null }): ApiResult<import('@/lib/types').ProductCostingDetail> { return rpc('get_product_costing_detail', p); },
+  getCostHistory(p: { p_product_id: string; p_limit?: number }): ApiResult<import('@/lib/types').CostHistoryRow[]> { return rpc('get_cost_history', p); },
+  getSupplierPriceImpact(p: { p_supplier_id: string }): ApiResult<import('@/lib/types').SupplierPriceImpactRow[]> { return rpc('get_supplier_price_impact', p); },
+  getOrderMargin(p: { p_branch_id?: string | null; p_from?: string | null; p_to?: string | null }): ApiResult<import('@/lib/types').OrderMarginRow[]> { return rpc('get_order_margin', p); },
+};
+
 export const manufacturing = {
   createOrder(p: { p_product_id: string; p_branch_id: string; p_warehouse_id: string | null; p_quantity: number; p_batch_number: string | null; p_planned_at: string | null; p_notes: string | null }): ApiResult<RpcResult> { return rpc('create_production_order', p); },
   startOrder(p: { p_order_id: string }): ApiResult<RpcResult> { return rpc('start_production_order', p); },

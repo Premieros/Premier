@@ -6,7 +6,7 @@ export type MenuGroup = 'main' | 'catalog' | 'operations' | 'people' | 'finance'
 export type MenuIcon =
   | 'dashboard' | 'subscription' | 'pos' | 'products' | 'categories' | 'components'
   | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
-  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation' | 'lowStockAlerts' | 'branches'
+  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation' | 'lowStockAlerts' | 'costingCenter' | 'branches'
   | 'purchases' | 'customers' | 'suppliers' | 'expenses'
   | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation' | 'financialReports'
   | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
@@ -54,6 +54,7 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'inventory-batches', route: APP_ROUTES.inventoryBatches, icon: 'inventoryBatches', labelKey: 'inventoryBatches', permission: 'inventory.view', group: 'operations' },
   { id: 'low-stock-alerts', route: APP_ROUTES.lowStockAlerts, icon: 'lowStockAlerts', labelKey: 'lowStockAlerts', permission: 'inventory.view', group: 'operations' },
   { id: 'stock-valuation', route: APP_ROUTES.stockValuation, icon: 'stockValuation', labelKey: 'stockValuation', permission: 'inventory.ledger.view', group: 'operations' },
+  { id: 'costing-center', route: APP_ROUTES.costingCenter, icon: 'costingCenter', labelKey: 'costingCenter', permission: 'reports.costing', group: 'finance' },
   { id: 'branches', route: APP_ROUTES.branches, icon: 'branches', labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
   { id: 'purchases', route: APP_ROUTES.purchases, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
 
