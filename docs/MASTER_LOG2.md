@@ -228,3 +228,36 @@ Every branch below was compared against `development/master-log2` (unique-commit
 
 ### NEXT
 - P0 item 3: purchasing workflow - begin with an audit of the current schema/APIs/screens BEFORE any migration or new code.
+
+
+## Phase closure: P0 item 3 — Procurement Workflow (2026-08-15)
+
+### SCOPE (implemented in one batch on `development/master-log2`)
+- Full chain: Purchase Request -> RFQ -> Supplier Quotation (comparison + selection) -> Purchase Order (draft -> submitted -> approved/cancelled) -> Receiving/GRN (partial + full, posts to ledger like process_purchase) -> Backorders -> Receipts -> Supplier Evaluation + hardened supplier price impact.
+- Migration `075_procurement_workflow.sql` (additive): 8 new tables (`purchase_requests`, `purchase_request_items`, `rfqs`, `rfq_items`, `supplier_quotations`, `supplier_quotation_items`, `purchase_receipts`, `purchase_receipt_items`), workflow columns on `purchases`/`purchase_items`, status CHECKs, RLS backstops, document sequences, and 13 SECURITY DEFINER RPCs enforcing `is_pos_admin()/can_permission('purchases.manage')` + branch isolation.
+
+### DONE
+- Frontend: `PurchaseRequestsPage`, `RfqsPage`, `ReceivingPage` (backorders/receipts/evaluation tabs) + `PurchasesPage` PO actions + `SuppliersPage` evaluation; `api.procurement` module (13 wrappers); permissions `purchases.requests/rfq/receiving/evaluation`; routes `/purchases/requests|rfqs|receiving` + menu + lazy loading; ~50 i18n keys (ar/en); types in `src/lib/types.ts`.
+- `scripts/db/verify-schema.js` extended: 60 tables, 65 functions — passes on the isolated cluster.
+- New integration suite `tests/integration/procurement_workflow.test.ts` (8 tests): NOT_ALLOWED, request lifecycle + bad transitions, branch isolation, RFQ copy + quotation recording/rejection, comparison, selection/award, PO creation/approval, partial/over/full receiving, backorders, ledger posting, receipts, supplier evaluation, hardened `get_supplier_price_impact` isolation.
+- Three real SQL bugs found only by the live suite and fixed in 075 (applied/verified on the isolated cluster):
+  1. `create_purchase_order`: loop variable `v_item jsonb` over a multi-column `SELECT` cast the first column (a uuid) to jsonb -> `invalid input syntax for type json`; switched the quotation loop to a dedicated `record` variable.
+  2. `receive_purchase_order`: validation `SELECT quantity, received_quantity INTO v_pitem` left the record without an `id` field -> `record has no field` exception masking the intended `OVER_RECEIPT`; now `SELECT *`.
+  3. `get_supplier_evaluation`: `LEFT JOIN` of purchases and quotations cross-multiplied `SUM(pc.total)` (1760 for an 880 PO); rewritten with per-supplier aggregated subqueries; also qualified subquery columns to avoid PL/pgSQL RETURNS TABLE variable ambiguity.
+
+### EVIDENCE
+- Commit: `e8f9b87` `feat(procurement): P0 procurement workflow - ...` pushed to `origin/development/master-log2` (15 files, +3031).
+- Local `npm run verify:full` green (EXIT_CODE=0) at this state: typecheck:all, lint (0 errors, 16 pre-existing warnings), build, test:unit 257 passed (21 files), test:integration 162 passed (11 files) on the isolated cluster.
+- GitHub Actions run for the push: see CI record below.
+
+### NEXT
+- P0 item 4 (inventory replenishment / reorder) with the same rule: implement -> focused tests -> fix -> full verification -> CI -> log.
+
+
+## CI record: P0 procurement workflow `e8f9b87` (2026-08-15)
+
+### EVIDENCE
+- Commit: `e8f9b87` `feat(procurement): P0 procurement workflow - ...` (on `development/master-log2`; no merge to main).
+- Pushed to `origin/development/master-log2` (49d4db1..e8f9b87).
+- GitHub Actions run (triggered via the open PR from this branch to main, head_sha `e8f9b87`): run 31901346288 — **conclusion success** (verify, db, browser-smoke jobs). Run URL: https://github.com/Premieros/Premier/actions/runs/31901346288
+- Local `npm run verify:full` was green (EXIT_CODE=0) before the commit.
