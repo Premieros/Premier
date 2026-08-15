@@ -261,3 +261,25 @@ Every branch below was compared against `development/master-log2` (unique-commit
 - Pushed to `origin/development/master-log2` (49d4db1..e8f9b87).
 - GitHub Actions run (triggered via the open PR from this branch to main, head_sha `e8f9b87`): run 31901346288 — **conclusion success** (verify, db, browser-smoke jobs). Run URL: https://github.com/Premieros/Premier/actions/runs/31901346288
 - Local `npm run verify:full` was green (EXIT_CODE=0) before the commit.
+
+## GitHub Pages deployment rule change `29e2ec6` (2026-08-15)
+
+### RULE
+- `development/master-log2` is now the **sole source of development AND publishing**.
+- `main` is the **production baseline only**: never developed on directly, never deleted. No merge from this branch to main is required for publishing.
+- Every push to `development/master-log2` runs the strict gate chain `verify -> db -> e2e -> deploy`; any failing test aborts the chain and **no deployment happens** (no deploy ever skips a gate).
+
+### WORKFLOW CHANGES (`.github/workflows/deploy.yml`, commit `29e2ec6`)
+- Trigger changed from `push: [main]` to `push: [development/master-log2]` (+ `workflow_dispatch`).
+- Jobs: `verify` (lint, typecheck, `typecheck:all` with `@playwright/test@1.55.0`, 257 unit tests, production build, `upload-pages-artifact@v3`) -> `db` (needs verify; `stub_auth`, canonical migrations, `verify-schema`, `disable_subscription_guard`, `seed_raw_material_branch`, 162 integration tests against an **isolated postgres:18 service** - never Production DB) -> `e2e` (needs db; Playwright chromium, 50 browser tests against the production build) -> `deploy` (needs e2e; `actions/deploy-pages@v4`, environment `github-pages`).
+
+### UNBLOCKING
+- GitHub Pages was already `build_type: workflow`, but the `github-pages` environment had a **custom deployment-branch policy allowing only `main`**, so the deploy job failed instantly on this branch ("Branch ... is not allowed to deploy to github-pages due to environment protection rules").
+- Fixed via API: added branch policy `development/master-log2` (type branch) to the environment. `main` policy left untouched.
+
+### EVIDENCE
+- Commit `29e2ec6` pushed to `origin/development/master-log2` (fb88e2d..29e2ec6).
+- GitHub Actions run 31904141867, attempt 2 — **conclusion success**: verify ✓, db ✓, e2e ✓, deploy ✓. Run URL: https://github.com/Premieros/Premier/actions/runs/31904141867
+- Local pre-push verification green: lint (0 errors), `typecheck:all`, 257 unit, `npm run build`, 162 integration (isolated cluster, port 55432), 50 Playwright e2e (dist preview on 127.0.0.1:4173).
+- Pages deployment created for `29e2ec6` (github-pages environment, created 2026-08-15T19:42:40Z).
+- Live site: https://premieros.github.io/Premier/ — HTTP 200, title "Premier | Business Management Platform".
