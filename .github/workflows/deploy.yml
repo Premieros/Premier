@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [development/master-log2]
   workflow_dispatch:
 
 permissions:
@@ -14,8 +14,26 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# =============================================================================
+# Deployment gate chain (STRICT and sequential).
+#
+# `development/master-log2` is the sole source of development AND publishing.
+# `main` is the production baseline only - never developed on directly, never
+# deleted. A push to development/master-log2 is deployed to GitHub Pages ONLY
+# after every gate below passes; any failing test aborts the chain and no
+# deployment happens.
+#
+#   verify -> db -> e2e -> deploy
+#
+#   verify : lint, typecheck (app + test suites), unit tests, production build
+#   db     : apply migrations + verify schema + integration tests against an
+#            ISOLATED postgres:18 service container (never Production DB)
+#   e2e    : Playwright browser tests against the production build
+#   deploy : publish the dist artifact to GitHub Pages
+# =============================================================================
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     env:
       VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
@@ -29,6 +47,10 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Install Playwright test runner for suite typechecking
+        run: npm install --no-save @playwright/test@1.55.0
+      - name: Typecheck application and test suites
+        run: npm run typecheck:all
       - run: npm run test:unit
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
@@ -36,6 +58,7 @@ jobs:
           path: dist
 
   db:
+    needs: verify
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -69,11 +92,11 @@ jobs:
         run: node scripts/db/apply-migration.js --file supabase/ci/disable_subscription_guard.sql
       - name: Seed raw-material branch helper (CI only, never on real Supabase)
         run: node scripts/db/apply-migration.js --file supabase/ci/seed_raw_material_branch.sql
-      - name: Run integration tests (BEGIN/ROLLBACK)
+      - name: Run integration tests (BEGIN/ROLLBACK, isolated Postgres)
         run: npm run test:integration
 
   e2e:
-    needs: [build, db]
+    needs: db
     runs-on: ubuntu-latest
     env:
       VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
@@ -97,7 +120,7 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: [build, db, e2e]
+    needs: e2e
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -23,6 +23,8 @@ dist-ssr
 
 # build artifacts
 *.tsbuildinfo
+playwright-report
+test-results
 
 # eslint cache
 .eslintcache
