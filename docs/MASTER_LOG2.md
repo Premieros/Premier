@@ -186,3 +186,33 @@ Every branch below was compared against `development/master-log2` (unique-commit
 
 ### NEXT
 - P0 item 3: purchasing workflow on `development/master-log2` (no new branch).
+
+
+## Phase closure: Integration DB suite activated against an isolated local PostgreSQL (2026-08-15)
+
+### DECISION
+- Integration tests now run for real. `SUPABASE_DB_URL` is provided as a session environment variable pointing at an **isolated local PostgreSQL 18.4 cluster** (`C:\Users\CAVOCE~1\AppData\Local\Temp\opencode\pg-itest`, port 55432, trust auth, loopback only). No Supabase project/branch was created; the production Supabase project and the local production service on port 5432 were never touched. The URL is passed inline per command and was never written to `.env` or committed (git status shows no secret file; `.gitignore` keeps `.env*` excluded).
+- Exact CI recipe reproduced from `.github/workflows/verify-main.yml`: `stub_auth.sql` (CI-only, never on real Supabase) -> `apply-migration.js --dir supabase/migrations` -> `verify-schema.js` -> `disable_subscription_guard.sql` -> `seed_raw_material_branch.sql`, then `npm run test:integration`.
+
+### DONE
+- Fixed two real SQL bugs in migration `074_product_costing.sql` (found only because the suite now runs against a live Postgres; the migration had failed/rolled back in the local cluster and was **never applied anywhere**, so editing is legal under the additive rule):
+  1. `_raw_wavg_cost`: `rm.default_cost` referenced from a JOIN without GROUP BY -> PostgreSQL "must appear in the GROUP BY clause" error. Replaced with a scalar subquery against `raw_materials` (keeps the no-batches fallback semantics).
+  2. `get_supplier_price_impact`: `ORDER BY item_type, item_name` in a UNION ALL could not resolve those names (first branch column is the unaliased literal `'product'::text`). Aliased the literal as `item_type` and switched ORDER BY to positional `ORDER BY 2 ASC, 3 ASC`.
+- Applied the full migration chain on the isolated cluster: 79 prior migrations (replayed cleanly), `074_product_costing.sql` (after the fixes above), plus the 3 CI scripts.
+- `node scripts/db/verify-schema.js` passes: 52 tables, 51 functions, PostgreSQL 18.4.
+- `npm run test:integration` green: 10 files, 154 tests passed (5.07s) - this is the first real DB execution of these tests.
+- `npm run verify:full` green at this record: typecheck:all, lint, build, test:unit 257 passed (21 files), test:integration 154 passed (10 files).
+
+### REMAINING
+- The 074 costing RPCs still have no dedicated integration tests (unit + smoke only). Not blocking; the migration is now proven to apply and verify against a real Postgres. Equivalent coverage can be added with the next costing-related feature.
+
+### BLOCKED / RISKS
+- Local Postgres startup on Windows showed transient flakiness during the first attempt (0xC0000142 autovacuum worker exit, shared-memory error 487 after an unclean parent kill); a clean restart via a detached `start.cmd` (Start-Process) succeeded and shut down cleanly. Treat first-start instability as environmental, not schema-related.
+
+### EVIDENCE
+- This record (no feature code beyond the two 074 SQL fixes). Branch `development/master-log2`; no merge to main.
+- `npm run verify:full` EXIT_CODE=0 at this state: test:unit 257 passed, test:integration 154 passed (10 files).
+- Local cluster stopped cleanly after the run (pg_ctl stop, 0 listeners on 55432). Production service on 5432 untouched.
+
+### NEXT
+- P0 item 3: purchasing workflow on `development/master-log2` (implement -> focused tests -> fix -> full verification incl. integration against the isolated cluster -> CI -> log).

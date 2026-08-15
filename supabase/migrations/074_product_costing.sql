@@ -88,9 +88,10 @@ STABLE
 AS $function$
   SELECT CASE WHEN SUM(b.quantity) > 0
     THEN round(SUM(b.quantity * b.unit_cost) / SUM(b.quantity), 2)
-    ELSE COALESCE(rm.default_cost, 0) END
+    ELSE COALESCE(
+      (SELECT rm.default_cost FROM public.raw_materials rm WHERE rm.id = p_raw_material_id),
+      0) END
   FROM public.raw_material_batches b
-  JOIN public.raw_materials rm ON rm.id = b.raw_material_id
   WHERE b.raw_material_id = p_raw_material_id AND b.quantity > 0
     AND (p_branch_id IS NULL OR b.branch_id = p_branch_id)
 $function$;
@@ -335,7 +336,7 @@ CREATE OR REPLACE FUNCTION public.get_supplier_price_impact(
 AS $function$
   SELECT
     p.id,
-    'product'::text,
+    'product'::text AS item_type,
     COALESCE(NULLIF(btrim(p.name), ''), 'Product'),
     (array_agg(pi.unit_cost ORDER BY pc.created_at ASC))[1]::numeric(12,2),
     (array_agg(pi.unit_cost ORDER BY pc.created_at DESC))[1]::numeric(12,2),
@@ -376,7 +377,7 @@ UNION ALL
     AND pc.status = 'completed'
     AND pi.raw_material_id IS NOT NULL
   GROUP BY rm.id
-  ORDER BY item_type ASC, item_name ASC
+  ORDER BY 2 ASC, 3 ASC
 $function$;
 
 GRANT EXECUTE ON FUNCTION public.get_supplier_price_impact(uuid) TO authenticated;
