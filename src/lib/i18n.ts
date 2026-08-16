@@ -269,7 +269,11 @@ export const translations = {
     // P0 Inventory: Min/Max + Reorder + Low Stock
     minStockQty: 'الحد الأدنى',
     maxStockQty: 'الحد الأقصى',
+    maxStock: 'الحد الأقصى للمخزون',
     reorderPoint: 'نقطة إعادة الطلب',
+    reorder: 'إعادة التزويد',
+    suggestedQty: 'الكمية المقترحة',
+    remove: 'إزالة',
     lowStockAlerts: 'تنبيهات المخزون المنخفض',
     lowStockAlertsTitle: 'تنبيهات إعادة الطلب',
     shortageQty: 'الكمية الناقصة',
@@ -1524,7 +1528,11 @@ export const translations = {
     // P0 Inventory: Min/Max + Reorder + Low Stock
     minStockQty: 'Min Stock',
     maxStockQty: 'Max Stock',
+    maxStock: 'Max Stock',
     reorderPoint: 'Reorder Point',
+    reorder: 'Reorder',
+    suggestedQty: 'Suggested Qty',
+    remove: 'Remove',
     lowStockAlerts: 'Low Stock Alerts',
     lowStockAlertsTitle: 'Reorder Alerts',
     shortageQty: 'Shortage',

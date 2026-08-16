@@ -364,3 +364,27 @@ The original parity report ("Production at ~022–035, 33 RPCs + 2 tables missin
 - `check-production-parity.js` vs Production: **`PARITY OK` — every frontend RPC and table present in the production schema cache — exit 0** (one transient ECONNRESET on the first run, clean on re-run).
 - The deploy gate chain `verify -> db -> e2e -> parity -> deploy` will now PASS parity and publish on the next push to `development/master-log2`.
 - `supabase/migrations/078_register_branch.sql` must be committed so the migration set stays reproducible.
+
+## P0 item 4: Inventory replenishment / reorder — frontend implementation (2026-08-16)
+
+### SCOPE (no new schema/RPCs; builds on `071_inventory_policy_reorder.sql` already live on Production)
+1. **Reorder policy editable on products**: `min_stock`, `max_stock`, `reorder_point` added to the `Product` type and to the `ProductsPage` add/edit form, save payload, Excel export and import.
+2. **Reorder action on `LowStockAlertsPage`**: a `Reorder` button (permission `purchases.manage`) opens a review modal that:
+   - builds product lines from `get_low_stock_alerts` (aggregated per product across warehouses; suggested qty = `max_stock − on_hand`, falling back to `shortage_qty`, minimum 1 when out of stock) with live `cost_price` lookups;
+   - builds raw-material lines from `raw_material_inventory` + `raw_materials` (suggested qty = `min_stock − quantity`, minimum 1 when depleted) with unit + `default_cost`;
+   - offers editable quantities, line removal, branch/supplier/priority/expected-date/notes;
+   - creates a `create_purchase_request` (draft) via the existing `api.procurement` chain and navigates to `/purchases/requests`.
+
+### DONE
+- New pure module `src/lib/reorder.ts` (suggestion functions + line builders + `reorderLinesToProcurementItems`).
+- `Product` type: `min_stock`/`max_stock`/`reorder_point`.
+- `ProductsPage`: three numeric inputs in the form (beside `low_stock_threshold`), included in insert/update payload, export columns `MinStock/MaxStock/ReorderPoint`, import parsing.
+- `LowStockAlertsPage`: `Reorder` header button + `2xl` modal (branch/supplier/priority/expected date/notes + editable line table + remove). Raw-material branch query respects `raw_material_inventory` RLS.
+- i18n (ar/en): `maxStock`, `reorder`, `suggestedQty`, `remove`.
+- New unit suite `tests/unit/lib/reorder.test.ts` (10 tests): suggestion math, per-warehouse aggregation, ok-row/empty dropping, worst-status, raw lines, procurement-item mapping + overrides + zero-filter.
+
+### EVIDENCE
+- Local: `npm run typecheck` ✓, `tsc -p tsconfig.test.json` ✓, `npm run lint` (0 errors, 16 pre-existing warnings), `npm run test:unit` **267 passed (22 files)**, `npm run build` ✓.
+- `pages.smoke.test.tsx` (36 pages incl. `LowStockAlertsPage` + `ProductsPage`) green — page still renders with the new button/modal state.
+- No migration/contract change: `gen-contract --check` and Production parity are unaffected (columns + client-only logic).
+- Uncommitted as of writing.

@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/Toast';
 import { useBranchFilter } from '@/lib/useBranchFilter';
+import { useCan } from '@/lib/permissions';
 import { DesignSurface, DesignPageHeader, DesignSearch, DesignPanel } from '@/components/design';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Button } from '@/components/Button';
-import { Select } from '@/components/Input';
+import { Input, Select, Textarea } from '@/components/Input';
+import { Modal } from '@/components/Modal';
 import { formatNumber } from '@/lib/format';
 import { exportToExcel } from '@/lib/excel';
-import type { LowStockAlertRow, Warehouse } from '@/lib/types';
+import { APP_ROUTES } from '@/core/navigation/routes';
+import {
+  buildProductReorderLines,
+  buildRawReorderLines,
+  reorderLinesToProcurementItems,
+  type ReorderLine,
+} from '@/lib/reorder';
+import type { LowStockAlertRow, Warehouse, Supplier } from '@/lib/types';
 
 export function LowStockAlertsPage() {
   const { t, lang } = useLanguage();
@@ -28,18 +40,37 @@ export function LowStockAlertsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const { user } = useAuth();
+  const can = useCan();
+  const navigate = useNavigate();
+
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [reorderItems, setReorderItems] = useState<ReorderLine[]>([]);
+  const [qtyOverride, setQtyOverride] = useState<Record<string, number>>({});
+  const [loadingReorder, setLoadingReorder] = useState(false);
+  const [savingReorder, setSavingReorder] = useState(false);
+  const [reorderForm, setReorderForm] = useState({
+    branch_id: '',
+    supplier_id: '',
+    priority: 'normal',
+    expected_date: '',
+    notes: '',
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [br, wh] = await Promise.all([
+    const [br, wh, sp] = await Promise.all([
       supabase.from('branches').select('id, name').eq('is_active', true).order('name'),
       supabase.from('warehouses').select('*').eq('is_active', true).order('name'),
+      supabase.from('suppliers').select('*').order('name'),
     ]);
     if (br.error) { setError(br.error.message); setLoading(false); show(br.error.message, 'error'); return; }
     const b = (br.data as { id: string; name: string }[] | null) || [];
     setBranches(b);
     setWarehouses((wh.data as Warehouse[]) || []);
+    setSuppliers((sp.data as Supplier[]) || []);
     let effBranch = branchId;
     if (!effBranch && b.length === 1) { effBranch = b[0].id; setBranchId(effBranch); }
 
@@ -76,6 +107,95 @@ export function LowStockAlertsPage() {
       ReorderPoint: r.reorder_point, LowStockThreshold: r.low_stock_threshold,
       Shortage: r.shortage_qty, Status: r.status,
     })), 'low-stock-alerts');
+  };
+
+  const loadReorder = useCallback(async (branchId: string) => {
+    if (!branchId) return;
+    setLoadingReorder(true);
+    const [alerts, rawRes] = await Promise.all([
+      api.inventory.getLowStockAlerts({ p_branch_id: branchId, p_warehouse_id: null }),
+      supabase
+        .from('raw_material_inventory')
+        .select('raw_material_id, quantity, min_stock, raw_material:raw_materials(id, name, code, min_stock, default_cost, is_active, unit:units(name))')
+        .eq('branch_id', branchId),
+    ]);
+    const alertRows = alerts.data || [];
+    const productIds = alertRows.map((r) => r.product_id);
+    const costMap: Record<string, number> = {};
+    if (productIds.length > 0) {
+      const { data: costs } = await supabase.from('products').select('id, cost_price').in('id', productIds);
+      for (const c of (costs as { id: string; cost_price: number }[] | null) || []) costMap[c.id] = Number(c.cost_price) || 0;
+    }
+    const productLines = buildProductReorderLines(alertRows).map((l) => ({
+      ...l,
+      estimated_cost: costMap[l.product_id || ''] || 0,
+    }));
+    const rawRows = ((rawRes.data || []) as unknown as {
+      raw_material_id: string;
+      quantity: number;
+      min_stock: number;
+      raw_material: { id: string; name: string; code: string | null; min_stock: number; default_cost: number; is_active: boolean; unit: { name: string } | null } | null;
+    }[]).filter((r) => r.raw_material && r.raw_material.is_active !== false).map((r) => ({
+      raw_material_id: r.raw_material_id,
+      name: r.raw_material!.name,
+      unit_name: r.raw_material!.unit?.name || null,
+      quantity: Number(r.quantity) || 0,
+      min_stock: Number(r.raw_material!.min_stock) || Number(r.min_stock) || 0,
+      default_cost: Number(r.raw_material!.default_cost) || 0,
+    }));
+    const rawLines = buildRawReorderLines(rawRows);
+    const lines = [...productLines, ...rawLines];
+    setReorderItems(lines);
+    setQtyOverride(Object.fromEntries(lines.map((l) => [l.key, l.suggested_qty])));
+    setLoadingReorder(false);
+  }, []);
+
+  const openReorder = () => {
+    const effBranch = branchId || user?.branch_id || branches[0]?.id || '';
+    if (!effBranch) { show(t('required') + ': ' + t('branch'), 'error'); return; }
+    setReorderForm({ branch_id: effBranch, supplier_id: '', priority: 'normal', expected_date: '', notes: '' });
+    setReorderOpen(true);
+    loadReorder(effBranch);
+  };
+
+  const changeReorderBranch = (next: string) => {
+    setReorderForm((f) => ({ ...f, branch_id: next, supplier_id: '' }));
+    setReorderItems([]);
+    setQtyOverride({});
+    if (next) loadReorder(next);
+  };
+
+  const updateQty = (key: string, value: number) => setQtyOverride((prev) => ({ ...prev, [key]: value }));
+
+  const removeReorderLine = (key: string) => {
+    setReorderItems((items) => items.filter((l) => l.key !== key));
+    setQtyOverride((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const submitReorder = async () => {
+    if (!reorderForm.branch_id) { show(t('required') + ': ' + t('branch'), 'error'); return; }
+    const items = reorderLinesToProcurementItems(reorderItems, qtyOverride);
+    if (items.length === 0) { show(t('required') + ': ' + t('addItem'), 'error'); return; }
+    setSavingReorder(true);
+    const { data, error: err } = await api.procurement.createPurchaseRequest({
+      p_branch_id: reorderForm.branch_id,
+      p_supplier_id: reorderForm.supplier_id || null,
+      p_priority: reorderForm.priority,
+      p_expected_date: reorderForm.expected_date || null,
+      p_notes: reorderForm.notes || null,
+      p_items: items,
+    });
+    setSavingReorder(false);
+    if (err) { show(err.message, 'error'); return; }
+    const result = data as { success?: boolean; error?: string; detail?: string; request_number?: string } | null;
+    if (!result?.success) { show(result?.detail || result?.error || t('error'), 'error'); return; }
+    show(`${t('createRequest')}: ${result.request_number || ''}`, 'success');
+    setReorderOpen(false);
+    navigate(APP_ROUTES.purchaseRequests);
   };
 
   const statusPill = (status: string) => {
@@ -116,7 +236,12 @@ export function LowStockAlertsPage() {
   return (
     <DesignSurface testId="low-stock-alerts-page">
       <DesignPageHeader title={t('lowStockAlerts')} subtitle={isAr ? 'تنبيهات إعادة الطلب للمنتجات المنخفضة أو النافدة' : 'Reorder alerts for low or out-of-stock products'} actions={
-        <Button variant="outline" size="sm" onClick={handleExport}>{t('exportExcel')}</Button>
+        <>
+          {can('purchases.manage') && (
+            <Button size="sm" onClick={openReorder} data-testid="low-stock-reorder"><RefreshCw className="w-4 h-4" /> {t('reorder')}</Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleExport}>{t('exportExcel')}</Button>
+        </>
       } />
 
       <DesignPanel testId="alerts-summary-panel">
@@ -158,6 +283,82 @@ export function LowStockAlertsPage() {
       <DesignPanel testId="alerts-table-panel">
         <DataTable columns={columns} data={filtered} loading={loading} error={error} emptyMessage={t('noData')} />
       </DesignPanel>
+
+      <Modal open={reorderOpen} onClose={() => setReorderOpen(false)} title={`${t('reorder')} — ${t('createRequest')}`} size="2xl">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Select label={t('branch')} value={reorderForm.branch_id} onChange={(e) => changeReorderBranch(e.target.value)}>
+              <option value="">--</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+            <Select label={t('supplier')} value={reorderForm.supplier_id} onChange={(e) => setReorderForm({ ...reorderForm, supplier_id: e.target.value })}>
+              <option value="">{t('all')}</option>
+              {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
+            <Select label={t('priority')} value={reorderForm.priority} onChange={(e) => setReorderForm({ ...reorderForm, priority: e.target.value })}>
+              <option value="low">{t('priorityLow')}</option>
+              <option value="normal">{t('priorityNormal')}</option>
+              <option value="high">{t('priorityHigh')}</option>
+              <option value="urgent">{t('priorityUrgent')}</option>
+            </Select>
+            <Input label={t('expectedDate')} type="date" value={reorderForm.expected_date} onChange={(e) => setReorderForm({ ...reorderForm, expected_date: e.target.value })} />
+          </div>
+
+          <div className="rounded-xl border border-ui-border overflow-hidden">
+            <div className="max-h-80 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-ui-page-alt text-xs text-slate-500 dark:text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2 text-start font-medium">{t('type')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t('name')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t('availableStock')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t('minStock')} / {t('maxStock')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t('suggestedQty')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t('quantity')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingReorder && (
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t('loading')}</td></tr>
+                  )}
+                  {!loadingReorder && reorderItems.length === 0 && (
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t('noData')}</td></tr>
+                  )}
+                  {!loadingReorder && reorderItems.map((l) => (
+                    <tr key={l.key} className="border-t border-ui-border">
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${l.item_type === 'raw' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'}`}>
+                          {l.item_type === 'raw' ? t('rawMaterial') : t('product')}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{l.name}</td>
+                      <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{formatNumber(l.on_hand)}</td>
+                      <td className="px-3 py-2 text-slate-500">{formatNumber(l.min_stock)}{l.max_stock > 0 ? ` / ${formatNumber(l.max_stock)}` : ''}</td>
+                      <td className="px-3 py-2 text-slate-500">{formatNumber(l.suggested_qty)}</td>
+                      <td className="px-3 py-2">
+                        <Input type="number" step="0.0001" value={qtyOverride[l.key] ?? ''} onChange={(e) => updateQty(l.key, parseFloat(e.target.value) || 0)} className="w-28" />
+                      </td>
+                      <td className="px-3 py-2 text-end">
+                        <button onClick={() => removeReorderLine(l.key)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('remove')}><Trash2 className="w-4 h-4" /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <Textarea label={t('notes')} value={reorderForm.notes} onChange={(e) => setReorderForm({ ...reorderForm, notes: e.target.value })} rows={2} />
+
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setReorderOpen(false)}>{t('cancel')}</Button>
+            <Button size="sm" onClick={submitReorder} disabled={savingReorder || loadingReorder} data-testid="low-stock-reorder-submit">
+              {savingReorder ? t('loading') : t('createRequest')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </DesignSurface>
   );
 }

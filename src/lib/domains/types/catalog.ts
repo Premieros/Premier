@@ -23,6 +23,9 @@ export interface Product {
   image_url: string | null;
   is_active: boolean;
   low_stock_threshold: number;
+  min_stock: number;
+  max_stock: number;
+  reorder_point: number;
   product_type: ProductType;
   branch_id: string;
   created_at: string;

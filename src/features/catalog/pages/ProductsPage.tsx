@@ -54,7 +54,7 @@ export function ProductsPage() {
 
   const [form, setForm] = useState({
     name: '', name_en: '', barcode: '', sku: '', category_id: '', description: '',
-    cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready' as 'ready' | 'manufactured',
+    cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, min_stock: 0, max_stock: 0, reorder_point: 0, product_type: 'ready' as 'ready' | 'manufactured',
     branch_id: '',
   });
   const [units, setUnits] = useState<ProductUnit[]>([]);
@@ -107,7 +107,7 @@ export function ProductsPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, product_type: 'ready', branch_id: branchFilter || '' });
+    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, min_stock: 0, max_stock: 0, reorder_point: 0, product_type: 'ready', branch_id: branchFilter || '' });
     setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
     setProductComponents([]);
     setComponentSel('');
@@ -117,7 +117,7 @@ export function ProductsPage() {
 
   const openEdit = async (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, product_type: p.product_type || 'ready', branch_id: p.branch_id || branchFilter || '' });
+    setForm({ name: p.name, name_en: p.name_en || '', barcode: p.barcode || '', sku: p.sku || '', category_id: p.category_id || '', description: p.description || '', cost_price: p.cost_price, sale_price: p.sale_price, wholesale_price: p.wholesale_price, image_url: p.image_url || '', is_active: p.is_active, low_stock_threshold: p.low_stock_threshold, min_stock: p.min_stock ?? 0, max_stock: p.max_stock ?? 0, reorder_point: p.reorder_point ?? 0, product_type: p.product_type || 'ready', branch_id: p.branch_id || branchFilter || '' });
     const [u, comps] = await Promise.all([
       supabase.from('product_units').select('*').eq('product_id', p.id),
       supabase.from('product_components').select('component_product_id, quantity').eq('product_id', p.id),
@@ -204,6 +204,7 @@ export function ProductsPage() {
       ProductType: p.product_type || 'ready',
       CostPrice: p.cost_price, SalePrice: p.sale_price, WholesalePrice: p.wholesale_price,
       Category: p.category?.name || '', Active: p.is_active, LowStockThreshold: p.low_stock_threshold,
+      MinStock: p.min_stock ?? 0, MaxStock: p.max_stock ?? 0, ReorderPoint: p.reorder_point ?? 0,
     })), 'products');
   };
 
@@ -223,6 +224,9 @@ export function ProductsPage() {
         wholesale_price: Number(r.WholesalePrice || r.wholesale_price || 0),
         is_active: true,
         low_stock_threshold: Number(r.LowStockThreshold || 5),
+        min_stock: Number(r.MinStock || r.min_stock || 0),
+        max_stock: Number(r.MaxStock || r.max_stock || 0),
+        reorder_point: Number(r.ReorderPoint || r.reorder_point || 0),
         branch_id: branchFilter || branches[0]?.id || null,
       })).filter(r => r.name);
       if (payload.length === 0) { show('No valid rows', 'error'); return; }
@@ -354,6 +358,9 @@ export function ProductsPage() {
             <Input label={t('salePrice')} type="number" step="0.01" value={form.sale_price || ''} onChange={(e) => setForm({ ...form, sale_price: parseFloat(e.target.value) || 0 })} />
             <Input label={t('wholesalePrice')} type="number" step="0.01" value={form.wholesale_price || ''} onChange={(e) => setForm({ ...form, wholesale_price: parseFloat(e.target.value) || 0 })} />
             <Input label={t('lowStockThreshold')} type="number" value={form.low_stock_threshold || ''} onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 0 })} />
+            <Input label={t('minStock')} type="number" step="0.0001" value={form.min_stock || ''} onChange={(e) => setForm({ ...form, min_stock: parseFloat(e.target.value) || 0 })} />
+            <Input label={t('maxStock')} type="number" step="0.0001" value={form.max_stock || ''} onChange={(e) => setForm({ ...form, max_stock: parseFloat(e.target.value) || 0 })} />
+            <Input label={t('reorderPoint')} type="number" step="0.0001" value={form.reorder_point || ''} onChange={(e) => setForm({ ...form, reorder_point: parseFloat(e.target.value) || 0 })} />
           </div>
           <Textarea label={t('description')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
 
