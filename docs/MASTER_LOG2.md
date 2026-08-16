@@ -387,4 +387,8 @@ The original parity report ("Production at ~022–035, 33 RPCs + 2 tables missin
 - Local: `npm run typecheck` ✓, `tsc -p tsconfig.test.json` ✓, `npm run lint` (0 errors, 16 pre-existing warnings), `npm run test:unit` **267 passed (22 files)**, `npm run build` ✓.
 - `pages.smoke.test.tsx` (36 pages incl. `LowStockAlertsPage` + `ProductsPage`) green — page still renders with the new button/modal state.
 - No migration/contract change: `gen-contract --check` and Production parity are unaffected (columns + client-only logic).
-- Uncommitted as of writing.
+
+### CI (2026-08-16)
+- Commit `a3c1dc7` `feat(reorder): P0 inventory replenishment - reorder policy fields + reorder-from-alerts purchase request` pushed to `origin/development/master-log2`.
+- GitHub Actions run 31968999936 — **conclusion success** (`verify` 1m14s → `db` 37s → `e2e` 1m27s → `parity` 29s → `deploy` 9s). Run URL: https://github.com/Premieros/Premier/actions/runs/31968999936
+- Pages deployment created; live site: https://premieros.github.io/Premier/
