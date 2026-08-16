@@ -33,7 +33,7 @@ export function TransfersPage() {
 
   const { rows: transfers, loading, error, total, hasMore, loadMore, loadingMore, refresh: reloadTransfers } = usePaginatedRows<WarehouseTransfer>({
     table: 'warehouse_transfers',
-    select: '*, from_warehouse:warehouses!warehouse_transfers_from_warehouse_id_fkey(*), to_warehouse:warehouses!warehouse_transfers_to_warehouse_id_fkey(*), branch:branches(*), requester:users(id, full_name, email)',
+    select: '*, from_warehouse:warehouses!warehouse_transfers_from_warehouse_id_fkey(*), to_warehouse:warehouses!warehouse_transfers_to_warehouse_id_fkey(*), branch:branches(*), requester:users!warehouse_transfers_requested_by_fkey(id, full_name, email)',
     order: { column: 'created_at', ascending: false },
     pageSize: 100,
   });
