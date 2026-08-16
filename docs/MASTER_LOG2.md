@@ -312,5 +312,28 @@ Every branch below was compared against `development/master-log2` (unique-commit
 - Commits for this record: `076_fix_stock_valuation_ambiguity.sql`, `stock_valuation.test.ts`, `check-production-parity.js`, `deploy.yml` parity job (see CI record below).
 
 ### REMAINING (needs Production DB credentials — deliberately NOT done by script)
-- Run the official migration chain on Production once a `SUPABASE_DB_URL` for the production database is available (via `scripts/db/apply-migration.js` — additive-only, checksummed, `--dry-run` available). Current schema boundary is ~022–035; migrations `036`–`075` + `076` must be applied so the frontend and database are in parity.
+- Run the official migration chain on Production once a `SUPABASE_DB_URL` for the production database is available (via `scripts/db/apply-migration.js` — additive-only, checksummed, `--dry-run` available). Current schema boundary is ~022–035; migrations `036`–`075` + `076` + `077` must be applied so the frontend and database are in parity.
 - After migration: re-run the parity gate (must pass), then the next push to `development/master-log2` deploys.
+
+## Structural refactor: per-domain API/types + single source-of-truth API contract (2026-08-16)
+
+### GOAL
+Make the frontend structure easier to evolve and — critically — give the deployment gates a **single source of truth** describing exactly which RPCs/tables the frontend requires, instead of regex-scraping source files ad hoc.
+
+### CHANGES
+1. **API split**: `src/api/modules.ts` (monolith) → `src/api/rpc.ts` (shared typed `rpc()` helper) + **13 per-domain modules** in `src/api/domains/` (`pos`, `floorPlan`, `trade`, `procurement`, `shifts`, `inventory`, `costing`, `manufacturing`, `catalog`, `accounting`, `reporting`, `subscriptions`, `admin`). `modules.ts` is now a barrel re-exporting them — zero import changes for callers.
+2. **Type split**: `src/lib/types.ts` (monolith) → barrel + **12 per-domain files** in `src/lib/domains/types/` (`users`, `organization`, `catalog`, `parties`, `trade`, `floorPlan`, `manufacturing`, `inventory`, `costing`, `accounting`, `subscription`, `procurement`).
+3. **API contract = single source of truth**: `scripts/db/gen-contract.js` generates `supabase/api-contract.json` (90 RPCs with `p_` params, 38 tables) directly from `src/api/domains/*.ts` (pattern: `(p: {` + `return rpc('fn', p)`). `--check` fails on drift.
+4. **Gates consume the contract**: `check-production-parity.js` (Production probe) and `verify-schema.js` (actual-DB-vs-contract comparison) now read `api-contract.json` instead of scraping source. `verify-schema.js` now also reports any contract RPC missing from the real database.
+
+### LATENT BUG THE CONTRACT CAUGHT
+- Contract-vs-DB comparison against the isolated cluster (55432) revealed `replace_product_units(uuid, jsonb)` — **called by the frontend on every product create/edit** (`ProductsPage.save` → `api.catalog.replaceProductUnits`) — was **never defined in any migration**. On any fully-migrated DB (and the live site) this is a silent PGRST202 on every product save.
+- Fixed by `supabase/migrations/077_replace_product_units.sql`: `SECURITY DEFINER`, `SET search_path=public`, branch isolation via `is_pos_admin()` (staff locked to own branch), atomic delete+insert replace, error payloads returned as jsonb (`PRODUCT_NOT_FOUND` / `NO_BASE_UNIT` / `NOT_ALLOWED`) instead of exceptions, `audit_log` row, `GRANT EXECUTE ... TO authenticated`. Applied to the isolated cluster: `Done: 1 applied, 0 skipped`.
+- Locked in by `tests/integration/replace_product_units.test.ts` (6 tests): signature, atomic replace, unknown-product, no-base-unit, branch isolation (admin/staff/cross-branch denial), audit trail.
+
+### VERIFICATION
+- `gen-contract.js --check` → exit 0 (90 RPCs, 38 tables, committed snapshot current).
+- `verify-schema.js` against the isolated cluster → **Tables 60/60, Functions 65/65, Contract RPCs 90/90, Contract tables 38/38**, exit 0.
+- Full suite: unit 257, integration **173 (13 files)**, build, `npx playwright test` 50 passed — all green.
+- `deploy.yml` `verify` job now runs `node scripts/db/gen-contract.js --check` so contract drift fails CI before any gate runs.
+- Contract-vs-Production parity is unchanged and still correctly FAILS (Production is behind; see P0 section above) — the gate blocks deployment until Production is migrated. Work on this record is **uncommitted** as of writing (files below).

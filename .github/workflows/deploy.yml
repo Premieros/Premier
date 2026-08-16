@@ -51,6 +51,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Enforce the API contract matches the committed snapshot
+        run: node scripts/db/gen-contract.js --check
       - name: Install Playwright test runner for suite typechecking
         run: npm install --no-save @playwright/test@1.55.0
       - name: Typecheck application and test suites
