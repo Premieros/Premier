@@ -337,3 +337,30 @@ Make the frontend structure easier to evolve and — critically — give the dep
 - Full suite: unit 257, integration **173 (13 files)**, build, `npx playwright test` 50 passed — all green.
 - `deploy.yml` `verify` job now runs `node scripts/db/gen-contract.js --check` so contract drift fails CI before any gate runs.
 - Contract-vs-Production parity is unchanged and still correctly FAILS (Production is behind; see P0 section above) — the gate blocks deployment until Production is migrated. Work on this record is **uncommitted** as of writing (files below).
+
+## PRODUCTION MIGRATION: schema parity achieved — 0 missing (2026-08-16)
+
+### WHAT ACTUALLY HAPPENED
+The original parity report ("Production at ~022–035, 33 RPCs + 2 tables missing") was **stale**. Direct inspection of the live database showed its objects were already at roughly migration `077` level (e.g. `get_stock_valuation`, `get_stock_valuation_summary`, `replace_product_units`, `get_costing_overview` all present), but `public.schema_migrations` only recorded `001–048`. The database had been built through a path that never recorded later entries.
+
+### CONNECTION (only working route found)
+- Direct host `db.<ref>.supabase.co` is **IPv6-only** (AAAA, no A record) and this workstation has no IPv6 route.
+- Working URL: `postgresql://postgres.<ref>:<password>@aws-1-eu-west-2.pooler.supabase.com:5432/postgres` (project lives in AWS London eu-west-2, `aws-1` pooler). Stored in local `.env` (gitignored).
+- The password rotates; anyone re-running these steps must supply a fresh `SUPABASE_DB_URL`.
+
+### ACTUAL GAP (verified via `verify-schema.js` against Production)
+`60/60 tables`, `65/65 functions`, but **contract missing 26 RPCs + 2 tables**. Missing objects mapped to:
+- `061_inventory_stock_counts.sql` (stock_counts, stock_count_items, apply_stock_count)
+- `070_stock_count_workflow.sql` (stock-count lifecycle RPCs)
+- `074_product_costing.sql` (get_product_costing_detail, get_cost_history, get_order_margin)
+- `075_procurement_workflow.sql` (purchase_requests/purchase_request_items + full RFQ/PO/receipt chain)
+- `register_branch` — extracted from `055` into a new **`078_register_branch.sql`** (055 itself was NOT re-run: it re-INSERTs subscription rows and DROP/re-creates `process_sale`, unsafe on a live DB).
+
+### WHAT WAS APPLIED (via `apply-migration.js --file`, additive-only, checksummed)
+`061` → `070` → `074` → `075` → `078` (each `--dry-run` first, then applied; `Done: 1 applied, 0 skipped` each). `schema_migrations` on Production now records `001–048` + `061/070/074/075/078` (049–060/062–073/076–077 objects pre-existed untracked).
+
+### RESULT (both gates green)
+- `verify-schema.js` vs Production: **Tables 60/60, Functions 65/65, Contract RPCs 90/90, Contract tables 38/38** — exit 0.
+- `check-production-parity.js` vs Production: **`PARITY OK` — every frontend RPC and table present in the production schema cache — exit 0** (one transient ECONNRESET on the first run, clean on re-run).
+- The deploy gate chain `verify -> db -> e2e -> parity -> deploy` will now PASS parity and publish on the next push to `development/master-log2`.
+- `supabase/migrations/078_register_branch.sql` must be committed so the migration set stays reproducible.
