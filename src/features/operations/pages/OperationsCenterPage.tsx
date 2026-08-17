@@ -24,6 +24,7 @@ export function OperationsCenterPage() {
 
   const cards: ActionCard[] = [
     { id: 'pos', ar: 'نقطة البيع والطلبات', en: 'POS & Orders', descriptionAr: 'فتح نقطة البيع ومتابعة الطلبات النشطة.', descriptionEn: 'Open POS and monitor active orders.', route: APP_ROUTES.pos, permission: 'pos.sell', icon: ShoppingCart },
+    { id: 'inventory-center', ar: 'مركز المخزون', en: 'Inventory Center', descriptionAr: 'الوصول الموحد لكل وظائف المخزون.', descriptionEn: 'Unified access to all inventory functions.', route: APP_ROUTES.inventoryCenter, permission: 'inventory.view', icon: Boxes },
     { id: 'inventory', ar: 'المخزون', en: 'Inventory', descriptionAr: 'الرصيد الحالي وحالة الأصناف.', descriptionEn: 'Current stock and item status.', route: APP_ROUTES.inventory, permission: 'inventory.view', icon: Boxes },
     { id: 'warehouses', ar: 'المستودعات', en: 'Warehouses', descriptionAr: 'إدارة المستودعات والأرصدة.', descriptionEn: 'Manage warehouses and balances.', route: APP_ROUTES.warehouses, permission: 'warehouses.view', icon: Warehouse },
     { id: 'transfers', ar: 'التحويلات المخزنية', en: 'Stock Transfers', descriptionAr: 'نقل الأصناف بين المستودعات والفروع.', descriptionEn: 'Move stock between warehouses and branches.', route: APP_ROUTES.transfers, permission: 'inventory.transfers', icon: ArrowLeftRight },
