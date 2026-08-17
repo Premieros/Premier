@@ -11,16 +11,26 @@ export type MenuIcon =
 export interface MenuItemConfig { id: string; route: AppRoute; icon: MenuIcon; labelKey: TranslationKey; permission?: Permission; group: MenuGroup; superAdminOnly?: boolean; }
 
 export const MENU_GROUPS: Record<MenuGroup, { ar: string; en: string }> = {
-  main: { ar: 'الرئيسية', en: 'Main' }, catalog: { ar: 'الكتالوج', en: 'Catalog' }, operations: { ar: 'العمليات', en: 'Operations' },
-  centers: { ar: 'مراكز الإدارة', en: 'Management Centers' }, people: { ar: 'الأطراف', en: 'People' }, finance: { ar: 'المالية', en: 'Finance' }, admin: { ar: 'الإدارة', en: 'Admin' },
+  main: { ar: 'الرئيسية', en: 'Main' },
+  catalog: { ar: 'الكتالوج', en: 'Catalog' },
+  operations: { ar: 'العمليات', en: 'Operations' },
+  centers: { ar: 'مراكز الإدارة', en: 'Management Centers' },
+  people: { ar: 'الأطراف', en: 'People' },
+  finance: { ar: 'المالية', en: 'Finance' },
+  admin: { ar: 'الإدارة', en: 'Admin' },
 };
 
+/**
+ * Navigation is intentionally de-duplicated.
+ * Detailed modules are reached from their owning Management Center instead of
+ * appearing as a second sidebar entry. Routes remain available for deep links.
+ */
 export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'dashboard', route: APP_ROUTES.dashboard, icon: 'dashboard', labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
   { id: 'subscription', route: APP_ROUTES.subscription, icon: 'subscription', labelKey: 'mySubscription', group: 'main' },
   { id: 'pos', route: APP_ROUTES.pos, icon: 'pos', labelKey: 'pos', permission: 'pos.sell', group: 'main' },
 
-  { id: 'operations-center', route: APP_ROUTES.operationsCenter, icon: 'pos', labelKey: 'pos', permission: 'dashboard.view', group: 'centers' },
+  { id: 'operations-center', route: APP_ROUTES.operationsCenter, icon: 'pos', labelKey: 'orders', permission: 'dashboard.view', group: 'centers' },
   { id: 'inventory-center', route: APP_ROUTES.inventoryCenter, icon: 'inventory', labelKey: 'inventory', permission: 'inventory.view', group: 'centers' },
   { id: 'procurement-center', route: APP_ROUTES.procurementCenter, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'centers' },
   { id: 'manufacturing-center', route: APP_ROUTES.manufacturingCenter, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'centers' },
@@ -28,27 +38,13 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'products', route: APP_ROUTES.products, icon: 'products', labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { id: 'categories', route: APP_ROUTES.categories, icon: 'categories', labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { id: 'components', route: APP_ROUTES.components, icon: 'components', labelKey: 'components', permission: 'components.view', group: 'catalog' },
-  { id: 'raw-materials', route: APP_ROUTES.rawMaterials, icon: 'rawMaterials', labelKey: 'rawMaterials', permission: 'raw_materials.view', group: 'catalog' },
-  { id: 'recipes', route: APP_ROUTES.recipes, icon: 'recipes', labelKey: 'recipes', permission: 'recipes.view', group: 'catalog' },
 
-  { id: 'inventory', route: APP_ROUTES.inventory, icon: 'inventory', labelKey: 'inventory', permission: 'inventory.view', group: 'operations' },
-  { id: 'warehouses', route: APP_ROUTES.warehouses, icon: 'warehouses', labelKey: 'warehouses', permission: 'warehouses.view', group: 'operations' },
-  { id: 'production', route: APP_ROUTES.production, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'operations' },
-  { id: 'transfers', route: APP_ROUTES.transfers, icon: 'transfers', labelKey: 'warehouseTransfers', permission: 'inventory.transfers', group: 'operations' },
-  { id: 'inventory-ledger', route: APP_ROUTES.inventoryLedger, icon: 'inventoryLedger', labelKey: 'inventoryLedger', permission: 'inventory.ledger.view', group: 'operations' },
-  { id: 'stock-counts', route: APP_ROUTES.stockCounts, icon: 'stockCounts', labelKey: 'stockCounts', permission: 'inventory.manage', group: 'operations' },
-  { id: 'inventory-batches', route: APP_ROUTES.inventoryBatches, icon: 'inventoryBatches', labelKey: 'inventoryBatches', permission: 'inventory.view', group: 'operations' },
-  { id: 'low-stock-alerts', route: APP_ROUTES.lowStockAlerts, icon: 'lowStockAlerts', labelKey: 'lowStockAlerts', permission: 'inventory.view', group: 'operations' },
-  { id: 'stock-valuation', route: APP_ROUTES.stockValuation, icon: 'stockValuation', labelKey: 'stockValuation', permission: 'inventory.ledger.view', group: 'operations' },
-  { id: 'costing-center', route: APP_ROUTES.costingCenter, icon: 'costingCenter', labelKey: 'costingCenter', permission: 'reports.costing', group: 'finance' },
   { id: 'branches', route: APP_ROUTES.branches, icon: 'branches', labelKey: 'branches', permission: 'branches.manage', group: 'operations' },
-  { id: 'purchases', route: APP_ROUTES.purchases, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'operations' },
-  { id: 'purchase-requests', route: APP_ROUTES.purchaseRequests, icon: 'purchases', labelKey: 'purchaseRequests', permission: 'purchases.requests', group: 'operations' },
-  { id: 'rfqs', route: APP_ROUTES.rfqs, icon: 'purchases', labelKey: 'rfqs', permission: 'purchases.rfq', group: 'operations' },
-  { id: 'receiving', route: APP_ROUTES.receiving, icon: 'purchases', labelKey: 'receiving', permission: 'purchases.receiving', group: 'operations' },
   { id: 'customers', route: APP_ROUTES.customers, icon: 'customers', labelKey: 'customers', permission: 'customers.view', group: 'people' },
   { id: 'suppliers', route: APP_ROUTES.suppliers, icon: 'suppliers', labelKey: 'suppliers', permission: 'suppliers.view', group: 'people' },
+
   { id: 'expenses', route: APP_ROUTES.expenses, icon: 'expenses', labelKey: 'expenses', permission: 'expenses.view', group: 'finance' },
+  { id: 'costing-center', route: APP_ROUTES.costingCenter, icon: 'costingCenter', labelKey: 'costingCenter', permission: 'reports.costing', group: 'finance' },
   { id: 'accounts', route: APP_ROUTES.accounts, icon: 'accounts', labelKey: 'chartOfAccounts', permission: 'accounts.view', group: 'finance' },
   { id: 'payments', route: APP_ROUTES.payments, icon: 'payments', labelKey: 'receivePayment', permission: 'accounts.view', group: 'finance' },
   { id: 'journal', route: APP_ROUTES.journal, icon: 'journal', labelKey: 'journalEntries', permission: 'accounts.view', group: 'finance' },
@@ -58,6 +54,7 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'sales', route: APP_ROUTES.sales, icon: 'sales', labelKey: 'salesInvoices', permission: 'sales.view', group: 'finance' },
   { id: 'shifts', route: APP_ROUTES.shifts, icon: 'shifts', labelKey: 'shifts', permission: 'shifts.view', group: 'finance' },
   { id: 'reports', route: APP_ROUTES.reports, icon: 'reports', labelKey: 'reports', permission: 'reports.view', group: 'finance' },
+
   { id: 'users', route: APP_ROUTES.users, icon: 'users', labelKey: 'users', permission: 'users.view', group: 'admin' },
   { id: 'subscriptions-admin', route: APP_ROUTES.subscriptions, icon: 'subscriptionsAdmin', labelKey: 'subscriptionsAdmin', group: 'admin', superAdminOnly: true },
   { id: 'audit-log', route: APP_ROUTES.auditLog, icon: 'auditLog', labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
