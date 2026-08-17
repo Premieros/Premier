@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle, FileDown, Printer } from 'lucide-react';
-import { supabase } from '@/api';
+import { supabase, costing } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Card } from '@/components/PageHeader';
@@ -378,39 +378,26 @@ export function ReportsPage() {
         setChartData(rows.slice(0, 10).map((p) => ({ name: String(p.name), value: Number(p.quantity) })));
         setSummary({ total: rows.length, count: rows.length });
       } else if (reportType === 'recipe_costs') {
-        let compQuery = supabase.from('product_components').select('product_id, component_product_id, quantity, product:products(branch_id)');
-        let prodQuery = supabase.from('products').select('id, name, sale_price, cost_price, product_type');
-        if (effectiveBranchFilter) {
-          compQuery = compQuery.eq('product.branch_id', effectiveBranchFilter);
-          prodQuery = prodQuery.eq('branch_id', effectiveBranchFilter);
-        }
-        if (filters.product) {
-          compQuery = compQuery.eq('product_id', filters.product);
-          prodQuery = prodQuery.eq('id', filters.product);
-        }
-        if (filters.category) {
-          compQuery = compQuery.eq('product.category_id', filters.category);
-          prodQuery = prodQuery.eq('category_id', filters.category);
-        }
-        const [rec, prod] = await Promise.all([compQuery, prodQuery]);
-        const productsById = new Map<string, Record<string, unknown>>();
-        (prod.data || []).forEach((p) => productsById.set(p.id as string, p));
-        const costMap = new Map<string, number>();
-        (rec.data || []).forEach((r: Record<string, unknown>) => {
-          const pid = r.product_id as string;
-          const cp = productsById.get(r.component_product_id as string) as { cost_price?: number } | undefined;
-          costMap.set(pid, (costMap.get(pid) || 0) + Number(cp?.cost_price || 0) * Number(r.quantity));
-        });
-        const rows = Array.from(costMap.entries()).map(([pid, cost]) => {
-          const p = productsById.get(pid) as { name?: string; sale_price?: number } | undefined;
-          const sale = Number(p?.sale_price || 0);
-          return {
-            [lang === 'ar' ? 'المنتج' : 'Product']: p?.name || '-',
-            [lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost']: cost,
-            [lang === 'ar' ? 'سعر البيع' : 'Sale Price']: sale,
-            [lang === 'ar' ? 'الهامش' : 'Margin']: sale - cost,
-          };
-        }).sort((a, b) => Number(Object.values(b)[3]) - Number(Object.values(a)[3]));
+        // Manufacturing model (recipes -> recipe_items -> raw_materials), via
+        // the branch-scoped get_costing_overview RPC (074). Supersedes the
+        // legacy product_components BOM report. Actual recipe cost is the
+        // branch-scoped recipe cost computed by the RPC.
+        const res = await costing.getOverview({ p_branch_id: effectiveBranchFilter });
+        if (res.error) { setData([]); setChartData([]); setSummary({ total: 0, count: 0 }); return; }
+        const catName = filters.category
+          ? options.categories.find((c) => c.id === filters.category)?.name ?? filters.category
+          : '';
+        const rows = (res.data || [])
+          .filter((r) => r.recipe_item_count > 0)
+          .filter((r) => !filters.product || r.product_id === filters.product)
+          .filter((r) => !catName || r.category_name === catName)
+          .map((r) => ({
+            [lang === 'ar' ? 'المنتج' : 'Product']: r.product_name,
+            [lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost']: Number(r.actual_cost),
+            [lang === 'ar' ? 'سعر البيع' : 'Sale Price']: Number(r.sale_price),
+            [lang === 'ar' ? 'الهامش' : 'Margin']: Number(r.sale_price) - Number(r.actual_cost),
+          }))
+          .sort((a, b) => Number(Object.values(b)[3]) - Number(Object.values(a)[3]));
         setData(rows);
         setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[3]) })));
         setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[1]), 0), count: rows.length });

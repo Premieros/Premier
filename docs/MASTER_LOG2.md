@@ -392,3 +392,64 @@ The original parity report ("Production at ~022–035, 33 RPCs + 2 tables missin
 - Commit `a3c1dc7` `feat(reorder): P0 inventory replenishment - reorder policy fields + reorder-from-alerts purchase request` pushed to `origin/development/master-log2`.
 - GitHub Actions run 31968999936 — **conclusion success** (`verify` 1m14s → `db` 37s → `e2e` 1m27s → `parity` 29s → `deploy` 9s). Run URL: https://github.com/Premieros/Premier/actions/runs/31968999936
 - Pages deployment created; live site: https://premieros.github.io/Premier/
+
+## P0 item 2: Product/Recipe Costing — comprehensive bug-fix audit (2026-08-17)
+
+### SCOPE
+Full audit of all 80 applied migrations (001–080) + frontend contract tests. Identified and fixed 6 bugs discovered during integration testing and security review.
+
+### BUGS FOUND AND FIXED
+
+#### B-1 (P0): `get_order_margin` — ambiguous `branch_id` (079)
+- **Origin**: `074_product_costing.sql` — `RETURNS TABLE` includes `branch_id`, making `SELECT branch_id INTO v_user_branch FROM public.users` ambiguous for non-admin callers.
+- **Impact**: Every non-admin call to order margin fails with `column reference "branch_id" is ambiguous`.
+- **Fix**: `079_fix_cost_order_margin_branch.sql` — `SELECT u.branch_id INTO ... FROM public.users u WHERE u.id = auth.uid()`.
+
+#### B-2 (P0): `get_low_stock_alerts` — ambiguous `branch_id` (080) + numeric type mismatch (081)
+- **Origin**: `071_inventory_policy_reorder.sql` — identical ambiguity pattern as B-1.
+- **Impact**: Every non-admin inventory alert call fails.
+- **Fix**: `080_fix_ambiguous_branch_and_grants.sql` (qualified `u.branch_id`) + `081_fix_low_stock_numeric_cast.sql` (cast `low_stock_threshold` integer → `numeric(14,4)` to match `RETURNS TABLE`).
+
+#### B-3 (P0): `get_expiring_batches` — ambiguous `branch_id` (080)
+- **Origin**: `073_batch_expiry.sql` — same pattern.
+- **Fix**: included in `080`.
+
+#### B-4 (P1): `get_audit_trail` — no GRANT EXECUTE to authenticated (080)
+- **Origin**: `044_rbac_hardening.sql` — function created but never granted to `authenticated`. Audit trail page broken for all non-superusers.
+- **Fix**: `GRANT EXECUTE ON FUNCTION public.get_audit_trail(...) TO authenticated` in `080`.
+
+#### B-5 (P2): `send_to_kitchen` / `set_order_status` — anon access via PUBLIC (080 + 082)
+- **Origin**: `048_kitchen_sends.sql` — PostgreSQL grants EXECUTE to PUBLIC by default (`=X/postgres` in ACL). Initial `REVOKE FROM anon` in `080` was ineffective because `anon` inherits EXECUTE from PUBLIC.
+- **Impact**: Anonymous API callers could bypass branch isolation and send orders to kitchen or change order status.
+- **Fix**: `082_revoke_public_kitchen_security.sql` — `REVOKE EXECUTE ... FROM PUBLIC` + re-GRANT to `authenticated` + `service_role` only. Verified: `has_function_privilege('anon',...) = false`, `authenticated = true`, `service_role = true`.
+
+#### B-6 (P1): ReportsPage recipe_costs — category filter UUID vs name mismatch
+- **Origin**: `ReportsPage.tsx` — `filters.category` holds a UUID (from dropdown `value={c.id}`) but compared against `r.category_name` (a text string). Filter could never match.
+- **Fix**: Resolve category UUID → name via `options.categories.find(c => c.id === filters.category)?.name` before comparison.
+
+### MIGRATIONS APPLIED (local cluster)
+| # | File | What | Status |
+|---|------|------|--------|
+| 079 | `079_fix_cost_order_margin_branch.sql` | `get_order_margin` branch_id | Applied |
+| 080 | `080_fix_ambiguous_branch_and_grants.sql` | `get_low_stock_alerts` + `get_expiring_batches` ambiguity + `get_audit_trail` GRANT + anon REVOKE | Applied |
+| 081 | `081_fix_low_stock_numeric_cast.sql` | `get_low_stock_alerts` numeric cast | Applied |
+| 082 | `082_revoke_public_kitchen_security.sql` | `REVOKE FROM PUBLIC` for kitchen/order-status | Applied |
+
+### TESTS
+- **Unit tests**: 205 passed (19 files) — 0 failures.
+- **Integration tests**: 180 passed (14 files) — 0 failures.
+- **TypeScript**: `tsc --noEmit` clean, 0 errors.
+- **API contract**: `gen-contract --check` OK — 90 RPCs, 38 tables, up to date.
+
+### SECURITY VERIFICATION (psql direct)
+```
+anon → send_to_kitchen: BLOCKED
+anon → set_order_status: BLOCKED
+authenticated → send_to_kitchen: ALLOWED
+authenticated → set_order_status: ALLOWED
+service_role → send_to_kitchen: ALLOWED
+service_role → set_order_status: ALLOWED
+```
+
+### FRONTEND FIX
+- `src/features/reporting/pages/ReportsPage.tsx` — category filter for `recipe_costs` now resolves UUID to name before comparing with `r.category_name`.
