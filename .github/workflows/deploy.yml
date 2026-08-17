@@ -28,8 +28,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bnNkc25jbWxzcm9pc3dnb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
 
       - uses: actions/upload-pages-artifact@v3
         with:
