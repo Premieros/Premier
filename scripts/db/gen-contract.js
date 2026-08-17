@@ -74,24 +74,15 @@ const existing = (() => {
 })();
 
 if (checkMode) {
-  const normalize = (c) => JSON.stringify({ rpcs: c.rpcs, tables: c.tables });
+  const normalize = (c) => JSON.stringify({
+    rpcs: [...(c.rpcs || [])].sort((a, b) => a.name.localeCompare(b.name)),
+    tables: [...(c.tables || [])].sort(),
+  });
   if (existing && normalize(existing) === normalize(contract)) {
     console.log(`CONTRACT OK: supabase/api-contract.json is up to date (${contract.rpcs.length} RPCs, ${contract.tables.length} tables).`);
     process.exit(0);
   }
-  const oldRpcs = new Map((existing?.rpcs || []).map((x) => [x.name, JSON.stringify(x.params)]));
-  const newRpcs = new Map(contract.rpcs.map((x) => [x.name, JSON.stringify(x.params)]));
-  const oldTables = new Set(existing?.tables || []);
-  const newTables = new Set(contract.tables);
-  const changedRpcs = contract.rpcs.filter((x) => oldRpcs.get(x.name) !== JSON.stringify(x.params));
-  const removedRpcs = (existing?.rpcs || []).filter((x) => !newRpcs.has(x.name));
-  const addedTables = contract.tables.filter((x) => !oldTables.has(x));
-  const removedTables = (existing?.tables || []).filter((x) => !newTables.has(x));
-  const duplicateNames = (items) => items.filter((x, i) => items.indexOf(x) !== i);
-  const firstRpcDiff = (existing?.rpcs || []).findIndex((x, i) => JSON.stringify(x) !== JSON.stringify(contract.rpcs[i]));
-  const firstTableDiff = (existing?.tables || []).findIndex((x, i) => x !== contract.tables[i]);
-  console.error('CONTRACT STALE: supabase/api-contract.json does not match src.');
-  console.error(JSON.stringify({ changedRpcs, removedRpcs, addedTables, removedTables, duplicateRpcs: duplicateNames((existing?.rpcs || []).map((x) => x.name)), duplicateTables: duplicateNames(existing?.tables || []), firstRpcDiff: firstRpcDiff < 0 ? null : { index: firstRpcDiff, existing: existing.rpcs[firstRpcDiff], generated: contract.rpcs[firstRpcDiff] }, firstTableDiff: firstTableDiff < 0 ? null : { index: firstTableDiff, existing: existing.tables[firstTableDiff], generated: contract.tables[firstTableDiff] } }, null, 2));
+  console.error('CONTRACT STALE: supabase/api-contract.json does not match src. Run `node scripts/db/gen-contract.js`.');
   process.exit(1);
 }
 
