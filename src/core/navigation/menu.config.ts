@@ -2,35 +2,35 @@ import type { Permission } from '@/lib/permissions';
 import type { TranslationKey } from '@/lib/i18n';
 import { APP_ROUTES, type AppRoute } from './routes';
 
-export type MenuGroup = 'main' | 'catalog' | 'operations' | 'people' | 'finance' | 'admin';
+export type MenuGroup = 'main' | 'catalog' | 'operations' | 'centers' | 'people' | 'finance' | 'admin';
 export type MenuIcon =
-  | 'dashboard' | 'subscription' | 'pos' | 'operationsCenter' | 'inventoryCenter' | 'procurementCenter' | 'manufacturingCenter'
-  | 'products' | 'categories' | 'components' | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
-  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation' | 'lowStockAlerts' | 'costingCenter' | 'branches'
-  | 'purchases' | 'customers' | 'suppliers' | 'expenses' | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation'
-  | 'financialReports' | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
+  | 'dashboard' | 'subscription' | 'pos' | 'products' | 'categories' | 'components' | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
+  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation' | 'lowStockAlerts' | 'costingCenter' | 'branches' | 'purchases' | 'customers' | 'suppliers' | 'expenses'
+  | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation' | 'financialReports' | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
 
 export interface MenuItemConfig { id: string; route: AppRoute; icon: MenuIcon; labelKey: TranslationKey; permission?: Permission; group: MenuGroup; superAdminOnly?: boolean; }
 
 export const MENU_GROUPS: Record<MenuGroup, { ar: string; en: string }> = {
   main: { ar: 'الرئيسية', en: 'Main' }, catalog: { ar: 'الكتالوج', en: 'Catalog' }, operations: { ar: 'العمليات', en: 'Operations' },
-  people: { ar: 'الأطراف', en: 'People' }, finance: { ar: 'المالية', en: 'Finance' }, admin: { ar: 'الإدارة', en: 'Admin' },
+  centers: { ar: 'مراكز الإدارة', en: 'Management Centers' }, people: { ar: 'الأطراف', en: 'People' }, finance: { ar: 'المالية', en: 'Finance' }, admin: { ar: 'الإدارة', en: 'Admin' },
 };
 
 export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'dashboard', route: APP_ROUTES.dashboard, icon: 'dashboard', labelKey: 'dashboard', permission: 'dashboard.view', group: 'main' },
   { id: 'subscription', route: APP_ROUTES.subscription, icon: 'subscription', labelKey: 'mySubscription', group: 'main' },
   { id: 'pos', route: APP_ROUTES.pos, icon: 'pos', labelKey: 'pos', permission: 'pos.sell', group: 'main' },
-  { id: 'operations-center', route: APP_ROUTES.operationsCenter, icon: 'operationsCenter', labelKey: 'operationsCenter', permission: 'dashboard.view', group: 'operations' },
-  { id: 'inventory-center', route: APP_ROUTES.inventoryCenter, icon: 'inventoryCenter', labelKey: 'inventoryCenter', permission: 'inventory.view', group: 'operations' },
-  { id: 'procurement-center', route: APP_ROUTES.procurementCenter, icon: 'procurementCenter', labelKey: 'procurementCenter', permission: 'purchases.view', group: 'operations' },
-  { id: 'manufacturing-center', route: APP_ROUTES.manufacturingCenter, icon: 'manufacturingCenter', labelKey: 'manufacturingCenter', permission: 'production.view', group: 'operations' },
+
+  { id: 'operations-center', route: APP_ROUTES.operationsCenter, icon: 'pos', labelKey: 'pos', permission: 'dashboard.view', group: 'centers' },
+  { id: 'inventory-center', route: APP_ROUTES.inventoryCenter, icon: 'inventory', labelKey: 'inventory', permission: 'inventory.view', group: 'centers' },
+  { id: 'procurement-center', route: APP_ROUTES.procurementCenter, icon: 'purchases', labelKey: 'purchases', permission: 'purchases.view', group: 'centers' },
+  { id: 'manufacturing-center', route: APP_ROUTES.manufacturingCenter, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'centers' },
 
   { id: 'products', route: APP_ROUTES.products, icon: 'products', labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { id: 'categories', route: APP_ROUTES.categories, icon: 'categories', labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { id: 'components', route: APP_ROUTES.components, icon: 'components', labelKey: 'components', permission: 'components.view', group: 'catalog' },
   { id: 'raw-materials', route: APP_ROUTES.rawMaterials, icon: 'rawMaterials', labelKey: 'rawMaterials', permission: 'raw_materials.view', group: 'catalog' },
   { id: 'recipes', route: APP_ROUTES.recipes, icon: 'recipes', labelKey: 'recipes', permission: 'recipes.view', group: 'catalog' },
+
   { id: 'inventory', route: APP_ROUTES.inventory, icon: 'inventory', labelKey: 'inventory', permission: 'inventory.view', group: 'operations' },
   { id: 'warehouses', route: APP_ROUTES.warehouses, icon: 'warehouses', labelKey: 'warehouses', permission: 'warehouses.view', group: 'operations' },
   { id: 'production', route: APP_ROUTES.production, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'operations' },
