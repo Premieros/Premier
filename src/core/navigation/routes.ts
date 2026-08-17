@@ -12,6 +12,7 @@ export const APP_ROUTES = {
   subscriptions: '/subscriptions',
   pos: '/pos',
   operationsCenter: '/operations',
+  inventoryCenter: '/inventory-center',
   floorPlan: '/floor-plan',
   products: '/products',
   categories: '/categories',
