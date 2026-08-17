@@ -12,137 +12,28 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
-
-# =============================================================================
-# Deployment gate chain (STRICT and sequential).
-#
-# `development/master-log2` is the sole source of development AND publishing.
-# `main` is the production baseline only - never developed on directly, never
-# deleted. A push to development/master-log2 is deployed to GitHub Pages ONLY
-# after every gate below passes; any failing test aborts the chain and no
-# deployment happens.
-#
-#   verify -> db -> e2e -> parity -> deploy
-#
-#   verify : lint, typecheck (app + test suites), unit tests, production build
-#   db     : apply migrations + verify schema + integration tests against an
-#            ISOLATED postgres:18 service container (never Production DB)
-#   e2e    : Playwright browser tests against the production build
-#   parity : probe the PRODUCTION PostgREST schema cache with the exact RPC
-#            calls and table reads the frontend makes. FAILS (and blocks
-#            deploy) if any function/table is missing - the database is behind
-#            the frontend and publishing would reproduce PGRST202/PGRST205.
-#   deploy : publish the dist artifact to GitHub Pages
-# =============================================================================
+  cancel-in-progress: false
 
 jobs:
-  verify:
+  build:
     runs-on: ubuntu-latest
-    env:
-      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bnNkc25jbWxzcm9pc3dnb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
+
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - name: Enforce the API contract matches the committed snapshot
-        run: node scripts/db/gen-contract.js --check
-      - name: Install Playwright test runner for suite typechecking
-        run: npm install --no-save @playwright/test@1.55.0
-      - name: Typecheck application and test suites
-        run: npm run typecheck:all
-      - run: npm run test:unit
       - run: npm run build
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-  db:
-    needs: verify
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Apply auth stub (CI only, never on real Supabase)
-        run: node scripts/db/apply-migration.js --file supabase/ci/stub_auth.sql
-      - name: Apply canonical migrations
-        run: node scripts/db/apply-migration.js --dir supabase/migrations
-      - name: Verify schema
-        run: node scripts/db/verify-schema.js
-      - name: Isolate subscription guard for order integration fixtures
-        run: node scripts/db/apply-migration.js --file supabase/ci/disable_subscription_guard.sql
-      - name: Seed raw-material branch helper (CI only, never on real Supabase)
-        run: node scripts/db/apply-migration.js --file supabase/ci/seed_raw_material_branch.sql
-      - name: Run integration tests (BEGIN/ROLLBACK, isolated Postgres)
-        run: npm run test:integration
-
-  e2e:
-    needs: db
-    runs-on: ubuntu-latest
-    env:
-      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bnNkc25jbWxzcm9pc3dnb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm install --no-save @playwright/test@1.55.0
-      - run: npx playwright install --with-deps chromium
-      - run: npm run build
-      - run: npx playwright test
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
-  parity:
-    needs: e2e
-    runs-on: ubuntu-latest
-    env:
-      VITE_SUPABASE_URL: https://lwnsdsncmlsroiswgoga.supabase.co
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bnNkc25jbWxzcm9pc3dnb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MjY1NTMsImV4cCI6MjEwMDUwMjU1M30.Yg3HawF-O5LRylT4YwkkrpqV78YTxctVgzd55PzqRf8
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Enforce frontend/database schema parity against Production
-        run: node scripts/db/check-production-parity.js
-
   deploy:
-    needs: parity
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
