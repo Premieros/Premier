@@ -84,7 +84,16 @@ if (checkMode) {
     console.log(`CONTRACT OK: supabase/api-contract.json is up to date (${contract.rpcs.length} RPCs, ${contract.tables.length} tables).`);
     process.exit(0);
   }
-  console.error('CONTRACT STALE: supabase/api-contract.json does not match src. Run `node scripts/db/gen-contract.js`.');
+  const oldRpcs = new Map((existing?.rpcs || []).map((x) => [x.name, JSON.stringify(x.params)]));
+  const newRpcs = new Map(contract.rpcs.map((x) => [x.name, JSON.stringify(x.params)]));
+  const oldTables = new Set(existing?.tables || []);
+  const newTables = new Set(contract.tables);
+  const changedRpcs = contract.rpcs.filter((x) => oldRpcs.get(x.name) !== JSON.stringify(x.params));
+  const removedRpcs = (existing?.rpcs || []).filter((x) => !newRpcs.has(x.name));
+  const addedTables = contract.tables.filter((x) => !oldTables.has(x));
+  const removedTables = (existing?.tables || []).filter((x) => !newTables.has(x));
+  console.error('CONTRACT STALE: supabase/api-contract.json does not match src.');
+  console.error(JSON.stringify({ changedRpcs, removedRpcs, addedTables, removedTables, counts: { rpc: [existing?.rpcs?.length || 0, contract.rpcs.length], tables: [existing?.tables?.length || 0, contract.tables.length] } }, null, 2));
   process.exit(1);
 }
 
