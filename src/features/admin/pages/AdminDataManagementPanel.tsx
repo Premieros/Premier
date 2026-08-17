@@ -26,6 +26,8 @@ const SECTIONS = [
   ['expenses', 'المصروفات', 'Expenses'],
 ] as const;
 
+type RpcErrorData = { error?: string };
+
 export function AdminDataManagementPanel() {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -45,7 +47,7 @@ export function AdminDataManagementPanel() {
     setBusy(null);
     setConfirm(null);
     if (error || !data?.success) {
-      show(error?.message || (data as any)?.error || (ar ? 'فشل حذف البيانات' : 'Delete failed'), 'error');
+      show(error?.message || (data as RpcErrorData | null)?.error || (ar ? 'فشل حذف البيانات' : 'Delete failed'), 'error');
       return;
     }
     await logAudit('delete', 'admin_data', branchId, { section });
@@ -58,7 +60,7 @@ export function AdminDataManagementPanel() {
     const { data, error } = await admin.seedAllDemoData({ p_branch_id: branchId });
     setBusy(null);
     if (error || !data?.success) {
-      show(error?.message || (data as any)?.error || (ar ? 'فشل إنشاء البيانات التجريبية' : 'Demo seeding failed'), 'error');
+      show(error?.message || (data as RpcErrorData | null)?.error || (ar ? 'فشل إنشاء البيانات التجريبية' : 'Demo seeding failed'), 'error');
       return;
     }
     await logAudit('create', 'admin_data', branchId, { action: 'seed_all', section_count: data.section_count });
