@@ -19,7 +19,6 @@ import { fileURLToPath } from 'node:url';
 const __dirname = resolve(fileURLToPath(import.meta.url), '..');
 const ROOT = resolve(__dirname, '..', '..');
 const CONTRACT_FILE = join(ROOT, 'supabase', 'api-contract.json');
-
 const checkMode = process.argv.includes('--check');
 
 function walk(dir, out = []) {
@@ -71,11 +70,7 @@ const contract = {
 };
 
 const existing = (() => {
-  try {
-    return JSON.parse(readFileSync(CONTRACT_FILE, 'utf8'));
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(readFileSync(CONTRACT_FILE, 'utf8')); } catch { return null; }
 })();
 
 if (checkMode) {
@@ -92,8 +87,11 @@ if (checkMode) {
   const removedRpcs = (existing?.rpcs || []).filter((x) => !newRpcs.has(x.name));
   const addedTables = contract.tables.filter((x) => !oldTables.has(x));
   const removedTables = (existing?.tables || []).filter((x) => !newTables.has(x));
+  const duplicateNames = (items) => items.filter((x, i) => items.indexOf(x) !== i);
+  const firstRpcDiff = (existing?.rpcs || []).findIndex((x, i) => JSON.stringify(x) !== JSON.stringify(contract.rpcs[i]));
+  const firstTableDiff = (existing?.tables || []).findIndex((x, i) => x !== contract.tables[i]);
   console.error('CONTRACT STALE: supabase/api-contract.json does not match src.');
-  console.error(JSON.stringify({ changedRpcs, removedRpcs, addedTables, removedTables, counts: { rpc: [existing?.rpcs?.length || 0, contract.rpcs.length], tables: [existing?.tables?.length || 0, contract.tables.length] } }, null, 2));
+  console.error(JSON.stringify({ changedRpcs, removedRpcs, addedTables, removedTables, duplicateRpcs: duplicateNames((existing?.rpcs || []).map((x) => x.name)), duplicateTables: duplicateNames(existing?.tables || []), firstRpcDiff: firstRpcDiff < 0 ? null : { index: firstRpcDiff, existing: existing.rpcs[firstRpcDiff], generated: contract.rpcs[firstRpcDiff] }, firstTableDiff: firstTableDiff < 0 ? null : { index: firstTableDiff, existing: existing.tables[firstTableDiff], generated: contract.tables[firstTableDiff] } }, null, 2));
   process.exit(1);
 }
 
