@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   subscription: '/subscription',
   subscriptions: '/subscriptions',
   pos: '/pos',
+  operationsCenter: '/operations',
   floorPlan: '/floor-plan',
   products: '/products',
   categories: '/categories',
