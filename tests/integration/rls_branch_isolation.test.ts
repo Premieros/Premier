@@ -646,7 +646,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
 
   describe('global reference tables (open read, gated write)', () => {
     t('staff can read global master data', async () => {
-      for (const table of ['roles', 'units', 'raw_materials', 'branches']) {
+      for (const table of ['roles', 'measurement_units', 'raw_materials', 'branches']) {
         const res = await runProbe(client, `${table} SELECT as cashier`, cashierId(), `SELECT count(*)::int AS c FROM ${table}`, 'ok');
         expect(Number(res.rows[0].c)).toBeGreaterThanOrEqual(1);
       }
@@ -654,7 +654,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
 
     t('writes to master data are admin-only', async () => {
       const ins: [string, string][] = [
-        ['units', `INSERT INTO public.units (code, name) VALUES ('${uniq('U')}', 'Probe')`],
+        ['measurement_units', `INSERT INTO public.measurement_units (code, name) VALUES ('${uniq('U')}', 'Probe')`],
         ['raw_materials', `INSERT INTO public.raw_materials (code, name) VALUES ('${uniq('RM')}', 'Probe')`],
         ['roles', `INSERT INTO public.roles (role, name_ar, name_en, permissions) VALUES ('${uniq('R')}', 'X', 'Y', '[]'::jsonb)`],
         ['branches', `INSERT INTO public.branches (name) VALUES ('${uniq('B')}')`],

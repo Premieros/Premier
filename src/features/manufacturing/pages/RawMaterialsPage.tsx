@@ -71,7 +71,7 @@ export function RawMaterialsPage() {
       const [inv, b, u, br] = await Promise.all([
         supabase.from('raw_material_inventory').select('*, raw_material:raw_materials(*), branch:branches(*)').order('updated_at', { ascending: false }),
         supabase.from('raw_material_batches').select('*, raw_material:raw_materials(*), branch:branches(*)').order('created_at', { ascending: false }),
-        supabase.from('units').select('*').eq('is_active', true).order('name'),
+        supabase.from('measurement_units').select('*').eq('is_active', true).order('name'),
         supabase.from('branches').select('*').eq('is_active', true).order('name'),
       ]);
       setInventory((inv.data as RawMaterialInventory[]) || []);
