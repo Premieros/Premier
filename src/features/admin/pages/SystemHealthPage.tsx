@@ -4,6 +4,7 @@ import { supabase } from '@/api';
 import { Card } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
 import { useLanguage } from '@/context/LanguageContext';
+import { AdminDataManagementPanel } from './AdminDataManagementPanel';
 
 type Status = 'ok' | 'warning' | 'error' | 'checking';
 type Check = { key: string; ar: string; en: string; status: Status; detail: string; count?: number };
@@ -51,9 +52,7 @@ export function SystemHealthPage() {
 
     const results = await Promise.all(TARGETS.map(async ([key, arName, enName]) => {
       const { count, error } = await supabase.from(key).select('*', { count: 'exact', head: true });
-      if (error) {
-        return { key, ar: arName, en: enName, status: 'error' as Status, detail: error.message };
-      }
+      if (error) return { key, ar: arName, en: enName, status: 'error' as Status, detail: error.message };
       return { key, ar: arName, en: enName, status: 'ok' as Status, detail: ar ? 'الوصول إلى الجدول يعمل' : 'Table access is working', count: count ?? 0 };
     }));
 
@@ -100,7 +99,9 @@ export function SystemHealthPage() {
         </div>
       </Card>
 
-      <Card className="p-5"><div className="flex items-start gap-3"><Activity className="mt-0.5 h-5 w-5 text-brand-600" /><div><h3 className="font-bold">{ar ? 'ملاحظة' : 'Note'}</h3><p className="mt-1 text-sm text-slate-500">{ar ? 'هذه المرحلة تقيس الوصول والبنية فقط. لن نعرض نجاح عملية تجارية أو سلامة RLS إلا بعد إضافة اختبارات مخصصة لها في المرحلة التالية.' : 'This phase checks access and structure only. Business-operation and RLS correctness will be tested with dedicated checks in the next phase.'}</p></div></div></Card>
+      <AdminDataManagementPanel />
+
+      <Card className="p-5"><div className="flex items-start gap-3"><Activity className="mt-0.5 h-5 w-5 text-brand-600" /><div><h3 className="font-bold">{ar ? 'ملاحظة' : 'Note'}</h3><p className="mt-1 text-sm text-slate-500">{ar ? 'هذه المرحلة تقيس الوصول والبنية فقط. أدوات إدارة البيانات أعلاه مقيدة بـ Super Admin وتعمل على الفرع المحدد فقط.' : 'This page checks access and structure. The data-management tools above are restricted to Super Admin and operate on the selected branch only.'}</p></div></div></Card>
     </div>
   );
 }
