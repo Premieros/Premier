@@ -4,17 +4,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
 import { Button } from '@/components/Button';
 import { Select } from '@/components/Input';
-import { supabase } from '@/api';
-import type { KitchenQueueItem } from '@/lib/types';
-
-const STATIONS = [
-  { value: 'main', ar: 'الرئيسي', en: 'Main' },
-  { value: 'grill', ar: 'المشويات', en: 'Grill' },
-  { value: 'salad', ar: 'السلط', en: 'Salad' },
-  { value: 'drinks', ar: 'المشروبات', en: 'Drinks' },
-  { value: 'dessert', ar: 'الحلويات', en: 'Dessert' },
-  { value: 'fryer', ar: 'المقالي', en: 'Fryer' },
-] as const;
+import { catalog } from '@/api/domains/catalog';
+import type { KitchenQueueItem, KitchenStation } from '@/lib/types';
 
 function elapsedColor(seconds: number): string {
   if (seconds > 600) return 'text-red-600 font-bold';
@@ -33,19 +24,27 @@ export function KitchenDisplayPage() {
   const ar = lang === 'ar';
   const [station, setStation] = useState('');
   const [items, setItems] = useState<KitchenQueueItem[]>([]);
+  const [stations, setStations] = useState<KitchenStation[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadStations = useCallback(async () => {
+    try {
+      const data = await catalog.listKitchenStations();
+      setStations((data ?? []) as KitchenStation[]);
+    } catch { /* silent */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_kitchen_queue', { p_station: station || null });
-      if (error) throw error;
+      const data = await catalog.getKitchenQueue(station || undefined);
       setItems((data ?? []) as KitchenQueueItem[]);
     } catch { /* silent */ }
     setLoading(false);
   }, [station]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void loadStations(); }, [loadStations]);
+  useEffect(() => { void load(); }, [load]);
 
   // Auto-refresh every 15 seconds
   useEffect(() => {
@@ -53,7 +52,11 @@ export function KitchenDisplayPage() {
     return () => clearInterval(id);
   }, [load]);
 
-  const stationName = (v: string) => STATIONS.find(s => s.value === v)?.[ar ? 'ar' : 'en'] ?? v;
+  const stationName = (v: string) => {
+    const s = stations.find(st => st.code === v);
+    if (s) return ar ? s.name_ar : s.name_en;
+    return v;
+  };
 
   return (
     <DesignSurface testId="kitchen-display">
@@ -62,7 +65,7 @@ export function KitchenDisplayPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Select value={station} onChange={e => setStation(e.target.value)} className="w-44">
             <option value="">{ar ? 'كل المحطات' : 'All Stations'}</option>
-            {STATIONS.map(s => <option key={s.value} value={s.value}>{ar ? s.ar : s.en}</option>)}
+            {stations.filter(s => s.is_active).map(s => <option key={s.code} value={s.code}>{ar ? s.name_ar : s.name_en}</option>)}
           </Select>
           <Button onClick={load} variant="outline"><RefreshCw className="h-4 w-4" /> {ar ? 'تحديث' : 'Refresh'}</Button>
           <span className="text-sm text-ui-muted">{items.length} {ar ? 'طلب' : 'orders'}</span>

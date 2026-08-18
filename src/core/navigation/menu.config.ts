@@ -5,7 +5,7 @@ import { APP_ROUTES, type AppRoute } from './routes';
 export type MenuGroup = 'main' | 'catalog' | 'operations' | 'centers' | 'people' | 'finance' | 'admin';
 export type MenuIcon =
   | 'dashboard' | 'subscription' | 'pos' | 'products' | 'categories' | 'components' | 'rawMaterials' | 'recipes' | 'inventory' | 'warehouses' | 'production' | 'transfers'
-  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation'   | 'lowStockAlerts' | 'inventoryUnits' | 'wasteCenter' | 'kitchenDisplay' | 'costingCenter' | 'branches' | 'purchases' | 'customers' | 'suppliers' | 'expenses'
+  | 'inventoryLedger' | 'stockCounts' | 'inventoryBatches' | 'stockValuation'   | 'lowStockAlerts' | 'inventoryUnits' | 'wasteCenter' | 'kitchenDisplay' | 'kitchenStations' | 'costingCenter' | 'branches' | 'purchases' | 'customers' | 'suppliers' | 'expenses'
   | 'accounts' | 'payments' | 'journal' | 'treasury' | 'reconciliation' | 'financialReports' | 'sales' | 'shifts' | 'reports' | 'users' | 'subscriptionsAdmin' | 'auditLog' | 'settings';
 
 export interface MenuItemConfig { id: string; route: AppRoute; icon: MenuIcon; labelKey: TranslationKey; permission?: Permission; group: MenuGroup; superAdminOnly?: boolean; }
@@ -31,6 +31,7 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'manufacturing-center', route: APP_ROUTES.manufacturingCenter, icon: 'production', labelKey: 'productionOrders', permission: 'production.view', group: 'centers' },
   { id: 'waste-center', route: APP_ROUTES.wasteCenter, icon: 'wasteCenter', labelKey: 'wasteCenter', permission: 'production.waste', group: 'centers' },
   { id: 'kitchen-display', route: APP_ROUTES.kitchenDisplay, icon: 'kitchenDisplay', labelKey: 'kitchenDisplay', permission: 'pos.sell', group: 'centers' },
+  { id: 'kitchen-stations', route: APP_ROUTES.kitchenStations, icon: 'kitchenStations', labelKey: 'kitchenStations', permission: 'settings.manage', group: 'admin' },
   { id: 'products', route: APP_ROUTES.products, icon: 'products', labelKey: 'products', permission: 'products.view', group: 'catalog' },
   { id: 'categories', route: APP_ROUTES.categories, icon: 'categories', labelKey: 'categories', permission: 'categories.view', group: 'catalog' },
   { id: 'components', route: APP_ROUTES.components, icon: 'components', labelKey: 'components', permission: 'components.view', group: 'catalog' },

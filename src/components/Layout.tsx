@@ -4,7 +4,7 @@ import {
   Activity, AlertTriangle, ArrowLeftRight, BarChart3, BadgeDollarSign, Boxes, BookOpenText, Building2, Calculator, ChefHat,
   ChevronDown, ClipboardCheck, CreditCard, Factory, FileSpreadsheet, FileText, FlaskConical,
   Globe, HandCoins, Landmark, Layers, LayoutDashboard, LogOut, Menu, Moon, NotebookPen,
-  Package, Receipt, Scale, ScrollText, Settings, ShoppingCart, Sparkles, Store, Sun,
+  Package, Receipt, Scale, ScrollText, Settings, ShoppingCart, SlidersHorizontal, Sparkles, Store, Sun,
   Tags, Timer, Trash2, Truck, UserCog, Users, Wallet, Warehouse, X,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -40,6 +40,7 @@ const ICONS: Record<MenuIcon, ReactNode> = {
   inventoryUnits: <Package className="h-5 w-5" />,
   wasteCenter: <Trash2 className="h-5 w-5" />,
   kitchenDisplay: <ChefHat className="h-5 w-5" />,
+  kitchenStations: <SlidersHorizontal className="h-5 w-5" />,
   costingCenter: <Calculator className="h-5 w-5" />,
   branches: <Store className="h-5 w-5" />,
   purchases: <Truck className="h-5 w-5" />,

@@ -57,7 +57,7 @@ export function WasteCenterPage() {
       if (entryRes.error) throw entryRes.error;
       setCategories(catRes.data ?? []);
       setEntries((entryRes.data ?? []) as unknown as WasteEntry[]);
-    } catch { show(ar ? 'خطأ في التحميل' : 'Load error', 'error'); }
+    } catch (err) { show(ar ? 'خطأ في التحميل' : 'Load error: ' + String((err as Error).message ?? err), 'error'); }
     finally { setLoading(false); }
   };
 
@@ -71,9 +71,10 @@ export function WasteCenterPage() {
 
   const handleCreate = async () => {
     if (!form.waste_category_id || form.quantity <= 0) { show(ar ? 'أكمل الحقول المطلوبة' : 'Fill required fields', 'error'); return; }
+    if (!branchFilter) { show(ar ? 'اختر الفرع أولاً' : 'Select a branch first', 'error'); return; }
     try {
       const { error } = await supabase.rpc('create_waste_entry', {
-        p_branch_id: branchFilter!,
+        p_branch_id: branchFilter,
         p_waste_category_id: form.waste_category_id,
         p_waste_type: form.waste_type,
         p_quantity: form.quantity,
@@ -89,8 +90,19 @@ export function WasteCenterPage() {
   };
 
   const handleApprove = async (id: string, approve: boolean) => {
+    if (!approve) {
+      const reason = prompt(ar ? 'سبب الرفض:' : 'Rejection reason:');
+      if (reason === null) return;
+      try {
+        const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: false, p_rejection_reason: reason || null });
+        if (error) throw error;
+        show(ar ? 'تم الرفض' : 'Rejected', 'success');
+        void load();
+      } catch (err) { show(String((err as Error).message ?? err), 'error'); }
+      return;
+    }
     try {
-      const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: approve });
+      const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: true });
       if (error) throw error;
       show(ar ? 'تم الاعتماد' : 'Approved', 'success');
       void load();
@@ -173,12 +185,14 @@ function WasteReport({ ar, branchFilter }: { ar: boolean; branchFilter: string |
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!branchFilter) { setLoading(false); return; }
     void (async () => {
-      const to = new Date().toISOString().slice(0, 10);
-      const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-      const { data } = await supabase.rpc('get_waste_report', { p_branch_id: branchFilter, p_from_date: from, p_to_date: to });
-      setRows((data ?? []) as Record<string, unknown>[]);
+      try {
+        const to = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        const { data, error } = await supabase.rpc('get_waste_report', { p_branch_id: branchFilter, p_from_date: from, p_to_date: to });
+        if (error) throw error;
+        setRows((data ?? []) as Record<string, unknown>[]);
+      } catch { /* report is optional, fail silently */ }
       setLoading(false);
     })();
   }, [branchFilter]);
