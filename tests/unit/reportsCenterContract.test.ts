@@ -10,6 +10,7 @@ const deepLinkSource = read('src/features/reporting/pages/ReportDeepLinkPage.tsx
 const financialSource = read('src/features/accounting/pages/FinancialReportsPage.tsx');
 const reportFiltersSource = read('src/features/reporting/reportFilters.ts');
 const reportExportSource = read('src/lib/reportExport.ts');
+const excelSource = read('src/lib/excel.ts');
 
 const OPERATIONAL_KEYS = [
   'sales', 'sales_by_payment', 'sales_by_employee', 'sales_by_product', 'detailed_invoices',
@@ -28,16 +29,12 @@ describe('Reports Center contract (6H-P4)', () => {
     expect(reportsSource).toContain('data-testid="report-context-filter"');
     expect(reportsSource).toContain('key={rt.key} value={rt.key}');
     expect(reportsSource).toContain('key={ft.key} value={ft.key}');
-    for (const key of OPERATIONAL_KEYS) {
-      expect(reportsSource).toContain(`{ key: '${key}',`);
-    }
+    for (const key of OPERATIONAL_KEYS) expect(reportsSource).toContain(`{ key: '${key}',`);
   });
 
   it('exposes financial report types in the dropdown only behind reports.financial permission', () => {
     expect(reportsSource).toContain("can('reports.financial')");
-    for (const key of FINANCIAL_KEYS) {
-      expect(reportsSource).toContain(`{ key: '${key}'`);
-    }
+    for (const key of FINANCIAL_KEYS) expect(reportsSource).toContain(`{ key: '${key}'`);
   });
 
   it('preserves the stable button[data-report-type="<key>"] contract for every report', () => {
@@ -63,14 +60,7 @@ describe('Reports Center contract (6H-P4)', () => {
   });
 
   it('provides a contextual period filter that drives from/to', () => {
-    expect(reportsSource).toContain('value="custom"');
-    expect(reportsSource).toContain('value="today"');
-    expect(reportsSource).toContain('value="yesterday"');
-    expect(reportsSource).toContain('value="last7"');
-    expect(reportsSource).toContain('value="last30"');
-    expect(reportsSource).toContain('value="this_month"');
-    expect(reportsSource).toContain('value="last_month"');
-    expect(reportsSource).toContain('value="this_year"');
+    for (const value of ['custom', 'today', 'yesterday', 'last7', 'last30', 'this_month', 'last_month', 'this_year']) expect(reportsSource).toContain(`value="${value}"`);
     expect(reportsSource).toContain('applyPeriod');
   });
 
@@ -104,6 +94,19 @@ describe('Reports Center contract (6H-P4)', () => {
     expect(reportExportSource).toContain('downloadCSV');
     expect(reportExportSource).toContain('openPrintWindow');
     expect(reportExportSource).toContain('text/csv;charset=utf-8');
+  });
+
+  it('provides compact grouped navigation and column customization', () => {
+    expect(deepLinkSource).toContain('مركز التقارير');
+    expect(deepLinkSource).toContain('data-report-nav={key}');
+    expect(deepLinkSource).toContain('تخصيص الأعمدة');
+    expect(deepLinkSource).toContain('premier.report.columns.');
+  });
+
+  it('keeps Excel exports spreadsheet-friendly with widths, filters and frozen headers', () => {
+    expect(excelSource).toContain("ws['!cols']");
+    expect(excelSource).toContain("ws['!autofilter']");
+    expect(excelSource).toContain("ws['!freeze']");
   });
 
   it('resets contextual filters when switching report type', () => {
