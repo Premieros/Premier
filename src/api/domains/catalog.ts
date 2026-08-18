@@ -162,4 +162,9 @@ export const catalog = {
     const { error } = await supabase.rpc('route_to_station', { p_order_id, p_station });
     if (error) throw error;
   },
+
+  async setKitchenStatus(p_order_id: string, p_status: string) {
+    const { error } = await supabase.rpc('set_kitchen_status', { p_order_id, p_status });
+    if (error) throw error;
+  },
 };
