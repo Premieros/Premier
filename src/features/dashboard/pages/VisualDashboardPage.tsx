@@ -140,6 +140,7 @@ export function VisualDashboardPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [items, setItems] = useState<SaleItem[]>([]);
   const [wasteRows, setWasteRows] = useState<{ waste_category: string; waste_type: string; total_quantity: number; total_cost: number; entry_count: number }[]>([]);
+  const [quickStats, setQuickStats] = useState({ sales: 0, expenses: 0, profit: 0, lowStockCount: 0 });
 
   const effectiveBranch = isAdmin ? activeBranchId : branchFilter;
   const settings = effectiveSettings(effectiveBranch);
@@ -189,6 +190,30 @@ export function VisualDashboardPage() {
   }, [range, effectiveBranch]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    (async () => {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const monthDateStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const monthDateEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+      const [salesRes, expensesRes, inventoryRes] = await Promise.all([
+        supabase.from('sales').select('total').gte('created_at', monthStart).lte('created_at', monthEnd),
+        supabase.from('expenses').select('amount').gte('expense_date', monthDateStart).lte('expense_date', monthDateEnd),
+        supabase.from('inventory').select('quantity, product:products(low_stock_threshold)'),
+      ]);
+      const totalSales = (salesRes.data || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total || 0), 0);
+      const totalExpenses = (expensesRes.data || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.amount || 0), 0);
+      const lowStockCount = (inventoryRes.data || []).filter((r: Record<string, unknown>) => {
+        const qty = Number(r.quantity || 0);
+        const product = r.product as { low_stock_threshold?: number }[] | null;
+        const threshold = Number(product?.[0]?.low_stock_threshold ?? 5);
+        return qty <= threshold;
+      }).length;
+      setQuickStats({ sales: totalSales, expenses: totalExpenses, profit: totalSales - totalExpenses, lowStockCount });
+    })();
+  }, []);
 
   const filteredSales = useMemo(
     () => (orderTypeFilter ? sales.filter((r) => String(r.order_type || '').toLowerCase() === orderTypeFilter) : sales),
@@ -305,6 +330,45 @@ export function VisualDashboardPage() {
           </div>
         </div>
       </section>
+
+      <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-black text-ui-text">{ar ? 'ملخص سريع' : 'Quick Stats'}</h2>
+                  <p className="mt-1 text-xs text-ui-subtle">{ar ? 'مؤشرات الشهر الحالي' : 'Current month highlights'}</p>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                    <span className="text-xs font-semibold text-ui-subtle">{ar ? 'مبيعات الشهر' : 'Sales this month'}</span>
+                  </div>
+                  <p className="text-xl font-black text-ui-text">{money(quickStats.sales)}</p>
+                </div>
+                <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-3 w-3 rounded-full bg-red-500" />
+                    <span className="text-xs font-semibold text-ui-subtle">{ar ? 'مصروفات الشهر' : 'Expenses this month'}</span>
+                  </div>
+                  <p className="text-xl font-black text-ui-text">{money(quickStats.expenses)}</p>
+                </div>
+                <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-3 w-3 rounded-full bg-ui-primary" />
+                    <span className="text-xs font-semibold text-ui-subtle">{ar ? 'هامش الربح' : 'Profit margin'}</span>
+                  </div>
+                  <p className="text-xl font-black text-ui-text">{money(quickStats.profit)}</p>
+                </div>
+                <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-3 w-3 rounded-full bg-amber-500" />
+                    <span className="text-xs font-semibold text-ui-subtle">{ar ? 'تنبيهات المخزون' : 'Low stock alerts'}</span>
+                  </div>
+                  <p className="text-xl font-black text-ui-text">{formatNumber(quickStats.lowStockCount, 0)}</p>
+                </div>
+              </div>
+            </Card>
 
       {loading ? (
         <div className="flex h-72 items-center justify-center rounded-3xl border border-ui-border bg-ui-surface"><RefreshCw className="h-7 w-7 animate-spin text-ui-primary" /></div>

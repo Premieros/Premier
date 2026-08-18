@@ -6,6 +6,7 @@ const root = resolve(process.cwd());
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 const reportsSource = read('src/features/reporting/pages/ReportsPage.tsx');
+const reportFilterBarSource = read('src/features/reporting/ReportFilterBar.tsx');
 const deepLinkSource = read('src/features/reporting/pages/ReportDeepLinkPage.tsx');
 const financialSource = read('src/features/accounting/pages/FinancialReportsPage.tsx');
 const reportFiltersSource = read('src/features/reporting/reportFilters.ts');
@@ -24,10 +25,10 @@ const FINANCIAL_KEYS = [
 
 describe('Reports Center contract (6H-P4)', () => {
   it('provides a report-type dropdown covering all 14 operational types', () => {
-    expect(reportsSource).toContain('data-testid="report-type-select"');
-    expect(reportsSource).toContain('data-testid="report-context-filter"');
-    expect(reportsSource).toContain('key={rt.key} value={rt.key}');
-    expect(reportsSource).toContain('key={ft.key} value={ft.key}');
+    expect(reportFilterBarSource).toContain('data-testid="report-type-select"');
+    expect(reportFilterBarSource).toContain('data-testid="report-context-filter"');
+    expect(reportFilterBarSource).toContain('key={rt.key} value={rt.key}');
+    expect(reportFilterBarSource).toContain('key={ft.key} value={ft.key}');
     for (const key of OPERATIONAL_KEYS) {
       expect(reportsSource).toContain(`{ key: '${key}',`);
     }
@@ -41,11 +42,11 @@ describe('Reports Center contract (6H-P4)', () => {
   });
 
   it('preserves the stable button[data-report-type="<key>"] contract for every report', () => {
-    expect(reportsSource).toContain('data-report-type={rt.key}');
-    expect(reportsSource).toContain('data-report-type={ft.key}');
+    expect(reportFilterBarSource).toContain('data-report-type={rt.key}');
+    expect(reportFilterBarSource).toContain('data-report-type={ft.key}');
     expect(deepLinkSource).toContain('button[data-report-type="');
-    expect(reportsSource).toContain('reportTypes.map((rt)');
-    expect(reportsSource).toContain('financialTypes.map((ft)');
+    expect(reportFilterBarSource).toContain('reportTypes.map((rt)');
+    expect(reportFilterBarSource).toContain('financialTypes.map((ft)');
   });
 
   it('keeps /reports?reportType=… deep links resolving to the reports route', () => {
@@ -63,22 +64,22 @@ describe('Reports Center contract (6H-P4)', () => {
   });
 
   it('provides a contextual period filter that drives from/to', () => {
-    expect(reportsSource).toContain('value="custom"');
-    expect(reportsSource).toContain('value="today"');
-    expect(reportsSource).toContain('value="yesterday"');
-    expect(reportsSource).toContain('value="last7"');
-    expect(reportsSource).toContain('value="last30"');
-    expect(reportsSource).toContain('value="this_month"');
-    expect(reportsSource).toContain('value="last_month"');
-    expect(reportsSource).toContain('value="this_year"');
-    expect(reportsSource).toContain('applyPeriod');
+    expect(reportFilterBarSource).toContain('value="custom"');
+    expect(reportFilterBarSource).toContain('value="today"');
+    expect(reportFilterBarSource).toContain('value="yesterday"');
+    expect(reportFilterBarSource).toContain('value="last7"');
+    expect(reportFilterBarSource).toContain('value="last30"');
+    expect(reportFilterBarSource).toContain('value="this_month"');
+    expect(reportFilterBarSource).toContain('value="last_month"');
+    expect(reportFilterBarSource).toContain('value="this_year"');
+    expect(reportFilterBarSource).toContain('onPeriodChange');
   });
 
   it('shows only the filters relevant to the selected report (ERP-01 §6)', () => {
-    expect(reportsSource).toContain('data-testid="report-contextual-filters"');
-    expect(reportsSource).toContain('data-filter-dim={dim}');
-    expect(reportsSource).toContain('REPORT_FILTER_DIMS[reportType].length > 0');
-    expect(reportsSource).toContain('DATE_DRIVEN_REPORTS.has(reportType)');
+    expect(reportFilterBarSource).toContain('data-testid="report-contextual-filters"');
+    expect(reportFilterBarSource).toContain('data-filter-dim={dim}');
+    expect(reportFilterBarSource).toContain('filterDimensions');
+    expect(reportFilterBarSource).toContain('showDate');
     expect(reportFiltersSource).toContain('REPORT_FILTER_DIMS');
     expect(reportFiltersSource).toContain('DATE_DRIVEN_REPORTS');
   });

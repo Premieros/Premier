@@ -1,24 +1,29 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle, FileDown, Printer } from 'lucide-react';
+import { Download, TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, List, Layers, TrendingDown, AlertTriangle, FileDown, Printer, UserCheck, RotateCcw, Trash2 } from 'lucide-react';
 import { supabase, costing } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Card } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
 import { formatCurrency, formatDate, todayISO } from '@/lib/format';
 import { getBrandColor } from '@/lib/brandColor';
-import { exportToExcel } from '@/lib/excel';
+import { exportToExcelAdvanced } from '@/lib/excel';
 import { downloadCSV, openPrintWindow } from '@/lib/reportExport';
 import { useBranchFilter } from '@/lib/useBranchFilter';
 import { isAdminRole, useCan } from '@/lib/permissions';
+import { useColumnPreferences } from '../useColumnPreferences';
+import { ColumnPicker } from '../ColumnPicker';
+import { useCustomReports } from '../useCustomReports';
+import type { SavedReportConfig } from '../useCustomReports';
+import { CustomReportBar } from '../CustomReportBar';
+import { ReportFilterBar } from '../ReportFilterBar';
 import { useBranches } from '@/hooks/useBranches';
 import { useSettings } from '@/context/SettingsContext';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 import { applySalesFilters, applySaleItemFilters, applyPurchaseFilters, applyExpenseFilters, applyProductScopedFilters, REPORT_FILTER_DIMS, DATE_DRIVEN_REPORTS, ORDER_TYPE_OPTIONS, PAYMENT_METHOD_OPTIONS, SALE_STATUS_OPTIONS, type ReportFilters, type ReportFilterKey, type EqBuilder } from '../reportFilters';
 
-type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock';
+type ReportType = 'sales' | 'purchases' | 'expenses' | 'profit' | 'inventory' | 'sales_by_payment' | 'sales_by_employee' | 'sales_by_product' | 'detailed_invoices' | 'component_consumption' | 'recipe_costs' | 'top_consumed_components' | 'top_consumed_products' | 'low_stock' | 'cashier_performance' | 'returns' | 'production_waste';
 
 type FinancialReportType = 'trial_balance' | 'ledger' | 'income' | 'balance_sheet' | 'ar_aging' | 'ap_aging' | 'aging_summary' | 'cash_flow' | 'party_statement';
 
@@ -26,7 +31,12 @@ type PeriodKey = 'custom' | 'today' | 'yesterday' | 'last7' | 'last30' | 'this_m
 
 const PIE_COLORS = [getBrandColor(600), '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#ec4899', getBrandColor(500)];
 
-export function ReportsPage() {
+interface ReportsPageProps {
+  controlledReportType?: ReportType;
+  onReportTypeChange?: (type: ReportType) => void;
+}
+
+export function ReportsPage({ controlledReportType, onReportTypeChange }: ReportsPageProps = {}) {
   /* REPORT-BRANCH-AUDIT-2026 */
   const { t, lang } = useLanguage();
   const { user } = useAuth();
@@ -34,6 +44,19 @@ export function ReportsPage() {
   const navigate = useNavigate();
   const branchFilter = useBranchFilter();
   const [reportType, setReportType] = useState<ReportType>('sales');
+
+  useEffect(() => {
+    if (controlledReportType) {
+      setReportType((prev) => {
+        if (prev !== controlledReportType) {
+          setFilters({});
+          onReportTypeChange?.(controlledReportType);
+          return controlledReportType;
+        }
+        return prev;
+      });
+    }
+  }, [controlledReportType]);
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(todayISO());
   const [period, setPeriod] = useState<PeriodKey>('custom');
@@ -57,6 +80,8 @@ export function ReportsPage() {
   const { branches } = useBranches();
   const { effectiveSettings } = useSettings();
   const currency = effectiveSettings(effectiveBranchFilter)?.currency || 'EGP';
+  const { visibleColumns, toggleColumn, showAllColumns } = useColumnPreferences(reportType);
+  const { savedReports, saveReport, deleteReport } = useCustomReports();
 
   const filterQ = <T,>(q: T, f: ReportFilters, applier: (b: EqBuilder, x: ReportFilters) => EqBuilder): T =>
     applier(q as unknown as EqBuilder, f) as unknown as T;
@@ -81,7 +106,19 @@ export function ReportsPage() {
     }
     setFilters({});
     setReportType(value as ReportType);
+    onReportTypeChange?.(value as ReportType);
   }
+
+  const handleSaveCustomReport = () => {
+    const name = prompt(lang === 'ar' ? 'اسم التقرير:' : 'Report name:');
+    if (!name?.trim()) return;
+    saveReport(name.trim(), reportType, visibleColumns, filters);
+  };
+
+  const handleRestoreCustomReport = (config: SavedReportConfig) => {
+    handleReportTypeSelect(config.reportType);
+    setFilters(config.filters || {});
+  };
 
   function applyPeriod(key: PeriodKey) {
     const now = new Date();
@@ -157,7 +194,7 @@ export function ReportsPage() {
       const toTs = `${to}T23:59:59`;
 
       if (reportType === 'sales') {
-        let q = supabase.from('sales').select('id, invoice_number, total, created_at, customer:customers(name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });
+        let q = supabase.from('sales').select('id, invoice_number, total, created_at, customer:customers(name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false }).limit(5000);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applySalesFilters);
         const { data: sales } = await q;
@@ -166,7 +203,7 @@ export function ReportsPage() {
         setChartData((sales || []).slice(0, 10).map((s: Record<string, unknown>) => ({ name: String(s.invoice_number), value: Number(s.total) })));
         setSummary({ total: (sales || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total), 0), count: (sales || []).length });
       } else if (reportType === 'purchases') {
-        let q = supabase.from('purchases').select('id, invoice_number, total, created_at, supplier:suppliers(name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });
+        let q = supabase.from('purchases').select('id, invoice_number, total, created_at, supplier:suppliers(name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false }).limit(5000);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applyPurchaseFilters);
         const { data: purchases } = await q;
@@ -175,7 +212,7 @@ export function ReportsPage() {
         setChartData((purchases || []).slice(0, 10).map((p: Record<string, unknown>) => ({ name: String(p.invoice_number), value: Number(p.total) })));
         setSummary({ total: (purchases || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total), 0), count: (purchases || []).length });
       } else if (reportType === 'expenses') {
-        let q = supabase.from('expenses').select('id, category, description, amount, expense_date').gte('expense_date', from).lte('expense_date', to).order('expense_date', { ascending: false });
+        let q = supabase.from('expenses').select('id, category, description, amount, expense_date').gte('expense_date', from).lte('expense_date', to).order('expense_date', { ascending: false }).limit(5000);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applyExpenseFilters);
         const { data: expenses } = await q;
@@ -264,7 +301,7 @@ export function ReportsPage() {
         let itemsQuery = supabase.from('sale_items').select('quantity, total, product:products(name), sale:sales(created_at, branch_id)');
         if (effectiveBranchFilter) itemsQuery = itemsQuery.eq('sale.branch_id', effectiveBranchFilter);
         itemsQuery = filterQ(itemsQuery, filters, applySaleItemFilters);
-        const { data: items } = await itemsQuery;
+        const { data: items } = await itemsQuery.limit(10000);
         const filtered = (items || []).filter((item: Record<string, unknown>) => {
           const sale = item.sale as { created_at: string } | null;
           if (!sale) return false;
@@ -286,7 +323,7 @@ export function ReportsPage() {
         setChartData(Array.from(prodMap.values()).sort((a, b) => b.total - a.total).slice(0, 10).map((p) => ({ name: p.name, value: p.total })));
         setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[2]), 0), count: rows.length });
       } else if (reportType === 'detailed_invoices') {
-        let q = supabase.from('sales').select('id, invoice_number, total, paid_amount, payment_method, status, created_at, customer:customers(name), cashier:users!fk_sales_cashier(full_name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false });
+        let q = supabase.from('sales').select('id, invoice_number, total, paid_amount, payment_method, status, created_at, customer:customers(name), cashier:users!fk_sales_cashier(full_name)').gte('created_at', fromTs).lte('created_at', toTs).order('created_at', { ascending: false }).limit(5000);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applySalesFilters);
         const { data: sales } = await q;
@@ -311,7 +348,7 @@ export function ReportsPage() {
         let q = supabase.from('stock_transactions').select('product_id, quantity, unit_cost, created_at, product:products(name), warehouse:warehouses(name)').eq('component_flow', true).eq('transaction_type', 'sale').gte('created_at', fromTs).lte('created_at', toTs);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applyProductScopedFilters);
-        const { data: tx } = await q;
+        const { data: tx } = await q.limit(5000);
         const map = new Map<string, { name: string; qty: number; cost: number; count: number }>();
         (tx || []).forEach((t: Record<string, unknown>) => {
           const product = t.product as { name?: string } | null;
@@ -336,7 +373,7 @@ export function ReportsPage() {
         let q = supabase.from('stock_transactions').select('product_id, quantity, product:products(name)').eq('component_flow', true).eq('transaction_type', 'sale').gte('created_at', fromTs).lte('created_at', toTs);
         if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
         q = filterQ(q, filters, applyProductScopedFilters);
-        const { data: tx } = await q;
+        const { data: tx } = await q.limit(5000);
         const map = new Map<string, { name: string; qty: number }>();
         (tx || []).forEach((t: Record<string, unknown>) => {
           const product = t.product as { name?: string } | null;
@@ -356,7 +393,7 @@ export function ReportsPage() {
         let itemsQuery = supabase.from('sale_items').select('quantity, product:products(name), sale:sales(created_at, branch_id)');
         if (effectiveBranchFilter) itemsQuery = itemsQuery.eq('sale.branch_id', effectiveBranchFilter);
         itemsQuery = filterQ(itemsQuery, filters, applySaleItemFilters);
-        const { data: items } = await itemsQuery;
+        const { data: items } = await itemsQuery.limit(10000);
         const filtered = (items || []).filter((item: Record<string, unknown>) => {
           const sale = item.sale as { created_at: string } | null;
           if (!sale) return false;
@@ -423,11 +460,87 @@ export function ReportsPage() {
         setData(rows);
         setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[3]) })));
         setSummary({ total: 0, count: rows.length });
+      } else if (reportType === 'cashier_performance') {
+        let q = supabase.from('sales').select('cashier_id, total, payment_method, status, created_at, users:users!fk_sales_cashier(full_name, email)').gte('created_at', fromTs).lte('created_at', toTs);
+        if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
+        const { data: sales } = await q;
+        const empMap = new Map<string, { name: string; total: number; count: number; refundCount: number }>();
+        (sales || []).forEach((s: Record<string, unknown>) => {
+          const cashier = s.users as { full_name?: string; email?: string } | null;
+          const name = cashier?.full_name || cashier?.email || (lang === 'ar' ? 'غير معروف' : 'Unknown');
+          const existing = empMap.get(name) || { name, total: 0, count: 0, refundCount: 0 };
+          existing.total += Number(s.total);
+          existing.count += 1;
+          if (s.status === 'refunded' || s.status === 'cancelled') existing.refundCount += 1;
+          empMap.set(name, existing);
+        });
+        const rows = Array.from(empMap.values()).sort((a, b) => b.total - a.total).map((e) => ({
+          [lang === 'ar' ? 'الموظف' : 'Employee']: e.name,
+          [lang === 'ar' ? 'الفواتير' : 'Invoices']: e.count,
+          [lang === 'ar' ? 'الإجمالي' : 'Total']: e.total,
+          [lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Order']: e.count > 0 ? Math.round(e.total / e.count) : 0,
+          [lang === 'ar' ? 'المرتجعات' : 'Refunds']: e.refundCount,
+          [lang === 'ar' ? 'نسبة المرتجعات' : 'Refund Rate']: e.count > 0 ? `${Math.round((e.refundCount / e.count) * 100)}%` : '0%',
+        }));
+        setData(rows);
+        setChartData(Array.from(empMap.values()).sort((a, b) => b.total - a.total).slice(0, 10).map((e) => ({ name: e.name, value: e.total })));
+        setSummary({ total: (sales || []).reduce((s: number, r: Record<string, unknown>) => s + Number(r.total), 0), count: (sales || []).length });
+      } else if (reportType === 'returns') {
+        let q = supabase.from('sales').select('id, invoice_number, total, status, created_at, customer:customers(name), cashier:users!fk_sales_cashier(full_name)').in('status', ['refunded', 'cancelled']).gte('created_at', fromTs).lte('created_at', toTs);
+        if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
+        const { data: returns } = await q;
+        const STATUS_LABELS: Record<string, string> = { refunded: t('refunded'), cancelled: t('statusCancelled') };
+        const rows = (returns || []).map((s: Record<string, unknown>) => {
+          const customer = s.customer as { name?: string } | null;
+          const cashier = s.cashier as { full_name?: string } | null;
+          return {
+            [lang === 'ar' ? 'رقم الفاتورة' : 'Invoice']: s.invoice_number,
+            [lang === 'ar' ? 'التاريخ' : 'Date']: formatDate(s.created_at as string, lang),
+            [lang === 'ar' ? 'العميل' : 'Customer']: customer?.name || '-',
+            [lang === 'ar' ? 'أمين الصندوق' : 'Cashier']: cashier?.full_name || '-',
+            [lang === 'ar' ? 'المبلغ' : 'Amount']: Number(s.total),
+            [lang === 'ar' ? 'الحالة' : 'Status']: STATUS_LABELS[String(s.status)] || s.status,
+          };
+        });
+        setData(rows);
+        setChartData([]);
+        setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[4] || 0), 0), count: rows.length });
+      } else if (reportType === 'production_waste') {
+        let q = supabase.from('waste_entries').select('id, created_at, quantity, unit_cost, total_cost, reason, product:products(name), branch:warehouses(name)').gte('created_at', fromTs).lte('created_at', toTs);
+        if (effectiveBranchFilter) q = q.eq('branch_id', effectiveBranchFilter);
+        const { data: waste } = await q;
+        const rows = (waste || []).map((w: Record<string, unknown>) => {
+          const product = w.product as { name?: string } | null;
+          const branch = w.branch as { name?: string } | null;
+          return {
+            [lang === 'ar' ? 'المنتج' : 'Product']: product?.name || '-',
+            [lang === 'ar' ? 'التاريخ' : 'Date']: formatDate(w.created_at as string, lang),
+            [lang === 'ar' ? 'الكمية' : 'Quantity']: Number(w.quantity),
+            [lang === 'ar' ? 'تكلفة الوحدة' : 'Unit Cost']: Number(w.unit_cost),
+            [lang === 'ar' ? 'التكلفة الإجمالية' : 'Total Cost']: Number(w.total_cost),
+            [lang === 'ar' ? 'السبب' : 'Reason']: w.reason || '-',
+            [lang === 'ar' ? 'المستودع' : 'Warehouse']: branch?.name || '-',
+          };
+        });
+        setData(rows);
+        setChartData(rows.slice(0, 10).map((r) => ({ name: String(Object.values(r)[0]), value: Number(Object.values(r)[4]) })));
+        setSummary({ total: rows.reduce((s, r) => s + Number(Object.values(r)[4]), 0), count: rows.length });
       }
     } finally { setLoading(false); }
   }
 
-  const handleExportExcel = () => { void exportToExcel(data, `report_${reportType}_${from}_${to}`); };
+  const handleExportExcel = () => {
+    void exportToExcelAdvanced({
+      data,
+      filename: `report_${reportType}_${from}_${to}`,
+      sheetName: reportType,
+      title: reportTypes.find(r => r.key === reportType)?.label ?? reportType,
+      subtitle: `${from} — ${to}`,
+      totalRow: summary.total ? { [lang === 'ar' ? 'الإجمالي' : 'Total']: summary.total, [lang === 'ar' ? 'العدد' : 'Count']: summary.count } : undefined,
+      currencyColumns: [lang === 'ar' ? 'الإجمالي' : 'Total', lang === 'ar' ? 'المبلغ' : 'Amount', lang === 'ar' ? 'الربح' : 'Profit', lang === 'ar' ? 'المبيعات' : 'Sales', lang === 'ar' ? 'المشتريات' : 'Purchases', lang === 'ar' ? 'المصروفات' : 'Expenses', lang === 'ar' ? 'الإيراد' : 'Revenue', lang === 'ar' ? 'المدفوع' : 'Paid'],
+      lang,
+    });
+  };
   const handleExportCSV = () => { downloadCSV(data, `report_${reportType}_${from}_${to}`); };
 
   const reportTypes: { key: ReportType; label: string; icon: React.ReactNode }[] = [
@@ -445,13 +558,19 @@ export function ReportsPage() {
     { key: 'top_consumed_components', label: t('topConsumedComponentsReport'), icon: <TrendingDown className="w-4 h-4" /> },
     { key: 'top_consumed_products', label: t('topConsumedProductsReport'), icon: <Package className="w-4 h-4" /> },
     { key: 'low_stock', label: t('lowStockReport'), icon: <AlertTriangle className="w-4 h-4" /> },
+    { key: 'cashier_performance', label: t('cashierPerformanceReport'), icon: <UserCheck className="w-4 h-4" /> },
+    { key: 'returns', label: t('returnsReport'), icon: <RotateCcw className="w-4 h-4" /> },
+    { key: 'production_waste', label: t('productionWasteReport'), icon: <Trash2 className="w-4 h-4" /> },
   ];
 
   const isPie = reportType === 'expenses' || reportType === 'profit' || reportType === 'sales_by_payment';
 
-  const moneyKeys = [lang === 'ar' ? 'الإجمالي' : 'Total', lang === 'ar' ? 'المبلغ' : 'Amount', lang === 'ar' ? 'الربح' : 'Profit', lang === 'ar' ? 'المبيعات' : 'Sales', lang === 'ar' ? 'المشتريات' : 'Purchases', lang === 'ar' ? 'المصروفات' : 'Expenses', lang === 'ar' ? 'الإيراد' : 'Revenue', lang === 'ar' ? 'المدفوع' : 'Paid', lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Invoice', lang === 'ar' ? 'تكلفة الاستهلاك' : 'Consumption Cost', lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost', lang === 'ar' ? 'سعر البيع' : 'Sale Price', lang === 'ar' ? 'الهامش' : 'Margin'];
+  const moneyKeys = [lang === 'ar' ? 'الإجمالي' : 'Total', lang === 'ar' ? 'المبلغ' : 'Amount', lang === 'ar' ? 'الربح' : 'Profit', lang === 'ar' ? 'المبيعات' : 'Sales', lang === 'ar' ? 'المشتريات' : 'Purchases', lang === 'ar' ? 'المصروفات' : 'Expenses', lang === 'ar' ? 'الإيراد' : 'Revenue', lang === 'ar' ? 'المدفوع' : 'Paid', lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Invoice', lang === 'ar' ? 'متوسط الفاتورة' : 'Avg Order', lang === 'ar' ? 'تكلفة الاستهلاك' : 'Consumption Cost', lang === 'ar' ? 'تكلفة الوصفة' : 'Recipe Cost', lang === 'ar' ? 'سعر البيع' : 'Sale Price', lang === 'ar' ? 'الهامش' : 'Margin', lang === 'ar' ? 'تكلفة الوحدة' : 'Unit Cost', lang === 'ar' ? 'التكلفة الإجمالية' : 'Total Cost'];
 
   const showDate = DATE_DRIVEN_REPORTS.has(reportType);
+  const allColumns = data.length > 0 ? Object.keys(data[0]) : [];
+  const columns = visibleColumns ? allColumns.filter((c) => visibleColumns.includes(c)) : allColumns;
+  const hiddenCount = visibleColumns ? allColumns.length - columns.length : 0;
   const ALL_LABEL = lang === 'ar' ? 'الكل' : 'All';
   const ORDER_TYPE_LABELS: Record<string, string> = { dine_in: t('dineIn'), takeaway: t('takeaway'), delivery: t('delivery'), drive_thru: t('driveThru') };
   const PAYMENT_METHOD_LABELS: Record<string, string> = { cash: t('cash'), card: t('card'), transfer: t('transfer'), credit: t('credit') };
@@ -523,98 +642,66 @@ export function ReportsPage() {
     <div>
       <PageHeader title={t('reports')} actions={
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV}><FileDown className="w-4 h-4" /> {t('exportCsv')}</Button>
-          <Button variant="outline" size="sm" onClick={handlePrint}><Printer className="w-4 h-4" /> {t('print')}</Button>
+          <ColumnPicker
+            columns={data.length > 0 ? Object.keys(data[0]) : []}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+            onShowAll={showAllColumns}
+            lang={lang}
+            hiddenCount={hiddenCount}
+          />
+          {can('reports.export') && (
+            <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="w-4 h-4" /> {t('exportExcel')}</Button>
+          )}
+          {can('reports.export') && (
+            <Button variant="outline" size="sm" onClick={handleExportCSV}><FileDown className="w-4 h-4" /> {t('exportCsv')}</Button>
+          )}
+          {can('reports.print') && (
+            <Button variant="outline" size="sm" onClick={handlePrint}><Printer className="w-4 h-4" /> {t('print')}</Button>
+          )}
         </div>
       } />
 
-      <Card className="mb-4 p-4 border-ui-border bg-ui-surface shadow-ui">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="min-w-[220px]">
-              <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('reports')}</label>
-              <select data-testid="report-type-select" value={reportType} onChange={(e) => handleReportTypeSelect(e.target.value)}
-                className="h-10 w-full rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
-                <optgroup label={lang === 'ar' ? 'التقارير التشغيلية' : 'Operational reports'}>
-                  {reportTypes.map((rt) => <option key={rt.key} value={rt.key}>{rt.label}</option>)}
-                </optgroup>
-                {canFinancial && (
-                  <optgroup label={lang === 'ar' ? 'التقارير المالية' : 'Financial reports'}>
-                    {financialTypes.map((ft) => <option key={ft.key} value={ft.key}>{ft.label}</option>)}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-            {showDate && (
-              <div className="min-w-[200px]">
-                <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('filterByPeriod')}</label>
-                <select data-testid="report-context-filter" value={period} onChange={(e) => applyPeriod(e.target.value as PeriodKey)}
-                  className="h-10 w-full rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
-                  <option value="custom">{lang === 'ar' ? 'مخصص' : 'Custom'}</option>
-                  <option value="today">{lang === 'ar' ? 'اليوم' : 'Today'}</option>
-                  <option value="yesterday">{lang === 'ar' ? 'أمس' : 'Yesterday'}</option>
-                  <option value="last7">{lang === 'ar' ? 'آخر 7 أيام' : 'Last 7 days'}</option>
-                  <option value="last30">{lang === 'ar' ? 'آخر 30 يومًا' : 'Last 30 days'}</option>
-                  <option value="this_month">{lang === 'ar' ? 'هذا الشهر' : 'This month'}</option>
-                  <option value="last_month">{lang === 'ar' ? 'الشهر الماضي' : 'Last month'}</option>
-                  <option value="this_year">{lang === 'ar' ? 'هذه السنة' : 'This year'}</option>
-                </select>
-              </div>
-            )}
-            {showDate && <Input label={t('from')} type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPeriod('custom'); }} />}
-            {showDate && <Input label={t('to')} type="date" value={to} onChange={(e) => { setTo(e.target.value); setPeriod('custom'); }} />}
-            {isAdminRole(user?.role) && branches.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-ui-muted mb-1.5">{t('filterByBranch')}</label>
-                <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                  className="h-10 min-w-[180px] rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
-                  <option value="">{t('allBranches')}</option>
-                  {branches.map((b) => <option key={b.id} value={b.id}>{lang === 'ar' ? b.name : (b.name_en || b.name)}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="flex gap-4 text-sm">
-              <div className="rounded-ui-lg bg-ui-page-alt px-4 py-2 border border-ui-border">
-                <span className="text-ui-muted">{t('total')}: </span>
-                <span className="font-bold text-ui-accent">{formatCurrency(summary.total, currency, lang)}</span>
-              </div>
-              <div className="rounded-ui-lg bg-ui-page-alt px-4 py-2 border border-ui-border">
-                <span className="text-ui-muted">{t('count')}: </span>
-                <span className="font-bold text-ui-text">{summary.count}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 border-t border-ui-border pt-3">
-            {reportTypes.map((rt) => (
-              <button key={rt.key} data-report-type={rt.key} onClick={() => handleReportTypeSelect(rt.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-ui-lg text-sm font-medium transition-colors ${reportType === rt.key ? 'bg-ui-primary text-ui-primary-fg shadow-ui-sm' : 'bg-ui-page-alt text-ui-muted border border-ui-border hover:bg-ui-primary-soft hover:text-ui-primary'}`}>
-                {rt.icon} {rt.label}
-              </button>
-            ))}
-            {canFinancial && financialTypes.map((ft) => (
-              <button key={ft.key} data-report-type={ft.key} onClick={() => handleReportTypeSelect(ft.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-ui-lg text-sm font-medium transition-colors bg-ui-page-alt text-ui-muted border border-ui-border hover:bg-ui-primary-soft hover:text-ui-primary`}>
-                {ft.label}
-              </button>
-            ))}
-          </div>
-          {REPORT_FILTER_DIMS[reportType].length > 0 && (
-            <div data-testid="report-contextual-filters" className="flex flex-wrap items-end gap-4 border-t border-ui-border pt-3">
-              {REPORT_FILTER_DIMS[reportType].map((dim) => (
-                <div key={dim} className="min-w-[180px]">
-                  <label className="block text-sm font-medium text-ui-muted mb-1.5">{filterLabel(dim)}</label>
-                  <select data-filter-dim={dim} value={filters[dim] || ''} onChange={(e) => setFilters((prev) => ({ ...prev, [dim]: e.target.value }))}
-                    className="h-10 w-full rounded-ui border border-ui-border bg-ui-surface-raised px-3 text-sm font-semibold text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-ring">
-                    <option value="">{allLabel(dim)}</option>
-                    {filterOptions(dim).map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </Card>
+      <CustomReportBar
+        savedReports={savedReports}
+        currentReportType={reportType}
+        currentVisibleColumns={visibleColumns}
+        currentFilters={filters}
+        onSelect={handleRestoreCustomReport}
+        onSave={handleSaveCustomReport}
+        onDelete={deleteReport}
+        lang={lang}
+      />
+
+      <ReportFilterBar
+        reportType={reportType}
+        filters={filters}
+        onFilterChange={(dim, value) => setFilters(prev => ({ ...prev, [dim]: value }))}
+        showDate={showDate}
+        period={period}
+        onPeriodChange={(key) => applyPeriod(key as PeriodKey)}
+        from={from}
+        to={to}
+        onFromChange={(v) => { setFrom(v); setPeriod('custom'); }}
+        onToChange={(v) => { setTo(v); setPeriod('custom'); }}
+        showBranchFilter={isAdminRole(user?.role) && branches.length > 0}
+        branches={branches}
+        branchFilterValue={adminBranchFilter}
+        onBranchFilterChange={setAdminBranchFilter}
+        filterOptions={filterOptions}
+        filterLabel={filterLabel}
+        allLabel={allLabel}
+        filterDimensions={REPORT_FILTER_DIMS[reportType]}
+        total={summary.total}
+        count={summary.count}
+        currency={currency}
+        lang={lang}
+        financialTypes={canFinancial ? financialTypes : []}
+        canFinancial={canFinancial}
+        onFinancialSelect={(key) => navigate(`/financial-reports?view=${key}&from=${from}&to=${to}`)}
+        reportTypes={reportTypes}
+        onReportTypeChange={handleReportTypeSelect}
+      />
 
       {chartData.length > 0 && (
         <Card className="mb-4 p-5 border-ui-border bg-ui-surface shadow-ui">
@@ -647,10 +734,15 @@ export function ReportsPage() {
           <div className="text-center py-12 text-ui-subtle text-sm">{t('noData')}</div>
         ) : (
           <div className="overflow-x-auto">
+            {data.length >= 5000 && (
+              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                {lang === 'ar' ? 'تم عرض أول 5,000 سجل. استخدم الفلاتر لتضييق النتائج.' : 'Showing first 5,000 records. Use filters to narrow results.'}
+              </div>
+            )}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ui-border">
-                  {Object.keys(data[0]).map((key) => (
+                  {columns.map((key) => (
                     <th key={key} className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{key}</th>
                   ))}
                 </tr>
@@ -658,13 +750,16 @@ export function ReportsPage() {
               <tbody>
                 {data.map((row, i) => (
                   <tr key={i} className="border-b border-ui-border/60 hover:bg-ui-page-alt">
-                    {Object.entries(row).map(([key, val], j) => (
-                      <td key={j} className="px-4 py-3 text-ui-text">
-                        {typeof val === 'number' && moneyKeys.includes(key)
-                          ? formatCurrency(val, currency, lang)
-                          : String(val)}
-                      </td>
-                    ))}
+                    {columns.map((key, j) => {
+                      const val = row[key];
+                      return (
+                        <td key={j} className="px-4 py-3 text-ui-text">
+                          {typeof val === 'number' && moneyKeys.includes(key)
+                            ? formatCurrency(val, currency, lang)
+                            : String(val)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

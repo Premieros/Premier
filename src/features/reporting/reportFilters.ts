@@ -12,7 +12,10 @@ export type ReportType =
   | 'recipe_costs'
   | 'top_consumed_components'
   | 'top_consumed_products'
-  | 'low_stock';
+  | 'low_stock'
+  | 'cashier_performance'
+  | 'returns'
+  | 'production_waste';
 
 export type ReportFilterKey =
   | 'warehouse'
@@ -59,6 +62,7 @@ export const ALL_REPORT_TYPES: ReportType[] = [
   'sales', 'sales_by_payment', 'sales_by_employee', 'sales_by_product', 'detailed_invoices',
   'purchases', 'expenses', 'profit', 'inventory', 'component_consumption', 'recipe_costs',
   'top_consumed_components', 'top_consumed_products', 'low_stock',
+  'cashier_performance', 'returns', 'production_waste',
 ];
 
 export const REPORT_FILTER_DIMS: Record<ReportType, ReportFilterKey[]> = {
@@ -76,11 +80,15 @@ export const REPORT_FILTER_DIMS: Record<ReportType, ReportFilterKey[]> = {
   top_consumed_components: ['warehouse', 'product', 'category'],
   top_consumed_products: ['order_type', 'warehouse', 'cashier', 'customer', 'product', 'category'],
   low_stock: ['warehouse', 'product', 'category'],
+  cashier_performance: ['warehouse', 'cashier'],
+  returns: ['order_type', 'warehouse', 'cashier', 'customer', 'payment_method', 'status'],
+  production_waste: ['warehouse', 'product'],
 };
 
 export const DATE_DRIVEN_REPORTS = new Set<ReportType>([
   'sales', 'sales_by_payment', 'sales_by_employee', 'sales_by_product', 'detailed_invoices',
   'purchases', 'expenses', 'profit', 'component_consumption', 'top_consumed_components', 'top_consumed_products',
+  'cashier_performance', 'returns', 'production_waste',
 ]);
 
 export const ORDER_TYPE_OPTIONS: readonly string[] = ['dine_in', 'takeaway', 'delivery', 'drive_thru'];
