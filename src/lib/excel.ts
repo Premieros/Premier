@@ -44,7 +44,11 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
       for (const [k, v] of entries) summaryRows.push([k, v == null ? '' : String(v)]);
     }
     summaryRows.push([`${lang === 'ar' ? 'تاريخ الإنشاء' : 'Generated at'}: ${new Date().toLocaleString()}`, '']);
-    const ws = XLSX.utils.aoa_to_sheet(summaryRows.map(([a, b]) => ({ [lang === 'ar' ? 'البيان' : 'Item']: a, [lang === 'ar' ? 'القيمة' : 'Value']: b })));
+    const summaryData: (string | number)[][] = [
+      [lang === 'ar' ? 'البيان' : 'Item', lang === 'ar' ? 'القيمة' : 'Value'],
+      ...summaryRows,
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, ws, lang === 'ar' ? 'ملخص' : 'Summary');
   }
 
@@ -56,7 +60,7 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
   const widths = autoWidth(columns, allRows);
   ws['!cols'] = widths.map((w) => ({ wch: w }));
 
-  (wb as Record<string, unknown>)['Workbook'] = { Views: [{ state: 'frozen', ysplit: 1, xsplit: 0 }] };
+  (wb as unknown as Record<string, unknown>)['Workbook'] = { Views: [{ state: 'frozen', ysplit: 1, xsplit: 0 }] };
 
   const range = XLSX.utils.decode_range(ws['!ref']!);
 
@@ -104,7 +108,6 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
   }
 
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 

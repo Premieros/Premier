@@ -3,6 +3,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Card } from '@/components/PageHeader';
 import { Input } from '@/components/Input';
 import { formatCurrency } from '@/lib/format';
+import type { Language } from '@/lib/types';
+import type { ReportFilterKey, ReportFilters } from './reportFilters';
 
 interface FilterOption {
   value: string;
@@ -11,8 +13,8 @@ interface FilterOption {
 
 export interface ReportFilterBarProps {
   reportType: string;
-  filters: Record<string, string>;
-  onFilterChange: (dim: string, value: string) => void;
+  filters: ReportFilters;
+  onFilterChange: (dim: ReportFilterKey, value: string) => void;
   showDate: boolean;
   period: string;
   onPeriodChange: (key: string) => void;
@@ -24,14 +26,14 @@ export interface ReportFilterBarProps {
   branches: Array<{ id: string; name: string; name_en: string | null }>;
   branchFilterValue: string;
   onBranchFilterChange: (value: string) => void;
-  filterOptions: (dim: string) => FilterOption[];
-  filterLabel: (dim: string) => string;
-  allLabel: (dim: string) => string;
-  filterDimensions: string[];
+  filterOptions: (dim: ReportFilterKey) => FilterOption[];
+  filterLabel: (dim: ReportFilterKey) => string;
+  allLabel: (dim: ReportFilterKey) => string;
+  filterDimensions: ReportFilterKey[];
   total: number;
   count: number;
   currency: string;
-  lang: string;
+  lang: Language;
   financialTypes?: Array<{ key: string; label: string }>;
   canFinancial?: boolean;
   onFinancialSelect?: (key: string) => void;

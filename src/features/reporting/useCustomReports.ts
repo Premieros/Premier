@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { ReportFilters } from './reportFilters';
 
 const STORAGE_KEY = 'premire_custom_reports';
 
@@ -7,7 +8,7 @@ export interface SavedReportConfig {
   name: string;
   reportType: string;
   visibleColumns: string[] | null;
-  filters: Record<string, string>;
+  filters: ReportFilters;
   createdAt: string;
 }
 
@@ -31,7 +32,7 @@ export function useCustomReports() {
   const savedReports = useMemo(() => Object.values(all).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [all]);
 
   const saveReport = useCallback(
-    (name: string, reportType: string, visibleColumns: string[] | null, filters: Record<string, string>) => {
+    (name: string, reportType: string, visibleColumns: string[] | null, filters: ReportFilters) => {
       const id = crypto.randomUUID();
       const config: SavedReportConfig = { id, name, reportType, visibleColumns, filters, createdAt: new Date().toISOString() };
       setAll((prev) => {

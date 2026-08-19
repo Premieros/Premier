@@ -13,7 +13,7 @@ import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { formatCurrency, formatNumber, generateBarcode } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
@@ -106,13 +106,7 @@ export function ProductsPage() {
   );
 
   const openAdd = () => {
-    setEditing(null);
-    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, min_stock: 0, max_stock: 0, reorder_point: 0, product_type: 'ready', branch_id: branchFilter || '' });
-    setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
-    setProductComponents([]);
-    setComponentSel('');
-    setComponentQty(1);
-    setModalOpen(true);
+    window.location.hash = '/products/setup';
   };
 
   const openEdit = async (p: Product) => {
@@ -150,7 +144,7 @@ export function ProductsPage() {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       pid = editing.id;
-      const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: editing.id, p_units: unitPayload });
+      const { error: unitError } = await api.catalog.replaceProductUnits({ p_product_id: editing.id, p_units: unitPayload });
       if (unitError) { show(unitError.message, 'error'); return; }
       await logAudit('update', 'products', editing.id, { name: form.name });
     } else {
@@ -158,7 +152,7 @@ export function ProductsPage() {
       if (error) { show(error.message, 'error'); return; }
       pid = (data as { id: string }).id;
       if (unitPayload.length > 0) {
-        const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: pid, p_units: unitPayload });
+        const { error: unitError } = await api.catalog.replaceProductUnits({ p_product_id: pid, p_units: unitPayload });
         if (unitError) { show(unitError.message, 'error'); return; }
       }
       await logAudit('create', 'products', pid, { name: form.name });
