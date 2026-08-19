@@ -20,6 +20,7 @@ describe.skipIf(skip)('process_sale authoritative pricing (D13)', () => {
   const branchId = randomUUID();
   const warehouseId = randomUUID();
   const productId = randomUUID();
+  const unitId = randomUUID();
   const invoiceNumber = `D13-TEST-${Date.now()}`;
 
   beforeAll(async () => {
@@ -40,9 +41,18 @@ describe.skipIf(skip)('process_sale authoritative pricing (D13)', () => {
       [productId, 'D13 Test Product', branchId],
     );
     await client.query(
-      `INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type)
+      `INSERT INTO public.inventory_units (id, code, name, unit_type, branch_id, cost_price, sale_price, is_active)
+       VALUES ($1, $2, $3, 'ready', $4, 50, 100, true)`,
+      [unitId, `D13-${randomUUID()}`, 'D13 Test Unit', branchId],
+    );
+    await client.query(
+      `INSERT INTO public.product_unit_links (product_id, unit_id, quantity) VALUES ($1, $2, 1)`,
+      [productId, unitId],
+    );
+    await client.query(
+      `INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost, source_type)
        VALUES ($1, $2, $3, 10, 50, 'opening')`,
-      [productId, warehouseId, branchId],
+      [unitId, branchId, warehouseId],
     );
 
     await client.query(`SELECT public.ensure_chart_of_accounts($1)`, [branchId]);
@@ -95,13 +105,13 @@ describe.skipIf(skip)('process_sale authoritative pricing (D13)', () => {
     expect(Number(sale.rows[0].tax_amount)).toBe(0);
 
     const batch = await client.query(
-      `SELECT quantity FROM public.inventory_batches WHERE product_id = $1`,
-      [productId],
+      `SELECT quantity FROM public.inventory_unit_batches WHERE unit_id = $1 AND warehouse_id = $2`,
+      [unitId, warehouseId],
     );
     expect(Number(batch.rows[0].quantity)).toBe(8);
 
     const ledger = await client.query(
-      `SELECT entry_type, quantity FROM public.inventory_ledger WHERE reference_id = $1`,
+      `SELECT entry_type, quantity FROM public.inventory_unit_entries WHERE reference_id = $1`,
       [r.sale_id],
     );
     expect(ledger.rows.length).toBeGreaterThan(0);
