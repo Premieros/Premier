@@ -12,9 +12,18 @@ describe.skipIf(skip)('Phase 2 — kitchen station routing', () => {
   const orderId = randomUUID();
 
   async function asAdmin<T>(fn: () => Promise<T>): Promise<T> {
+    await client.query(`SAVEPOINT phase2_kitchen_admin`);
     await client.query(`SELECT set_config('app.user_id', $1, true)`, [randomUUID()]);
     await client.query(`SET LOCAL ROLE service_role`);
-    try { return await fn(); } finally {
+    try {
+      const result = await fn();
+      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`);
+      return result;
+    } catch (error) {
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_kitchen_admin`).catch(() => {});
+      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`).catch(() => {});
+      throw error;
+    } finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
     }
@@ -77,7 +86,6 @@ describe.skipIf(skip)('Phase 2 — kitchen station routing', () => {
       const rows = await q<{ order_id: string }>(
         `SELECT order_id FROM public.get_kitchen_queue('salad', $1)`, [branchId]
       );
-      // Should not include our grill order
       expect(rows.find(r => r.order_id === orderId)).toBeUndefined();
     });
   });
