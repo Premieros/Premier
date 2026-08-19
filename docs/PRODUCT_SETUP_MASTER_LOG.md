@@ -24,7 +24,7 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `b9de36587e86509b110a4228bf50c83a8e69206f`
+- Current HEAD: `c7fa06107e3bb3ec3b6bf96027e68ff6e766a1ef`
 - PR state: Open, not merged
 
 ## Current Status
@@ -33,7 +33,7 @@ Rules:
 
 Status: **IN PROGRESS**
 
-The product Add flow is wired to the new wizard. The next model change is to make inventory units the only sellable component layer: ready units enter inventory directly; manufactured units receive stock only through production; their recipes are owned by the unit; product sales deduct units only.
+The product Add flow is wired to the wizard. Sales now deduct units only. Manufactured units own their Recipes. The `/production` route now opens the new unit-centered production workflow, which consumes the unit Recipe and creates inventory-unit batches.
 
 ## Work Completed
 
@@ -53,11 +53,7 @@ Canonical tables:
 
 ### 2. Full CI stabilization baseline
 
-Status: ✅
-
-Latest fully green baseline:
-
-`Verify main #250`
+Status: ✅ baseline confirmed on `Verify main #250`
 
 - lint ✅
 - typecheck ✅
@@ -70,55 +66,53 @@ Latest fully green baseline:
 
 ### 3. Products-page Add action
 
-Status: ✅ code implemented; fresh CI validation required after later model changes
+Status: ✅ code implemented
 
-Main Add action now opens:
-
-`/products/setup`
+Main Add action opens `/products/setup`.
 
 Existing Edit flow and import/export remain unchanged.
 
 ### 4. Sales deduction model changed to unit-only
 
-Commit:
+Commit: `717c3587e87dd90768743a3283b2abf01448b608`
 
-`717c3587e87dd90768743a3283b2abf01448b608`
+File: `src/lib/sales-deduction.ts`
 
-File:
-
-`src/lib/sales-deduction.ts`
-
-New rule:
+Rules:
 
 - Sale → product → linked inventory units → deduct unit batches only.
-- No `inventory_unit_recipes` lookup during sale.
-- No `raw_material_inventory` mutation during sale.
-- `raw_materials_deducted` remains empty for sale operations.
+- No recipe lookup during sale.
+- No raw-material inventory mutation during sale.
 
-Reason: raw materials have already been consumed when a manufactured unit is produced. Deducting them again at sale would double-consume stock.
+This prevents double consumption of raw materials.
 
-### 5. Unit-owned recipe management
+### 5. Unit-owned Recipe management
 
-Commit:
+Commit: `b9de36587e86509b110a4228bf50c83a8e69206f`
 
-`b9de36587e86509b110a4228bf50c83a8e69206f`
+File: `src/features/catalog/pages/InventoryUnitsPage.tsx`
 
-File:
+Manufactured units now expose a Recipe editor using `inventory_unit_recipes`. Ready units do not have a Recipe editor.
 
-`src/features/catalog/pages/InventoryUnitsPage.tsx`
+### 6. Unit-centered production workflow
 
-Changes:
+Commit: `c7fa06107e3bb3ec3b6bf96027e68ff6e766a1ef`
 
-- Manufactured units now have a visible Recipe action.
-- Recipe editor loads active raw materials.
-- Recipe rows support quantity and wastage percentage.
-- Save replaces the unit recipe in `inventory_unit_recipes`.
-- Ready units do not expose a recipe editor.
-- UI explicitly states that raw materials are consumed by manufacturing, not sale.
+New page:
+
+`src/features/manufacturing/pages/UnitProductionPage.tsx`
+
+The workflow:
+
+`Manufactured Unit → Unit Recipe → Production → Raw Material Deduction → Unit Batch`
+
+The existing `/production` route now opens this workflow. `APP_ROUTES.productionUnits` is also available at `/production/units`.
+
+The page uses the existing `produce_inventory_unit` RPC and filters manufactured units and warehouses by the active branch when available.
 
 ## Current Architecture Decision
 
-The intended source of truth is now:
+The source of truth is:
 
 `Raw Material`
 → `Unit Recipe`
@@ -142,34 +136,21 @@ Status: 🔄 awaiting CI
 1. Confirm lint/typecheck/unit/build remain green.
 2. Confirm DB integration/security/RLS remain green.
 3. Confirm browser smoke remains green.
-4. Confirm manufactured-unit Recipe UI compiles and renders.
+4. Confirm unit Recipe editor compiles and renders.
+5. Confirm `/production` opens the new unit production workflow.
 
-### Phase B — Convert manufacturing to unit-centered production
+### Phase B — Product composition validation
 
-Status: ⏳ next
-
-The existing `ProductionOrdersPage` still starts from manufactured **products** and legacy `recipes/recipe_items`.
-
-Replace the primary manufacturing flow with:
-
-`Manufactured Inventory Unit → Unit Recipe → Produce Unit → Consume Raw Materials → Create Unit Batch`
-
-The existing `produce_inventory_unit(uuid,numeric,uuid,uuid,text)` RPC already follows this unit-centered concept. fileciteturn64file0L1-L3
-
-The legacy product production flow must not become the source of truth for the new model.
-
-### Phase C — Product composition validation
-
-After unit production is green, validate:
+After CI is green, validate:
 
 `Product`
 → `Product Unit Links`
 → `Ready Unit / Manufactured Unit`
 → `Unit stock`
 
-No product-level raw-material Recipe should be required for the new flow.
+No new product-level raw-material Recipe should be required for the unit-centered flow.
 
-### Phase D — End-to-end test
+### Phase C — End-to-end test
 
 Validate exactly:
 
@@ -198,7 +179,7 @@ Also verify:
 - production history
 - audit log
 
-### Phase E — Final PR gate
+### Phase D — Final PR gate
 
 Only when all validations are green:
 
@@ -216,8 +197,11 @@ Only when all validations are green:
 | 2026-08-19 | `109e98d3...` | Products-page Add → unified wizard | ✅ code |
 | 2026-08-19 | Verify main #250 | Full CI baseline | ✅ all jobs green |
 | 2026-08-19 | Verify main #252 | Products Add lint regression | ❌ fixed |
-| 2026-08-19 | `717c3587...` | Sales deduction → units only | ✅ code |
-| 2026-08-19 | `b9de3658...` | Unit-owned Recipe editor | ✅ code |
+| 2026-08-19 | `717c3587...` | Sales deduction → units only | ✅ |
+| 2026-08-19 | `b9de3658...` | Unit-owned Recipe editor | ✅ |
+| 2026-08-19 | `b2c8815...` | Unit-centered production page | ✅ |
+| 2026-08-19 | `03c101b...` | Production route constant | ✅ |
+| 2026-08-19 | `c7fa061...` | `/production` → UnitProductionPage | ✅ |
 | 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ |
 
 ## Do Not Forget
