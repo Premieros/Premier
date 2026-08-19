@@ -10,12 +10,13 @@ describe.skipIf(skip)('Product -> manufactured unit -> sale stock flow', () => {
   let client: pg.Client;
   const branchId = randomUUID();
   const warehouseId = randomUUID();
+  const testUserId = randomUUID();
   const rawMaterialId = randomUUID();
   const unitId = randomUUID();
   const productId = randomUUID();
 
   async function asAdmin<T>(fn: () => Promise<T>): Promise<T> {
-    await client.query(`SELECT set_config('app.user_id', $1, true)`, [randomUUID()]);
+    await client.query(`SELECT set_config('app.user_id', $1, true)`, [testUserId]);
     await client.query(`SET LOCAL ROLE service_role`);
     try {
       return await fn();
@@ -33,6 +34,24 @@ describe.skipIf(skip)('Product -> manufactured unit -> sale stock flow', () => {
     await client.connect();
     await client.query('BEGIN');
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
+
+    await client.query(
+      `INSERT INTO auth.users (id, email, role, aud, instance_id, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+       VALUES ($1, $2, 'authenticated', 'authenticated', gen_random_uuid(), '{}'::jsonb, '{}'::jsonb, now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [testUserId, `unit-flow-${testUserId}@example.test`],
+    );
+    await client.query(
+      `INSERT INTO public.users (id, email, full_name, role, branch_id, is_active)
+       VALUES ($1, $2, 'Unit Flow Test User', 'owner', $3, true)
+       ON CONFLICT (id) DO UPDATE
+       SET email = EXCLUDED.email,
+           full_name = EXCLUDED.full_name,
+           role = 'owner',
+           branch_id = EXCLUDED.branch_id,
+           is_active = true`,
+      [testUserId, `unit-flow-${testUserId}@example.test`, branchId],
+    );
 
     await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, 'Unit Flow Test Branch')`, [branchId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, 'Unit Flow WH', $2, true)`, [warehouseId, branchId]);
