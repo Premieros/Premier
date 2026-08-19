@@ -20,11 +20,11 @@
 - Updated authoritative-pricing integration fixtures to use the same unit-based stock contract and to verify `inventory_unit_entries` for the sale.
 
 ### EVIDENCE
-- Run #276: all canonical migrations + schema verification passed; 211/215 integration tests passed. The four failures were the two legacy sale fixtures still asserting `inventory_batches` and the pricing discount fixture with a product lacking unit stock.
-- Follow-up commits on `agent/product-setup-flow`: additive unit-link enforcement, settlement fixture migration, pricing fixture migration.
+- Run #276: canonical migrations and schema verification passed; 211/215 integration tests passed. The four failures were the two legacy sale fixtures still asserting `inventory_batches` and the pricing fixture using a product without unit stock.
+- Follow-up commits: `4eb275f`, `257868f`, `06bbfc0`.
 
 ### REMAINING
-- Run the full CI on the new head.
+- Run full CI on the newest head.
 - Verify the live flow: manufacture unit -> add unit to product -> sell product -> unit decreases, raw material does not decrease again.
 
 ### GATE
