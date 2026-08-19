@@ -44,7 +44,11 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
       for (const [k, v] of entries) summaryRows.push([k, v == null ? '' : String(v)]);
     }
     summaryRows.push([`${lang === 'ar' ? 'تاريخ الإنشاء' : 'Generated at'}: ${new Date().toLocaleString()}`, '']);
-    const ws = XLSX.utils.aoa_to_sheet(summaryRows);
+    const summaryData: (string | number)[][] = [
+      [lang === 'ar' ? 'البيان' : 'Item', lang === 'ar' ? 'القيمة' : 'Value'],
+      ...summaryRows,
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, ws, lang === 'ar' ? 'ملخص' : 'Summary');
   }
 
@@ -104,7 +108,6 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
   }
 
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
