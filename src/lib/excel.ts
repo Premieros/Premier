@@ -92,6 +92,35 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
     }
   }
 
+  if (totalRow && allRows.length > 0) {
+    const lastR = range.e.r;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r: lastR, c });
+      const cell = ws[addr];
+      if (cell) {
+        cell.s = { ...(cell.s || {}), font: { bold: true } };
+      }
+    }
+  }
+
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, filename);
+
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+export async function exportToExcel(data: Record<string, unknown>[], filename: string, sheetName = 'Sheet1'): Promise<void> {
+  return exportToExcelAdvanced({ data, filename, sheetName });
+}
+
+export async function importFromExcel(file: File): Promise<Record<string, unknown>[]> {
+  const XLSX = await import('xlsx');
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
+}
+
+export async function downloadTemplate(columns: string[], filename: string): Promise<void> {
+  const data = [columns.reduce((acc, col) => ({ ...acc, [col]: '' }), {})];
+  await exportToExcel(data, filename, 'Template');
 }
