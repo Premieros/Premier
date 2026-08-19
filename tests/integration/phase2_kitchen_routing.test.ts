@@ -12,16 +12,16 @@ describe.skipIf(skip)('Phase 2 — kitchen station routing', () => {
   const orderId = randomUUID();
 
   async function asAdmin<T>(fn: () => Promise<T>): Promise<T> {
-    await client.query(`SAVEPOINT phase2_kitchen_admin`);
     await client.query(`SELECT set_config('app.user_id', $1, true)`, [randomUUID()]);
     await client.query(`SET LOCAL ROLE service_role`);
+    await client.query(`SAVEPOINT phase2_kitchen_admin`);
     try {
       const result = await fn();
       await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`);
       return result;
     } catch (error) {
-      await client.query(`ROLLBACK TO SAVEPOINT phase2_kitchen_admin`).catch(() => {});
-      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`).catch(() => {});
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_kitchen_admin`);
+      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`);
       throw error;
     } finally {
       await client.query('RESET ROLE').catch(() => {});
