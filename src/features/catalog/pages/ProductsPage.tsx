@@ -13,7 +13,7 @@ import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { formatCurrency, formatNumber, generateBarcode } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
