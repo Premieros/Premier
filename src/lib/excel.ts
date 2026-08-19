@@ -44,7 +44,7 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
       for (const [k, v] of entries) summaryRows.push([k, v == null ? '' : String(v)]);
     }
     summaryRows.push([`${lang === 'ar' ? 'تاريخ الإنشاء' : 'Generated at'}: ${new Date().toLocaleString()}`, '']);
-    const ws = XLSX.utils.aoa_to_sheet(summaryRows.map(([a, b]) => ({ [lang === 'ar' ? 'البيان' : 'Item']: a, [lang === 'ar' ? 'القيمة' : 'Value']: b })));
+    const ws = XLSX.utils.aoa_to_sheet(summaryRows);
     XLSX.utils.book_append_sheet(wb, ws, lang === 'ar' ? 'ملخص' : 'Summary');
   }
 
@@ -56,7 +56,7 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
   const widths = autoWidth(columns, allRows);
   ws['!cols'] = widths.map((w) => ({ wch: w }));
 
-  (wb as Record<string, unknown>)['Workbook'] = { Views: [{ state: 'frozen', ysplit: 1, xsplit: 0 }] };
+  (wb as unknown as Record<string, unknown>)['Workbook'] = { Views: [{ state: 'frozen', ysplit: 1, xsplit: 0 }] };
 
   const range = XLSX.utils.decode_range(ws['!ref']!);
 
@@ -92,35 +92,6 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
     }
   }
 
-  if (totalRow && allRows.length > 0) {
-    const lastR = range.e.r;
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      const addr = XLSX.utils.encode_cell({ r: lastR, c });
-      const cell = ws[addr];
-      if (cell) {
-        cell.s = { ...(cell.s || {}), font: { bold: true } };
-      }
-    }
-  }
-
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-  XLSX.writeFile(wb, `${filename}.xlsx`);
-}
-
-export async function exportToExcel(data: Record<string, unknown>[], filename: string, sheetName = 'Sheet1'): Promise<void> {
-  return exportToExcelAdvanced({ data, filename, sheetName });
-}
-
-export async function importFromExcel(file: File): Promise<Record<string, unknown>[]> {
-  const XLSX = await import('xlsx');
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
-}
-
-export async function downloadTemplate(columns: string[], filename: string): Promise<void> {
-  const data = [columns.reduce((acc, col) => ({ ...acc, [col]: '' }), {})];
-  await exportToExcel(data, filename, 'Template');
+  XLSX.writeFile(wb, filename);
 }
