@@ -24,14 +24,14 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `c7fa06107e3bb3ec3b6bf96027e68ff6e766a1ef`
+- Current HEAD: `d515adcdeee130613362810ac979c066667ab89a`
 - PR state: Open, not merged
 
 ## Current Status
 
 **Phase: Unit-centered inventory model**
 
-Status: **IN PROGRESS**
+Status: **IN PROGRESS — validation pending**
 
 The product Add flow is wired to the wizard. Sales now deduct units only. Manufactured units own their Recipes. The `/production` route now opens the new unit-centered production workflow, which consumes the unit Recipe and creates inventory-unit batches.
 
@@ -96,7 +96,11 @@ Manufactured units now expose a Recipe editor using `inventory_unit_recipes`. Re
 
 ### 6. Unit-centered production workflow
 
-Commit: `c7fa06107e3bb3ec3b6bf96027e68ff6e766a1ef`
+Commits:
+
+- `b2c881599f46fc6584a5804a05e1d91cb91e0840` — UnitProductionPage
+- `03c101bec230f15b8acadef52a84a9cf59643b30` — production route constant
+- `c7fa06107e3bb3ec3b6bf96027e68ff6e766a1ef` — `/production` → UnitProductionPage
 
 New page:
 
@@ -106,9 +110,43 @@ The workflow:
 
 `Manufactured Unit → Unit Recipe → Production → Raw Material Deduction → Unit Batch`
 
-The existing `/production` route now opens this workflow. `APP_ROUTES.productionUnits` is also available at `/production/units`.
-
 The page uses the existing `produce_inventory_unit` RPC and filters manufactured units and warehouses by the active branch when available.
+
+### 7. End-to-end hierarchy tests added
+
+Status: 🔄 awaiting CI
+
+#### Database integration test
+
+Commit: `c2083f23f19a0647e4b4660129bd4efc361bc5b5`
+
+File:
+
+`tests/integration/unit_inventory_hierarchy.test.ts`
+
+Scenario:
+
+- 100 units of Mayonnaise raw-material stock
+- Recipe: 2 units of Mayonnaise per Burger Sauce unit
+- Produce 20 Burger Sauce units
+- Assert raw-material stock becomes 60
+- Assert finished-unit batch becomes 20
+- Assert production record is completed with total cost 400 and unit cost 20
+
+#### Sales deduction unit test
+
+Commit: `d515adcdeee130613362810ac979c066667ab89a`
+
+File:
+
+`tests/unit/sales_deduction_units_only.test.ts`
+
+Assertions:
+
+- Sale of 2 manufactured units deducts 2 unit-stock items
+- Creates one unit sale ledger entry for `-2`
+- Returns zero raw-material deductions
+- Never touches `raw_material_inventory`
 
 ## Current Architecture Decision
 
@@ -138,6 +176,8 @@ Status: 🔄 awaiting CI
 3. Confirm browser smoke remains green.
 4. Confirm unit Recipe editor compiles and renders.
 5. Confirm `/production` opens the new unit production workflow.
+6. Confirm `unit_inventory_hierarchy.test.ts` passes.
+7. Confirm `sales_deduction_units_only.test.ts` passes.
 
 ### Phase B — Product composition validation
 
@@ -150,7 +190,7 @@ After CI is green, validate:
 
 No new product-level raw-material Recipe should be required for the unit-centered flow.
 
-### Phase C — End-to-end test
+### Phase C — End-to-end business validation
 
 Validate exactly:
 
@@ -202,6 +242,8 @@ Only when all validations are green:
 | 2026-08-19 | `b2c8815...` | Unit-centered production page | ✅ |
 | 2026-08-19 | `03c101b...` | Production route constant | ✅ |
 | 2026-08-19 | `c7fa061...` | `/production` → UnitProductionPage | ✅ |
+| 2026-08-19 | `c2083f23...` | DB hierarchy integration test | 🔄 CI pending |
+| 2026-08-19 | `d515adc...` | Unit-only sales deduction test | 🔄 CI pending |
 | 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ |
 
 ## Do Not Forget
