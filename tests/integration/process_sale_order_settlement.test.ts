@@ -3,24 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { getDbUrl, openDb } from './db';
 import type pg from 'pg';
 
-// Regression tests for migration 045 (audit C1):
-//
-//   OLD behaviour (038): the linked-order check ran AFTER the sale header,
-//   sale items, FIFO stock deduction and journal entry were already written.
-//   Because plpgsql RETURN does not abort the transaction, a rejected
-//   settlement "failed" while still committing a full sale:
-//     * held takeaway/delivery orders (table_id IS NULL) were unpayable and
-//       produced a phantom committed sale + stock deduction,
-//     * a second device paying an already-settled order duplicated the sale.
-//
-//   NEW behaviour (045): the order is validated BEFORE any write; a rejected
-//   settlement creates nothing.
-//
-// Runs inside a single BEGIN..ROLLBACK transaction — safe against the live DB.
-//
-//   Run:  npm run test:integration
-//   Skip: when no URL is configured
-
 const dbUrl = getDbUrl();
 const skip = !dbUrl;
 
@@ -95,8 +77,8 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
       [productId, unitId],
     );
     await client.query(
-      `INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost, source_type)
-       VALUES ($1, $2, $3, 10, 50, 'opening')`,
+      `INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost)
+       VALUES ($1, $2, $3, 10, 50)`,
       [unitId, branchId, warehouseId],
     );
     await client.query(
@@ -115,7 +97,7 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     }
   });
 
-  it('pays a held takeaway order (table_id NULL) — previously phantom-failed', async () => {
+  it('pays a held takeaway order (table_id NULL)', async () => {
     const orderId = await insertOrder('held', { tableId: null, orderType: 'takeaway' });
     const before = await batchQty();
 
@@ -132,8 +114,6 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     );
     expect(sale.rows[0].order_type).toBe('takeaway');
     expect(sale.rows[0].table_id).toBeNull();
-
-    // Unit stock is deducted exactly once.
     expect(await batchQty()).toBe(before - 1);
   });
 
@@ -148,11 +128,8 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     const saleCountBefore = await saleCount(prefix);
 
     const second = await settle(prefix, orderId);
-    // The settlement is rejected BEFORE any write.
     expect(second.success).toBe(false);
     expect(second.error).toBe('ORDER_NOT_FOUND');
-
-    // No phantom sale, no second stock deduction, order stays completed.
     expect(await saleCount(prefix)).toBe(saleCountBefore);
     expect(await batchQty()).toBe(beforeQty - 1);
 
