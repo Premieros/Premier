@@ -29,6 +29,7 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
   const branchId = randomUUID();
   const warehouseId = randomUUID();
   const productId = randomUUID();
+  const unitId = randomUUID();
   const tableId = randomUUID();
 
   const itemJson = (qty: number, price = 100) =>
@@ -64,8 +65,8 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
 
   async function batchQty(): Promise<number> {
     const r = await client.query<{ q: string }>(
-      `SELECT quantity::text AS q FROM public.inventory_batches WHERE product_id = $1`,
-      [productId],
+      `SELECT quantity::text AS q FROM public.inventory_unit_batches WHERE unit_id = $1 AND warehouse_id = $2`,
+      [unitId, warehouseId],
     );
     return Number(r.rows[0].q);
   }
@@ -85,9 +86,18 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
       [productId, '045 C1 Product', branchId],
     );
     await client.query(
-      `INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type)
+      `INSERT INTO public.inventory_units (id, code, name, unit_type, branch_id, cost_price, sale_price, is_active)
+       VALUES ($1, $2, $3, 'ready', $4, 50, 100, true)`,
+      [unitId, `U-${randomUUID()}`, '045 C1 Unit', branchId],
+    );
+    await client.query(
+      `INSERT INTO public.product_unit_links (product_id, unit_id, quantity) VALUES ($1, $2, 1)`,
+      [productId, unitId],
+    );
+    await client.query(
+      `INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost, source_type)
        VALUES ($1, $2, $3, 10, 50, 'opening')`,
-      [productId, warehouseId, branchId],
+      [unitId, branchId, warehouseId],
     );
     await client.query(
       `INSERT INTO public.dining_tables (id, name, branch_id, capacity, status) VALUES ($1, $2, $3, 4, 'vacant')`,
@@ -123,7 +133,7 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     expect(sale.rows[0].order_type).toBe('takeaway');
     expect(sale.rows[0].table_id).toBeNull();
 
-    // Stock deducted exactly once.
+    // Unit stock is deducted exactly once.
     expect(await batchQty()).toBe(before - 1);
   });
 
