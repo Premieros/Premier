@@ -35,6 +35,7 @@ describe.skipIf(skip)('Product -> manufactured unit -> sale stock flow', () => {
     await client.query('BEGIN');
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
 
+    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, 'Unit Flow Test Branch')`, [branchId]);
     await client.query(
       `INSERT INTO auth.users (id, email, role, aud, instance_id, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
        VALUES ($1, $2, 'authenticated', 'authenticated', gen_random_uuid(), '{}'::jsonb, '{}'::jsonb, now(), now())
@@ -52,8 +53,6 @@ describe.skipIf(skip)('Product -> manufactured unit -> sale stock flow', () => {
            is_active = true`,
       [testUserId, `unit-flow-${testUserId}@example.test`, branchId],
     );
-
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, 'Unit Flow Test Branch')`, [branchId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, 'Unit Flow WH', $2, true)`, [warehouseId, branchId]);
     await client.query(
       `INSERT INTO public.raw_materials (id, code, name, min_stock, default_cost, is_active, branch_id)
