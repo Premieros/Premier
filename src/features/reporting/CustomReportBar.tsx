@@ -1,11 +1,12 @@
 import { Plus, X } from 'lucide-react';
 import type { SavedReportConfig } from './useCustomReports';
+import type { ReportFilters } from './reportFilters';
 
 interface CustomReportBarProps {
   savedReports: SavedReportConfig[];
   currentReportType: string;
   currentVisibleColumns: string[] | null;
-  currentFilters: Record<string, string>;
+  currentFilters: ReportFilters;
   onSelect: (config: SavedReportConfig) => void;
   onSave: () => void;
   onDelete: (id: string) => void;
@@ -22,11 +23,11 @@ function arraysEqual(a: string[] | null, b: string[] | null) {
   return true;
 }
 
-function filtersEqual(a: Record<string, string>, b: Record<string, string>) {
+function filtersEqual(a: ReportFilters, b: ReportFilters) {
   const ka = Object.keys(a);
   const kb = Object.keys(b);
   if (ka.length !== kb.length) return false;
-  return ka.every((k) => a[k] === b[k]);
+  return ka.every((k) => a[k as keyof ReportFilters] === b[k as keyof ReportFilters]);
 }
 
 export function CustomReportBar({
