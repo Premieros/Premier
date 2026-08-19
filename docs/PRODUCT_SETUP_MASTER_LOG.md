@@ -22,7 +22,7 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD before final add-action CI: `109e98d3fd29224bcf028b6f9a27b14a98c1d165`
+- Current HEAD: `ad0f1d3b3442373a1c9e9fe850c028c5e99e964e`
 - PR state: Open, not merged
 
 ## Current Status
@@ -31,7 +31,7 @@ Rules:
 
 Status: **IN PROGRESS**
 
-The CI baseline is green. The main Products-page Add action is now wired to the unified wizard. Final CI for this change must be green before the phase is considered complete.
+The CI baseline is green. The main Products-page Add action is wired to the unified wizard. Final CI for this change must be green before the phase is considered complete.
 
 ## Work Completed
 
@@ -119,8 +119,15 @@ Change:
 - Existing **Edit Product** flow remains unchanged and continues to use the legacy edit modal.
 - Import/export actions remain unchanged.
 - No POS or inventory deduction logic was changed.
+- The unused `generateBarcode` import was removed.
 
 This establishes a single primary creation path for new products while preserving the existing edit workflow.
+
+### 6. CI failure and recovery checkpoint
+
+`Verify main #252` failed only at lint because `generateBarcode` was still imported after the Add flow changed. That import has been removed.
+
+A transient GitHub file-write issue temporarily produced an incomplete `ProductsPage.tsx`. The complete file was restored from the exact prior Git blob, and the branch was restored to a valid commit before creating the next CI-triggering checkpoint.
 
 ## Latest Confirmed CI
 
@@ -130,7 +137,7 @@ This establishes a single primary creation path for new products while preservin
 - DB ✅
 - Browser Smoke ✅
 
-The next run must validate the Products-page Add action change.
+`Verify main #252` was a stale failure from before the import cleanup and recovery checkpoint.
 
 ## Immediate Next Actions
 
@@ -203,7 +210,9 @@ Only when all validations are green:
 | 2026-08-19 | Phase 2 expected-error SAVEPOINT fixes | Integration tests | ✅ |
 | 2026-08-19 | Verify main #250 | Full CI baseline | ✅ all jobs green |
 | 2026-08-19 | Browser smoke container change | CI | ✅ |
-| 2026-08-19 | `109e98d3...` | Products-page Add → unified wizard | 🔄 awaiting CI |
+| 2026-08-19 | `109e98d3...` | Products-page Add → unified wizard | ✅ code |
+| 2026-08-19 | Verify main #252 | CI after Add integration | ❌ lint only; corrected |
+| 2026-08-19 | Restore checkpoint `ad0f1d3...` | ProductsPage integrity | ✅ |
 | 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ persistent source of truth |
 
 ## Do Not Forget
