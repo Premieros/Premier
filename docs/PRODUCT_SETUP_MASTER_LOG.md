@@ -22,7 +22,7 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `24e4b9f373002d5eeca6d0457a2d3c2d0c2c1c87`
+- Current HEAD before next fix cycle: `c0899a9552c2c520236c4bc04fb625dd6dfb044a`
 - PR state: Open, not merged
 
 ## Current Status
@@ -68,7 +68,7 @@ The wizard intentionally avoids introducing a third product/unit model.
 
 Status: ✅
 
-Latest confirmed CI before the remaining DB failures:
+Latest confirmed CI verification job:
 
 - lint: ✅
 - typecheck: ✅
@@ -85,9 +85,9 @@ Schema verification reported:
 
 ### 3. Production raw-material compatibility
 
-Status: ✅ implemented, awaiting fresh CI confirmation
+Status: ✅ implemented
 
-Migration added:
+Migration:
 
 `092_production_raw_material_compatibility.sql`
 
@@ -97,7 +97,7 @@ The migration adds a compatibility wrapper and delegates to the canonical FIFO i
 
 ### 4. Integration-test transaction isolation
 
-Status: ✅ implemented, awaiting fresh CI confirmation
+Status: ⚠️ partially fixed; negative-test callbacks still require explicit rollback before outer SAVEPOINT release
 
 Updated tests:
 
@@ -105,7 +105,7 @@ Updated tests:
 - `tests/integration/phase2_production_variance.test.ts`
 - `tests/integration/phase2_waste_center.test.ts`
 
-The tests now isolate expected database errors with SAVEPOINT/ROLLBACK TO SAVEPOINT so one intentionally failing RPC does not poison the enclosing transaction.
+The outer `asAdmin` helper now has SAVEPOINT handling, but the negative tests use `expect(...).rejects.toThrow()` inside the callback. That consumes the rejection inside the assertion, so the outer helper still attempts to release an aborted SAVEPOINT. This is now a confirmed root cause of 5 of the remaining 6 failures.
 
 ### 5. Master execution log
 
@@ -115,9 +115,9 @@ This file is now the required execution ledger for this branch. Every future edi
 
 ## Latest Known CI Result
 
-Run: `Verify main #236` (PR #8 merge ref)
+Run: `Verify main #240` (PR #8 merge ref `b8628b8...`)
 
-The verify job was green:
+Verification job:
 
 - lint ✅
 - typecheck ✅
@@ -125,52 +125,61 @@ The verify job was green:
 - unit tests ✅
 - build ✅
 
-DB job was still failing with **9 integration test failures / 205 passed** across 18 files.
+DB integration:
 
-### Root causes identified from the failing run
+- **208 passed / 214 total**
+- **6 failed**
+- 3 integration files affected
 
-#### A. Kitchen queue RPC schema mismatch
+This is an improvement from the previous checkpoint of 205 passed / 9 failed.
 
-Error:
+### Remaining failures and root causes
 
-`column o.table_number does not exist`
+#### A. Negative-error tests leave their SAVEPOINT aborted — 5 failures
 
-Location:
+Affected tests:
 
-`get_kitchen_queue(text, uuid)`
+- kitchen: `route_to_station rejects invalid station`
+- production: `produce_inventory_unit rejects non-manufactured unit`
+- production: `produce_inventory_unit rejects non-positive quantity`
+- waste: `approve_waste rejects if already approved`
+- waste: `create_waste_entry rejects invalid waste_type`
 
-The RPC created by the current migration references an `orders.table_number` column that is not present in the canonical schema.
+Observed error:
 
-#### B. Production RPC schema mismatch
+`current transaction is aborted, commands ignored until end of transaction block`
 
-Error:
+The intended RPC error occurs correctly, but the test assertion catches it inside `expect(...).rejects.toThrow()` and the enclosing helper then tries to `RELEASE SAVEPOINT` without first rolling back to that savepoint.
 
-`column "warehouse_id" of relation "raw_material_batches" does not exist`
+Required fix: introduce/use an explicit expected-error helper that performs `ROLLBACK TO SAVEPOINT` after catching the expected database error and only then releases the savepoint.
 
-Location:
+#### B. `produce_inventory_unit` does not resolve branch when omitted — 1 failure
 
-`produce_inventory_unit(uuid,numeric,uuid,uuid,text)`
+Observed error:
 
-The canonical `raw_material_batches` table is branch-scoped and does not contain `warehouse_id`.
+`null value in column "branch_id" of relation "raw_material_batches" violates not-null constraint`
 
-#### C. SAVEPOINT ordering bug in test helper
+The test calls:
 
-The earlier test helper created the SAVEPOINT before setting the service/admin role and then attempted `RELEASE SAVEPOINT` after the RPC had already aborted the transaction. This generated secondary `current transaction is aborted` failures.
+`produce_inventory_unit(unit_id, quantity, warehouse_id)`
+
+The current function reaches an insert with `p_branch_id = NULL` even though the warehouse has a valid `branch_id`.
+
+Required fix: preserve the public function contract and resolve `p_branch_id` from `warehouses.branch_id` (with `get_branch_id()` as a final fallback) before the branch-scoped raw-material batch writes.
+
+Do not make the raw-material batch table warehouse-scoped; the canonical schema is branch-scoped.
 
 ## Immediate Next Actions
 
-### Phase A — Database compatibility fix
+### Phase A — Fix the final 6 DB integration failures
 
 Status: 🔄 in progress
 
-A new compatibility migration has been added on the branch to address the production/kitchen schema mismatches. The next CI run must confirm the exact public RPC contracts against the canonical schema.
-
-Required checks:
-
-1. `get_kitchen_queue` must match the actual `orders` schema while preserving its return contract.
-2. `produce_inventory_unit` must write to the actual `raw_material_batches` schema and continue using branch-scoped FIFO consumption.
-3. Existing RLS/security behavior must remain unchanged.
-4. Existing public RPC signatures must remain stable or be wrapped compatibly.
+1. Add an explicit expected-error SAVEPOINT helper to the three Phase 2 integration test files.
+2. Make `produce_inventory_unit` derive `branch_id` from the selected warehouse when the argument is null/omitted.
+3. Add/update a new migration only; do not edit historical migrations.
+4. Run the complete DB integration/security/RLS test suite again.
+5. Record the exact CI run and failure count before any new phase.
 
 ### Phase B — CI verification
 
@@ -246,10 +255,11 @@ Only when all validations are green:
 | 2026-08-19 | Product setup wizard work | Frontend/product flow | ✅ |
 | 2026-08-19 | Remove unused `ReportDeepLinkPage` | Routes/lint | ✅ |
 | 2026-08-19 | TypeScript/report/excel fixes | Verify gate | ✅ lint/typecheck/build |
-| 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ migration applied in CI; needs final integration confirmation |
-| 2026-08-19 | Savepoint isolation fixes | Integration tests | ✅ implemented; needs final CI confirmation |
-| 2026-08-19 | Kitchen/production schema compatibility migration | DB | 🔄 added; awaiting CI confirmation |
-| 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ created and checkpointed |
+| 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ applied; production call path still needs branch resolution |
+| 2026-08-19 | `093_phase2_schema_compatibility.sql` | Kitchen/production schema compatibility | ✅ schema verification; removed table_number/warehouse_id mismatches |
+| 2026-08-19 | Savepoint isolation fixes | Integration tests | ⚠️ outer helper fixed; expected-error helper still required |
+| 2026-08-19 | Verify main #240 | CI checkpoint | ⚠️ verify ✅; DB 208/214 passed, 6 failed |
+| 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ persistent source of truth |
 
 ## Do Not Forget
 
