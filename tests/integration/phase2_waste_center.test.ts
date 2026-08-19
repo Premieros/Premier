@@ -23,13 +23,27 @@ describe.skipIf(skip)('Phase 2 — waste center', () => {
       await client.query(`RELEASE SAVEPOINT phase2_waste_admin`);
       return result;
     } catch (error) {
-      await client.query(`ROLLBACK TO SAVEPOINT phase2_waste_admin`);
-      await client.query(`RELEASE SAVEPOINT phase2_waste_admin`);
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_waste_admin`).catch(() => {});
+      await client.query(`RELEASE SAVEPOINT phase2_waste_admin`).catch(() => {});
       throw error;
     } finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
     }
+  }
+
+  async function expectDbError(fn: () => Promise<unknown>): Promise<void> {
+    const savepoint = 'phase2_waste_expected_error';
+    await client.query(`SAVEPOINT ${savepoint}`);
+    let threw = false;
+    try {
+      await fn();
+    } catch {
+      threw = true;
+    }
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    expect(threw).toBe(true);
   }
 
   const q = async <T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> =>
@@ -103,9 +117,9 @@ describe.skipIf(skip)('Phase 2 — waste center', () => {
 
   it('approve_waste rejects if already approved', async () => {
     await asAdmin(async () => {
-      await expect(
+      await expectDbError(() =>
         client.query(`SELECT public.approve_waste($1, true)`, [wasteId])
-      ).rejects.toThrow();
+      );
     });
   });
 
@@ -132,9 +146,9 @@ describe.skipIf(skip)('Phase 2 — waste center', () => {
 
   it('create_waste_entry rejects invalid waste_type', async () => {
     await asAdmin(async () => {
-      await expect(
+      await expectDbError(() =>
         client.query(`SELECT public.create_waste_entry($1, $2, $3, $4, $5, $6)`, [branchId, catId, 'invalid', 1, 1, null])
-      ).rejects.toThrow();
+      );
     });
   });
 });
