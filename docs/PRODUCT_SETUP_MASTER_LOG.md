@@ -22,16 +22,16 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD after browser workflow change: `41b0f1748e2a739f18f501d610851a62a3740536`
+- Current HEAD before final add-action CI: `109e98d3fd29224bcf028b6f9a27b14a98c1d165`
 - PR state: Open, not merged
 
 ## Current Status
 
-**Phase: CI stabilization before final product-flow integration**
+**Phase: Products-page integration**
 
 Status: **IN PROGRESS**
 
-The product setup wizard exists, and the application/DB verification gates are green on the latest completed run. Browser Smoke was blocked in Playwright dependency installation, so the workflow was adjusted before considering the final gate complete.
+The CI baseline is green. The main Products-page Add action is now wired to the unified wizard. Final CI for this change must be green before the phase is considered complete.
 
 ## Work Completed
 
@@ -68,7 +68,7 @@ The wizard intentionally avoids introducing a third product/unit model.
 
 Status: ✅
 
-Latest completed verification job:
+Latest fully green CI baseline was `Verify main #250`:
 
 - lint: ✅
 - typecheck: ✅
@@ -76,97 +76,76 @@ Latest completed verification job:
 - unit tests: ✅
 - build: ✅
 - schema verification: ✅
+- integration/security/RLS: ✅
+- browser smoke: ✅
 
-Schema verification reported:
+### 3. Database compatibility and integration-test stabilization
 
-- 60/60 tables
-- 65/65 functions
-- 92/92 contract RPCs
+Status: ✅
 
-### 3. Production raw-material compatibility
+Completed migrations:
 
-Status: ✅ implemented
+- `092_production_raw_material_compatibility.sql`
+- `093_phase2_schema_compatibility.sql`
+- `094_fix_inventory_unit_production_branch_resolution.sql`
 
-Migration:
-
-`092_production_raw_material_compatibility.sql`
-
-Reason: `produce_inventory_unit` expected `deduct_raw_material_inventory(...)`, while the canonical branch-scoped FIFO helper already present in the system is `_raw_remove_fifo(...)`.
-
-### 4. Integration-test transaction isolation
-
-Status: ✅ fixed in code and confirmed by latest DB CI
-
-Updated tests:
+Completed integration-test transaction isolation fixes in:
 
 - `tests/integration/phase2_kitchen_routing.test.ts`
 - `tests/integration/phase2_production_variance.test.ts`
 - `tests/integration/phase2_waste_center.test.ts`
 
-Each file now has explicit expected-error handling that rolls back to a nested SAVEPOINT before releasing it.
+The final six DB failures were eliminated; `Verify main #250` confirmed the DB job green.
 
-### 5. Production branch resolution
+### 4. Browser smoke stabilization
 
-Status: ✅ fixed and confirmed by latest DB CI
+Status: ✅
 
-Migration:
+Browser smoke now uses the Playwright container image with Chromium and dependencies preinstalled instead of running `npx playwright install --with-deps chromium` inside the job.
 
-`094_fix_inventory_unit_production_branch_resolution.sql`
+This removed the long/hanging browser dependency installation step. `Verify main #250` confirmed Browser Smoke green.
 
-The `produce_inventory_unit(uuid,numeric,uuid,uuid,text)` RPC resolves a missing branch from the selected warehouse and validates the warehouse/branch relationship. The raw-material batch model remains branch-scoped.
+### 5. Products-page Add action integration
 
-### 6. Browser Smoke workflow stabilization
+Status: ✅ code updated; awaiting fresh CI
 
-Status: ✅ workflow updated; awaiting new CI result
+File:
 
-Problem observed:
+`src/features/catalog/pages/ProductsPage.tsx`
 
-`npx playwright install --with-deps chromium` remained in progress for a prolonged period in GitHub Actions, before the browser test itself could begin.
+Change:
 
-Fix:
+- Main **Add Product** button (`data-testid="products-add"`) now navigates to `/products/setup`.
+- Existing **Edit Product** flow remains unchanged and continues to use the legacy edit modal.
+- Import/export actions remain unchanged.
+- No POS or inventory deduction logic was changed.
 
-`.github/workflows/verify-main.yml` now runs `browser-smoke` inside:
+This establishes a single primary creation path for new products while preserving the existing edit workflow.
 
-`mcr.microsoft.com/playwright:v1.55.0-noble`
+## Latest Confirmed CI
 
-This image provides Chromium and the required system dependencies up front, so the workflow no longer runs the long `playwright install --with-deps chromium` step.
+`Verify main #250` — all jobs green:
 
-The browser test itself remains unchanged:
+- Verify ✅
+- DB ✅
+- Browser Smoke ✅
 
-`npx playwright test --project=chromium`
-
-## Latest Known CI Result
-
-Run: `Verify main #248`
-
-Completed jobs:
-
-- verification job ✅
-- DB integration/security/RLS ✅
-- Browser Smoke was previously blocked in `playwright install --with-deps chromium` and had not reached the test stage.
-
-Because the workflow was changed afterward, a new CI run is required before declaring the final gate green.
+The next run must validate the Products-page Add action change.
 
 ## Immediate Next Actions
 
-### Phase A — Validate updated Browser Smoke
+### Phase A — Validate Products-page Add action
 
 Status: 🔄 awaiting CI
 
-1. Confirm the new Playwright container starts successfully.
-2. Confirm `npm ci` and project build succeed inside the container.
-3. Confirm `npx playwright test --project=chromium` passes.
-4. Record the exact CI run and result here.
+1. Confirm lint/typecheck/unit/build remain green.
+2. Confirm DB integration/security/RLS remain green.
+3. Confirm browser smoke remains green.
+4. Confirm the Products-page Add action reaches `/products/setup`.
 
-### Phase B — Connect the Products page
+### Phase B — End-to-end product hierarchy validation
 
-Only after the complete CI gate is green:
-
-- Make the main Products-page `Add Product` action open the unified wizard.
-- Ensure there is only one primary product-creation path.
-- Keep import/export and existing product list behavior intact.
-
-### Phase C — End-to-end product hierarchy test
+After Phase A is green:
 
 Validate this exact scenario:
 
@@ -201,7 +180,7 @@ Also verify:
 - production history
 - batch tracking
 
-### Phase D — Final PR gate
+### Phase C — Final PR gate
 
 Only when all validations are green:
 
@@ -220,12 +199,11 @@ Only when all validations are green:
 | 2026-08-19 | TypeScript/report/excel fixes | Verify gate | ✅ lint/typecheck/build |
 | 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ |
 | 2026-08-19 | `093_phase2_schema_compatibility.sql` | Kitchen/production schema compatibility | ✅ |
-| 2026-08-19 | `af6ab058...` | Kitchen expected-error transaction isolation | ✅ |
-| 2026-08-19 | `3d0bb5f4...` | Production expected-error transaction isolation | ✅ |
-| 2026-08-19 | `cb42db6f...` | Waste expected-error transaction isolation | ✅ |
-| 2026-08-19 | `1d95d62e...` | `094_fix_inventory_unit_production_branch_resolution.sql` | ✅ |
-| 2026-08-19 | Verify main #248 | CI checkpoint | ✅ verify + DB; browser setup blocked |
-| 2026-08-19 | `41b0f174...` | Playwright container workflow | 🔄 awaiting CI |
+| 2026-08-19 | `094_fix_inventory_unit_production_branch_resolution.sql` | Production branch resolution | ✅ |
+| 2026-08-19 | Phase 2 expected-error SAVEPOINT fixes | Integration tests | ✅ |
+| 2026-08-19 | Verify main #250 | Full CI baseline | ✅ all jobs green |
+| 2026-08-19 | Browser smoke container change | CI | ✅ |
+| 2026-08-19 | `109e98d3...` | Products-page Add → unified wizard | 🔄 awaiting CI |
 | 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ persistent source of truth |
 
 ## Do Not Forget
