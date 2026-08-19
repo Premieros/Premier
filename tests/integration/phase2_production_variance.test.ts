@@ -22,13 +22,27 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
       await client.query(`RELEASE SAVEPOINT phase2_production_admin`);
       return result;
     } catch (error) {
-      await client.query(`ROLLBACK TO SAVEPOINT phase2_production_admin`);
-      await client.query(`RELEASE SAVEPOINT phase2_production_admin`);
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_production_admin`).catch(() => {});
+      await client.query(`RELEASE SAVEPOINT phase2_production_admin`).catch(() => {});
       throw error;
     } finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
     }
+  }
+
+  async function expectDbError(fn: () => Promise<unknown>): Promise<void> {
+    const savepoint = 'phase2_production_expected_error';
+    await client.query(`SAVEPOINT ${savepoint}`);
+    let threw = false;
+    try {
+      await fn();
+    } catch {
+      threw = true;
+    }
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    expect(threw).toBe(true);
   }
 
   const q = async <T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> =>
@@ -106,17 +120,17 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
     const readyUnitId = randomUUID();
     await client.query(`INSERT INTO public.inventory_units (id, code, name, unit_type, branch_id, cost_price, is_active) VALUES ($1, 'IU-R', 'Ready Item', 'ready', $2, 5, true)`, [readyUnitId, branchId]);
     await asAdmin(async () => {
-      await expect(
+      await expectDbError(() =>
         client.query(`SELECT public.produce_inventory_unit($1, 1, $2)`, [readyUnitId, whId])
-      ).rejects.toThrow();
+      );
     });
   });
 
   it('produce_inventory_unit rejects non-positive quantity', async () => {
     await asAdmin(async () => {
-      await expect(
+      await expectDbError(() =>
         client.query(`SELECT public.produce_inventory_unit($1, 0, $2)`, [unitId, whId])
-      ).rejects.toThrow();
+      );
     });
   });
 });
