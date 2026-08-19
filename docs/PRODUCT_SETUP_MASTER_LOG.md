@@ -22,7 +22,7 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `c0899a9552c2c520236c4bc04fb625dd6dfb044a`
+- Current HEAD: `24e4b9f373002d5eeca6d0457a2d3c2d0c2c1c87`
 - PR state: Open, not merged
 
 ## Current Status
@@ -107,6 +107,12 @@ Updated tests:
 
 The tests now isolate expected database errors with SAVEPOINT/ROLLBACK TO SAVEPOINT so one intentionally failing RPC does not poison the enclosing transaction.
 
+### 5. Master execution log
+
+Status: ✅ created and checkpointed
+
+This file is now the required execution ledger for this branch. Every future edit or CI result must be added here before moving to another phase.
+
 ## Latest Known CI Result
 
 Run: `Verify main #236` (PR #8 merge ref)
@@ -151,20 +157,20 @@ The canonical `raw_material_batches` table is branch-scoped and does not contain
 
 The earlier test helper created the SAVEPOINT before setting the service/admin role and then attempted `RELEASE SAVEPOINT` after the RPC had already aborted the transaction. This generated secondary `current transaction is aborted` failures.
 
-The helper has been rewritten so expected failures are rolled back to the SAVEPOINT before release.
-
 ## Immediate Next Actions
 
 ### Phase A — Database compatibility fix
 
 Status: 🔄 in progress
 
-Add a new migration only (do not edit historical migrations) to:
+A new compatibility migration has been added on the branch to address the production/kitchen schema mismatches. The next CI run must confirm the exact public RPC contracts against the canonical schema.
 
-1. Replace/fix `get_kitchen_queue` so it matches the actual `orders` schema while preserving its public return contract.
-2. Replace/fix `produce_inventory_unit` so it writes to the actual `raw_material_batches` schema and continues using branch-scoped FIFO consumption.
-3. Preserve existing RLS/security behavior.
-4. Keep the public RPC signatures stable unless a compatibility wrapper is required.
+Required checks:
+
+1. `get_kitchen_queue` must match the actual `orders` schema while preserving its return contract.
+2. `produce_inventory_unit` must write to the actual `raw_material_batches` schema and continue using branch-scoped FIFO consumption.
+3. Existing RLS/security behavior must remain unchanged.
+4. Existing public RPC signatures must remain stable or be wrapped compatibly.
 
 ### Phase B — CI verification
 
@@ -242,7 +248,8 @@ Only when all validations are green:
 | 2026-08-19 | TypeScript/report/excel fixes | Verify gate | ✅ lint/typecheck/build |
 | 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ migration applied in CI; needs final integration confirmation |
 | 2026-08-19 | Savepoint isolation fixes | Integration tests | ✅ implemented; needs final CI confirmation |
-| 2026-08-19 | Kitchen/production schema compatibility migration (`093`) | DB | 🔄 added; awaiting CI confirmation |
+| 2026-08-19 | Kitchen/production schema compatibility migration | DB | 🔄 added; awaiting CI confirmation |
+| 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ created and checkpointed |
 
 ## Do Not Forget
 
