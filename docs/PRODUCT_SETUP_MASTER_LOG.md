@@ -22,7 +22,7 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `1d95d62e53a10a3c10909e2f6227ee43b060d4b2` before this log checkpoint commit
+- Current HEAD after browser workflow change: `41b0f1748e2a739f18f501d610851a62a3740536`
 - PR state: Open, not merged
 
 ## Current Status
@@ -31,7 +31,7 @@ Rules:
 
 Status: **IN PROGRESS**
 
-The product setup wizard exists, but final CI is not green yet. Do not merge the PR or declare the product flow complete until DB integration tests and the final verification gate are green.
+The product setup wizard exists, and the application/DB verification gates are green on the latest completed run. Browser Smoke was blocked in Playwright dependency installation, so the workflow was adjusted before considering the final gate complete.
 
 ## Work Completed
 
@@ -68,7 +68,7 @@ The wizard intentionally avoids introducing a third product/unit model.
 
 Status: ✅
 
-Latest confirmed CI verification job:
+Latest completed verification job:
 
 - lint: ✅
 - typecheck: ✅
@@ -93,11 +93,9 @@ Migration:
 
 Reason: `produce_inventory_unit` expected `deduct_raw_material_inventory(...)`, while the canonical branch-scoped FIFO helper already present in the system is `_raw_remove_fifo(...)`.
 
-The migration adds a compatibility wrapper and delegates to the canonical FIFO implementation.
-
 ### 4. Integration-test transaction isolation
 
-Status: ✅ fixed in code; awaiting CI confirmation
+Status: ✅ fixed in code and confirmed by latest DB CI
 
 Updated tests:
 
@@ -105,99 +103,70 @@ Updated tests:
 - `tests/integration/phase2_production_variance.test.ts`
 - `tests/integration/phase2_waste_center.test.ts`
 
-Each file now has an explicit expected-error helper that catches the database error, rolls back to a nested SAVEPOINT, then releases that SAVEPOINT before returning to the enclosing transaction. This removes the secondary `25P02` failures from intentionally rejected RPC calls.
+Each file now has explicit expected-error handling that rolls back to a nested SAVEPOINT before releasing it.
 
 ### 5. Production branch resolution
 
-Status: ✅ fixed in code; awaiting CI confirmation
+Status: ✅ fixed and confirmed by latest DB CI
 
-New migration:
+Migration:
 
 `094_fix_inventory_unit_production_branch_resolution.sql`
 
-The `produce_inventory_unit(uuid,numeric,uuid,uuid,text)` RPC now resolves a missing branch from the selected warehouse, requires the warehouse to have a branch, and rejects a branch/warehouse mismatch. The raw-material batch model remains branch-scoped.
+The `produce_inventory_unit(uuid,numeric,uuid,uuid,text)` RPC resolves a missing branch from the selected warehouse and validates the warehouse/branch relationship. The raw-material batch model remains branch-scoped.
+
+### 6. Browser Smoke workflow stabilization
+
+Status: ✅ workflow updated; awaiting new CI result
+
+Problem observed:
+
+`npx playwright install --with-deps chromium` remained in progress for a prolonged period in GitHub Actions, before the browser test itself could begin.
+
+Fix:
+
+`.github/workflows/verify-main.yml` now runs `browser-smoke` inside:
+
+`mcr.microsoft.com/playwright:v1.55.0-noble`
+
+This image provides Chromium and the required system dependencies up front, so the workflow no longer runs the long `playwright install --with-deps chromium` step.
+
+The browser test itself remains unchanged:
+
+`npx playwright test --project=chromium`
 
 ## Latest Known CI Result
 
-Run: `Verify main #240` (PR #8 merge ref `b8628b8...`)
+Run: `Verify main #248`
 
-Verification job:
+Completed jobs:
 
-- lint ✅
-- typecheck ✅
-- typecheck application/test suites ✅
-- unit tests ✅
-- build ✅
+- verification job ✅
+- DB integration/security/RLS ✅
+- Browser Smoke was previously blocked in `playwright install --with-deps chromium` and had not reached the test stage.
 
-DB integration:
-
-- **208 passed / 214 total**
-- **6 failed**
-- 3 integration files affected
-
-This was an improvement from the previous checkpoint of 205 passed / 9 failed.
-
-The six failures were traced to two root causes, both now addressed in code on the branch.
-
-### Root cause A — expected-error SAVEPOINT handling (5 failures)
-
-Affected tests:
-
-- kitchen: `route_to_station rejects invalid station`
-- production: `produce_inventory_unit rejects non-manufactured unit`
-- production: `produce_inventory_unit rejects non-positive quantity`
-- waste: `approve_waste rejects if already approved`
-- waste: `create_waste_entry rejects invalid waste_type`
-
-Observed secondary failure:
-
-`current transaction is aborted, commands ignored until end of transaction block`
-
-The RPC errors themselves were correct. The test assertion consumed the rejection before the outer helper could roll back the failed SAVEPOINT. This is now fixed by nested explicit `expectDbError` helpers.
-
-### Root cause B — missing production branch (1 failure)
-
-Observed error:
-
-`null value in column "branch_id" of relation "raw_material_batches" violates not-null constraint`
-
-`produce_inventory_unit(unit_id, quantity, warehouse_id)` was using a null default branch in the CI admin context. Migration `094_fix_inventory_unit_production_branch_resolution.sql` now derives the branch from the warehouse and validates the warehouse/branch relationship before any raw-material movement.
+Because the workflow was changed afterward, a new CI run is required before declaring the final gate green.
 
 ## Immediate Next Actions
 
-### Phase A — Verify the final six DB fixes
+### Phase A — Validate updated Browser Smoke
 
 Status: 🔄 awaiting CI
 
-1. Confirm the three expected-error helpers leave transactions clean.
-2. Confirm `produce_inventory_unit(unit_id, quantity, warehouse_id)` completes successfully.
-3. Confirm negative production tests still reject invalid unit type and non-positive quantity.
-4. Confirm waste and kitchen negative tests remain isolated.
-5. Record the new CI run and exact pass/fail counts.
+1. Confirm the new Playwright container starts successfully.
+2. Confirm `npm ci` and project build succeed inside the container.
+3. Confirm `npx playwright test --project=chromium` passes.
+4. Record the exact CI run and result here.
 
-### Phase B — CI verification
+### Phase B — Connect the Products page
 
-Run and record:
-
-- lint
-- typecheck
-- unit tests
-- build
-- schema verification
-- integration/security/RLS tests
-- browser smoke if enabled by the workflow
-
-Target: **all green**.
-
-### Phase C — Connect the Products page
-
-After CI is green:
+Only after the complete CI gate is green:
 
 - Make the main Products-page `Add Product` action open the unified wizard.
 - Ensure there is only one primary product-creation path.
 - Keep import/export and existing product list behavior intact.
 
-### Phase D — End-to-end product hierarchy test
+### Phase C — End-to-end product hierarchy test
 
 Validate this exact scenario:
 
@@ -232,7 +201,7 @@ Also verify:
 - production history
 - batch tracking
 
-### Phase E — Final PR gate
+### Phase D — Final PR gate
 
 Only when all validations are green:
 
@@ -249,13 +218,14 @@ Only when all validations are green:
 | 2026-08-19 | Product setup wizard work | Frontend/product flow | ✅ |
 | 2026-08-19 | Remove unused `ReportDeepLinkPage` | Routes/lint | ✅ |
 | 2026-08-19 | TypeScript/report/excel fixes | Verify gate | ✅ lint/typecheck/build |
-| 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ applied; final branch resolution pending at that checkpoint |
-| 2026-08-19 | `093_phase2_schema_compatibility.sql` | Kitchen/production schema compatibility | ✅ schema verification; removed table_number/warehouse_id mismatches |
-| 2026-08-19 | `af6ab058...` | Kitchen expected-error transaction isolation | ✅ code updated |
-| 2026-08-19 | `3d0bb5f4...` | Production expected-error transaction isolation | ✅ code updated |
-| 2026-08-19 | `cb42db6f...` | Waste expected-error transaction isolation | ✅ code updated |
-| 2026-08-19 | `1d95d62e...` | `094_fix_inventory_unit_production_branch_resolution.sql` | ✅ migration added |
-| 2026-08-19 | Verify main #240 | CI checkpoint | ⚠️ verify ✅; DB 208/214 passed, 6 failed |
+| 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ |
+| 2026-08-19 | `093_phase2_schema_compatibility.sql` | Kitchen/production schema compatibility | ✅ |
+| 2026-08-19 | `af6ab058...` | Kitchen expected-error transaction isolation | ✅ |
+| 2026-08-19 | `3d0bb5f4...` | Production expected-error transaction isolation | ✅ |
+| 2026-08-19 | `cb42db6f...` | Waste expected-error transaction isolation | ✅ |
+| 2026-08-19 | `1d95d62e...` | `094_fix_inventory_unit_production_branch_resolution.sql` | ✅ |
+| 2026-08-19 | Verify main #248 | CI checkpoint | ✅ verify + DB; browser setup blocked |
+| 2026-08-19 | `41b0f174...` | Playwright container workflow | 🔄 awaiting CI |
 | 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ persistent source of truth |
 
 ## Do Not Forget
