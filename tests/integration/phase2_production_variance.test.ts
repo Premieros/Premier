@@ -86,8 +86,8 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
   it('produce_inventory_unit creates production + batch + entry', async () => {
     await asAdmin(async () => {
       const result = await q<{ produce_inventory_unit: string }>(
-        `SELECT public.produce_inventory_unit($1, 3, $2)`,
-        [unitId, whId]
+        `SELECT public.produce_inventory_unit($1, 3, $2, $3)`,
+        [unitId, whId, branchId]
       );
       const prodId = result[0].produce_inventory_unit;
       expect(prodId).toBeTruthy();
@@ -121,7 +121,7 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
     await client.query(`INSERT INTO public.inventory_units (id, code, name, unit_type, branch_id, cost_price, is_active) VALUES ($1, 'IU-R', 'Ready Item', 'ready', $2, 5, true)`, [readyUnitId, branchId]);
     await asAdmin(async () => {
       await expectDbError(() =>
-        client.query(`SELECT public.produce_inventory_unit($1, 1, $2)`, [readyUnitId, whId])
+        client.query(`SELECT public.produce_inventory_unit($1, 1, $2, $3)`, [readyUnitId, whId, branchId])
       );
     });
   });
@@ -129,7 +129,7 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
   it('produce_inventory_unit rejects non-positive quantity', async () => {
     await asAdmin(async () => {
       await expectDbError(() =>
-        client.query(`SELECT public.produce_inventory_unit($1, 0, $2)`, [unitId, whId])
+        client.query(`SELECT public.produce_inventory_unit($1, 0, $2, $3)`, [unitId, whId, branchId])
       );
     });
   });
