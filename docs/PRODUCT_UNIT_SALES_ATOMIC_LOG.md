@@ -24,8 +24,8 @@
 - Follow-up commits: `4eb275f`, `257868f`, `06bbfc0`.
 
 ### REMAINING
-- Run full CI on the newest head.
-- Verify the live flow: manufacture unit -> add unit to product -> sell product -> unit decreases, raw material does not decrease again.
+- Run full CI on newest head.
+- Verify live flow: manufacture unit -> add unit to product -> sell product -> unit decreases, raw material does not decrease again.
 
 ### GATE
 Do not close this phase until Verify CI is fully green and the live stock-flow scenario passes.
