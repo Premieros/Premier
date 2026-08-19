@@ -15,16 +15,16 @@ describe.skipIf(skip)('Phase 2 — waste center', () => {
   let wasteId: string;
 
   async function asAdmin<T>(fn: () => Promise<T>): Promise<T> {
-    await client.query(`SAVEPOINT phase2_waste_admin`);
     await client.query(`SELECT set_config('app.user_id', $1, true)`, [randomUUID()]);
     await client.query(`SET LOCAL ROLE service_role`);
+    await client.query(`SAVEPOINT phase2_waste_admin`);
     try {
       const result = await fn();
       await client.query(`RELEASE SAVEPOINT phase2_waste_admin`);
       return result;
     } catch (error) {
-      await client.query(`ROLLBACK TO SAVEPOINT phase2_waste_admin`).catch(() => {});
-      await client.query(`RELEASE SAVEPOINT phase2_waste_admin`).catch(() => {});
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_waste_admin`);
+      await client.query(`RELEASE SAVEPOINT phase2_waste_admin`);
       throw error;
     } finally {
       await client.query('RESET ROLE').catch(() => {});
