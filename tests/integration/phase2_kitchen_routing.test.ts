@@ -20,13 +20,27 @@ describe.skipIf(skip)('Phase 2 — kitchen station routing', () => {
       await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`);
       return result;
     } catch (error) {
-      await client.query(`ROLLBACK TO SAVEPOINT phase2_kitchen_admin`);
-      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`);
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_kitchen_admin`).catch(() => {});
+      await client.query(`RELEASE SAVEPOINT phase2_kitchen_admin`).catch(() => {});
       throw error;
     } finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
     }
+  }
+
+  async function expectDbError(fn: () => Promise<unknown>): Promise<void> {
+    const savepoint = 'phase2_kitchen_expected_error';
+    await client.query(`SAVEPOINT ${savepoint}`);
+    let threw = false;
+    try {
+      await fn();
+    } catch {
+      threw = true;
+    }
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    expect(threw).toBe(true);
   }
 
   const q = async <T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> =>
@@ -65,9 +79,9 @@ describe.skipIf(skip)('Phase 2 — kitchen station routing', () => {
 
   it('route_to_station rejects invalid station', async () => {
     await asAdmin(async () => {
-      await expect(
+      await expectDbError(() =>
         client.query(`SELECT public.route_to_station($1, $2)`, [orderId, 'invalid_station'])
-      ).rejects.toThrow();
+      );
     });
   });
 
