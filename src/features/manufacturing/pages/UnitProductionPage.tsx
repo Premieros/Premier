@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Factory, PackageCheck, Play, RefreshCw } from 'lucide-react';
-import { supabase } from '@/api';
 import * as api from '@/api';
+import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,13 @@ import type { InventoryUnit, Warehouse } from '@/lib/types';
 
 type RecipeRow = { raw_material_id: string; quantity: number; wastage_percent: number; raw_material?: { name: string } | null };
 type ProductionRow = { id: string; unit_id: string; warehouse_id: string; quantity: number; total_cost: number; status: string; created_at: string };
+
+type RecipeQueryRow = {
+  raw_material_id: string;
+  quantity: number;
+  wastage_percent: number;
+  raw_material?: { name: string } | { name: string }[] | null;
+};
 
 export function UnitProductionPage() {
   const { lang } = useLanguage();
@@ -57,9 +64,18 @@ export function UnitProductionPage() {
 
   const loadRecipe = async (id: string) => {
     if (!id) { setRecipes([]); return; }
-    const { data, error } = await supabase.from('inventory_unit_recipes').select('raw_material_id, quantity, wastage_percent, raw_material:raw_materials(name)').eq('unit_id', id).order('created_at');
+    const { data, error } = await supabase.from('inventory_unit_recipes')
+      .select('raw_material_id, quantity, wastage_percent, raw_material:raw_materials(name)')
+      .eq('unit_id', id)
+      .order('created_at');
     if (error) { show(error.message, 'error'); return; }
-    setRecipes((data as RecipeRow[]) || []);
+    const rows = (data ?? []) as RecipeQueryRow[];
+    setRecipes(rows.map((row) => ({
+      raw_material_id: row.raw_material_id,
+      quantity: Number(row.quantity),
+      wastage_percent: Number(row.wastage_percent),
+      raw_material: Array.isArray(row.raw_material) ? row.raw_material[0] ?? null : row.raw_material ?? null,
+    })));
   };
 
   useEffect(() => { void loadRecipe(unitId); }, [unitId]);
