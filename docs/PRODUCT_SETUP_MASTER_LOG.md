@@ -4,16 +4,18 @@
 
 ## Scope
 
-Goal: unify product creation around the hierarchy:
+Goal: enforce the hierarchy:
 
-`Product → Inventory Units → Ready/Manufactured → Unit Recipe → Production → Inventory → POS deduction`
+`Raw Materials → Manufacturing → Inventory Units → Products → Sale`
 
 Rules:
 
 - Do not touch `main` directly.
 - Do not create duplicate raw materials or inventory units when an existing entity can be reused.
 - Preserve branch isolation and RLS.
-- Do not alter existing POS deduction behavior unless explicitly required and tested.
+- Raw materials are consumed by manufacturing only; sales do not deduct raw materials directly.
+- Products use inventory units as their sellable components.
+- Manufactured units own their recipes.
 - Every database change must be a new migration; do not rewrite historical migrations.
 - Every CI failure must be recorded with root cause and resolution.
 
@@ -22,16 +24,16 @@ Rules:
 - Branch: `agent/product-setup-flow`
 - Base: `main`
 - PR: `#8` — Implement unified product setup flow
-- Current HEAD: `ad0f1d3b3442373a1c9e9fe850c028c5e99e964e`
+- Current HEAD: `b9de36587e86509b110a4228bf50c83a8e69206f`
 - PR state: Open, not merged
 
 ## Current Status
 
-**Phase: Products-page integration**
+**Phase: Unit-centered inventory model**
 
 Status: **IN PROGRESS**
 
-The CI baseline is green. The main Products-page Add action is wired to the unified wizard. Final CI for this change must be green before the phase is considered complete.
+The product Add flow is wired to the new wizard. The next model change is to make inventory units the only sellable component layer: ready units enter inventory directly; manufactured units receive stock only through production; their recipes are owned by the unit; product sales deduct units only.
 
 ## Work Completed
 
@@ -39,155 +41,164 @@ The CI baseline is green. The main Products-page Add action is wired to the unif
 
 Status: ✅ implemented
 
-Flow:
-
-1. Product details
-2. Select/add inventory units
-3. For each unit choose ready vs manufactured sourcing
-4. Configure manufactured-unit recipe
-5. Review hierarchy
-6. Save using the newer unit hierarchy
-
 Primary route:
 
 `/products/setup`
 
-Permission:
-
-`products.manage`
-
-Canonical tables used by the wizard:
+Canonical tables:
 
 - `inventory_units`
 - `product_unit_links`
 - `inventory_unit_recipes`
 
-The wizard intentionally avoids introducing a third product/unit model.
-
-### 2. Lint/typecheck/build stabilization
+### 2. Full CI stabilization baseline
 
 Status: ✅
 
-Latest fully green CI baseline was `Verify main #250`:
+Latest fully green baseline:
 
-- lint: ✅
-- typecheck: ✅
-- test suite typecheck: ✅
-- unit tests: ✅
-- build: ✅
-- schema verification: ✅
-- integration/security/RLS: ✅
-- browser smoke: ✅
+`Verify main #250`
 
-### 3. Database compatibility and integration-test stabilization
+- lint ✅
+- typecheck ✅
+- test suite typecheck ✅
+- unit tests ✅
+- build ✅
+- schema verification ✅
+- integration/security/RLS ✅
+- browser smoke ✅
 
-Status: ✅
+### 3. Products-page Add action
 
-Completed migrations:
+Status: ✅ code implemented; fresh CI validation required after later model changes
 
-- `092_production_raw_material_compatibility.sql`
-- `093_phase2_schema_compatibility.sql`
-- `094_fix_inventory_unit_production_branch_resolution.sql`
+Main Add action now opens:
 
-Completed integration-test transaction isolation fixes in:
+`/products/setup`
 
-- `tests/integration/phase2_kitchen_routing.test.ts`
-- `tests/integration/phase2_production_variance.test.ts`
-- `tests/integration/phase2_waste_center.test.ts`
+Existing Edit flow and import/export remain unchanged.
 
-The final six DB failures were eliminated; `Verify main #250` confirmed the DB job green.
+### 4. Sales deduction model changed to unit-only
 
-### 4. Browser smoke stabilization
+Commit:
 
-Status: ✅
-
-Browser smoke now uses the Playwright container image with Chromium and dependencies preinstalled instead of running `npx playwright install --with-deps chromium` inside the job.
-
-This removed the long/hanging browser dependency installation step. `Verify main #250` confirmed Browser Smoke green.
-
-### 5. Products-page Add action integration
-
-Status: ✅ code updated; awaiting fresh CI
+`717c3587e87dd90768743a3283b2abf01448b608`
 
 File:
 
-`src/features/catalog/pages/ProductsPage.tsx`
+`src/lib/sales-deduction.ts`
 
-Change:
+New rule:
 
-- Main **Add Product** button (`data-testid="products-add"`) now navigates to `/products/setup`.
-- Existing **Edit Product** flow remains unchanged and continues to use the legacy edit modal.
-- Import/export actions remain unchanged.
-- No POS or inventory deduction logic was changed.
-- The unused `generateBarcode` import was removed.
+- Sale → product → linked inventory units → deduct unit batches only.
+- No `inventory_unit_recipes` lookup during sale.
+- No `raw_material_inventory` mutation during sale.
+- `raw_materials_deducted` remains empty for sale operations.
 
-This establishes a single primary creation path for new products while preserving the existing edit workflow.
+Reason: raw materials have already been consumed when a manufactured unit is produced. Deducting them again at sale would double-consume stock.
 
-### 6. CI failure and recovery checkpoint
+### 5. Unit-owned recipe management
 
-`Verify main #252` failed only at lint because `generateBarcode` was still imported after the Add flow changed. That import has been removed.
+Commit:
 
-A transient GitHub file-write issue temporarily produced an incomplete `ProductsPage.tsx`. The complete file was restored from the exact prior Git blob, and the branch was restored to a valid commit before creating the next CI-triggering checkpoint.
+`b9de36587e86509b110a4228bf50c83a8e69206f`
 
-## Latest Confirmed CI
+File:
 
-`Verify main #250` — all jobs green:
+`src/features/catalog/pages/InventoryUnitsPage.tsx`
 
-- Verify ✅
-- DB ✅
-- Browser Smoke ✅
+Changes:
 
-`Verify main #252` was a stale failure from before the import cleanup and recovery checkpoint.
+- Manufactured units now have a visible Recipe action.
+- Recipe editor loads active raw materials.
+- Recipe rows support quantity and wastage percentage.
+- Save replaces the unit recipe in `inventory_unit_recipes`.
+- Ready units do not expose a recipe editor.
+- UI explicitly states that raw materials are consumed by manufacturing, not sale.
+
+## Current Architecture Decision
+
+The intended source of truth is now:
+
+`Raw Material`
+→ `Unit Recipe`
+→ `Manufacturing`
+→ `Inventory Unit Batch`
+→ `Product Unit Link`
+→ `Sale`
+
+Examples:
+
+- Ready unit: purchased/received/added → unit stock increases directly.
+- Manufactured unit: production order → recipe consumes raw materials → unit batch increases.
+- Product sale: unit stock decreases only.
 
 ## Immediate Next Actions
 
-### Phase A — Validate Products-page Add action
+### Phase A — Validate current commits
 
 Status: 🔄 awaiting CI
 
 1. Confirm lint/typecheck/unit/build remain green.
 2. Confirm DB integration/security/RLS remain green.
 3. Confirm browser smoke remains green.
-4. Confirm the Products-page Add action reaches `/products/setup`.
+4. Confirm manufactured-unit Recipe UI compiles and renders.
 
-### Phase B — End-to-end product hierarchy validation
+### Phase B — Convert manufacturing to unit-centered production
 
-After Phase A is green:
+Status: ⏳ next
 
-Validate this exact scenario:
+The existing `ProductionOrdersPage` still starts from manufactured **products** and legacy `recipes/recipe_items`.
 
-`Burger Product`
+Replace the primary manufacturing flow with:
 
-→ `Burger Unit` (ready)
+`Manufactured Inventory Unit → Unit Recipe → Produce Unit → Consume Raw Materials → Create Unit Batch`
 
-→ `Special Sauce Unit` (manufactured)
+The existing `produce_inventory_unit(uuid,numeric,uuid,uuid,text)` RPC already follows this unit-centered concept. fileciteturn64file0L1-L3
 
-→ Recipe:
+The legacy product production flow must not become the source of truth for the new model.
 
-- mayonnaise
-- ketchup
-- spices
+### Phase C — Product composition validation
 
-→ Production order for sauce
+After unit production is green, validate:
 
-→ raw-material deduction
+`Product`
+→ `Product Unit Links`
+→ `Ready Unit / Manufactured Unit`
+→ `Unit stock`
 
-→ finished unit batch
+No product-level raw-material Recipe should be required for the new flow.
 
-→ product sale
+### Phase D — End-to-end test
 
-→ hierarchical inventory deduction
+Validate exactly:
+
+`Mayonnaise 100`
+
+→ manufacture `Burger Sauce 20`
+
+→ raw material stock decreases according to the unit Recipe
+
+→ `Burger Sauce` unit stock increases by 20
+
+→ product `Chicken Burger` links to `Burger Sauce × 1`
+
+→ sell 2 Chicken Burgers
+
+→ `Burger Sauce` stock decreases by 2
+
+→ mayonnaise stock does **not** decrease again.
 
 Also verify:
 
-- no duplicate unit creation
 - branch isolation
 - RLS
-- cost calculation
+- FIFO/batch behavior
+- unit cost
 - production history
-- batch tracking
+- audit log
 
-### Phase C — Final PR gate
+### Phase E — Final PR gate
 
 Only when all validations are green:
 
@@ -202,23 +213,17 @@ Only when all validations are green:
 | Date | Commit/Action | Area | Result |
 |---|---|---|---|
 | 2026-08-19 | Product setup wizard work | Frontend/product flow | ✅ |
-| 2026-08-19 | Remove unused `ReportDeepLinkPage` | Routes/lint | ✅ |
-| 2026-08-19 | TypeScript/report/excel fixes | Verify gate | ✅ lint/typecheck/build |
-| 2026-08-19 | `092_production_raw_material_compatibility.sql` | Production DB compatibility | ✅ |
-| 2026-08-19 | `093_phase2_schema_compatibility.sql` | Kitchen/production schema compatibility | ✅ |
-| 2026-08-19 | `094_fix_inventory_unit_production_branch_resolution.sql` | Production branch resolution | ✅ |
-| 2026-08-19 | Phase 2 expected-error SAVEPOINT fixes | Integration tests | ✅ |
-| 2026-08-19 | Verify main #250 | Full CI baseline | ✅ all jobs green |
-| 2026-08-19 | Browser smoke container change | CI | ✅ |
 | 2026-08-19 | `109e98d3...` | Products-page Add → unified wizard | ✅ code |
-| 2026-08-19 | Verify main #252 | CI after Add integration | ❌ lint only; corrected |
-| 2026-08-19 | Restore checkpoint `ad0f1d3...` | ProductsPage integrity | ✅ |
-| 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ persistent source of truth |
+| 2026-08-19 | Verify main #250 | Full CI baseline | ✅ all jobs green |
+| 2026-08-19 | Verify main #252 | Products Add lint regression | ❌ fixed |
+| 2026-08-19 | `717c3587...` | Sales deduction → units only | ✅ code |
+| 2026-08-19 | `b9de3658...` | Unit-owned Recipe editor | ✅ code |
+| 2026-08-19 | `PRODUCT_SETUP_MASTER_LOG.md` | Project governance | ✅ |
 
 ## Do Not Forget
 
-- Update this file after **every** meaningful step.
+- Update this file after every meaningful step.
 - Record exact commit SHA and CI run for each stabilization step.
 - Never claim a green result before GitHub Actions confirms it.
 - Do not merge while any required verification job is red.
-- Keep the legacy product/unit model untouched unless a compatibility migration is explicitly required.
+- Legacy product recipes may remain for compatibility, but they must not supersede the unit-centered source of truth.
