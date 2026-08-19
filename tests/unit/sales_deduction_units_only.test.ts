@@ -28,15 +28,12 @@ function makeBuilder(table: string) {
     order() {
       return this;
     },
-    update(payload: Record<string, unknown>) {
+    update() {
       if (table === 'inventory_unit_batches') {
         result = { data: null, error: null };
       }
       if (table === 'raw_material_inventory') rawMaterialTouched = true;
-      return { ...this, eq: (column: string) => {
-        if (table === 'raw_material_inventory') rawMaterialTouched = true;
-        return this;
-      } };
+      return this;
     },
     insert(payload: Record<string, unknown> | Array<Record<string, unknown>>) {
       if (table === 'raw_material_inventory') rawMaterialTouched = true;
@@ -49,7 +46,6 @@ function makeBuilder(table: string) {
       return Promise.resolve(resolve(result));
     },
   };
-  if (table === 'raw_material_inventory') rawMaterialTouched = true;
   return builder;
 }
 
