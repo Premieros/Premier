@@ -14,9 +14,18 @@ describe.skipIf(skip)('Phase 2 — production enhancements', () => {
   const unitId = randomUUID();
 
   async function asAdmin<T>(fn: () => Promise<T>): Promise<T> {
+    await client.query(`SAVEPOINT phase2_production_admin`);
     await client.query(`SELECT set_config('app.user_id', $1, true)`, [randomUUID()]);
     await client.query(`SET LOCAL ROLE service_role`);
-    try { return await fn(); } finally {
+    try {
+      const result = await fn();
+      await client.query(`RELEASE SAVEPOINT phase2_production_admin`);
+      return result;
+    } catch (error) {
+      await client.query(`ROLLBACK TO SAVEPOINT phase2_production_admin`).catch(() => {});
+      await client.query(`RELEASE SAVEPOINT phase2_production_admin`).catch(() => {});
+      throw error;
+    } finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
     }
