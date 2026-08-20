@@ -316,6 +316,22 @@ export async function runAs(client: pg.Client, userId: string, sql: string, para
   }
 }
 
+// Like runAs but WITHOUT the savepoint rollback: DML (e.g. SECURITY DEFINER
+// RPCs) persists within the outer transaction. Cleanup still resets role/GUC.
+export async function runAsPersist(client: pg.Client, userId: string, sql: string, params: unknown[] = []): Promise<RunResult> {
+  await client.query('SELECT set_config($1, $2, true)', ['app.user_id', userId]);
+  await client.query('SET LOCAL ROLE authenticated');
+  try {
+    const res = await client.query(sql, params);
+    return { rows: res.rows as Array<Record<string, unknown>>, rowCount: res.rowCount ?? 0 };
+  } catch (e: unknown) {
+    return { rows: [], rowCount: 0, error: (e as Error).message };
+  } finally {
+    await client.query('RESET ROLE').catch(() => {});
+    await client.query('RESET app.user_id').catch(() => {});
+  }
+}
+
 // True when the connected DB is the CI stub (auth.uid() driven by app.user_id).
 export async function canImpersonate(client: pg.Client): Promise<boolean> {
   await client.query('SAVEPOINT rls_probe');

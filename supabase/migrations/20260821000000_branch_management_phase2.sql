@@ -209,17 +209,37 @@ CREATE TRIGGER trg_branch_active_guard_shifts
 -- ============ 5. Updated RLS on branches ============
 -- Org-aware policies with legacy fallback for branches without organization_id.
 --
--- SELECT: admins see all; org members see their org's branches;
+-- NOTE: policies use is_platform_admin() (super_admin only) NOT is_pos_admin(),
+-- because is_pos_admin() includes org owners. In the multi-tenant model an
+-- owner of org A must NOT see/manage org B's branches.
+-- SELECT: platform admins see all; org members see their org's branches;
 --         legacy branches (org_id IS NULL) visible to branch owner via get_branch_id().
--- INSERT: admin-only (creation happens through RPCs).
--- UPDATE: admin OR org members for their org; legacy fallback via branch_id.
--- DELETE: admin-only.
+-- INSERT: platform-admin-only (creation happens through RPCs).
+-- UPDATE: platform admins OR org members for their org; legacy fallback via id.
+-- DELETE: platform-admin-only.
+
+CREATE OR REPLACE FUNCTION public.is_platform_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.is_active
+      AND users.role = 'super_admin'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_platform_admin() TO authenticated;
 
 DROP POLICY IF EXISTS auth_select_branches ON public.branches;
 CREATE POLICY auth_select_branches ON public.branches
   FOR SELECT TO authenticated
   USING (
-    is_pos_admin()
+    public.is_platform_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
     OR (organization_id IS NULL AND id = public.get_branch_id())
   );
@@ -227,18 +247,18 @@ CREATE POLICY auth_select_branches ON public.branches
 DROP POLICY IF EXISTS auth_insert_branches ON public.branches;
 CREATE POLICY auth_insert_branches ON public.branches
   FOR INSERT TO authenticated
-  WITH CHECK (is_pos_admin());
+  WITH CHECK (public.is_platform_admin());
 
 DROP POLICY IF EXISTS auth_update_branches ON public.branches;
 CREATE POLICY auth_update_branches ON public.branches
   FOR UPDATE TO authenticated
   USING (
-    is_pos_admin()
+    public.is_platform_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
     OR (organization_id IS NULL AND id = public.get_branch_id())
   )
   WITH CHECK (
-    is_pos_admin()
+    public.is_platform_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
     OR (organization_id IS NULL AND id = public.get_branch_id())
   );
@@ -246,7 +266,7 @@ CREATE POLICY auth_update_branches ON public.branches
 DROP POLICY IF EXISTS auth_delete_branches ON public.branches;
 CREATE POLICY auth_delete_branches ON public.branches
   FOR DELETE TO authenticated
-  USING (is_pos_admin());
+  USING (public.is_platform_admin());
 
 -- ============ 6. Prevent organization_id change via direct UPDATE ============
 -- Guard against moving a branch to another tenant via a direct UPDATE statement.
