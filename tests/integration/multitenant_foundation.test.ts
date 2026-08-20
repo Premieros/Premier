@@ -38,9 +38,10 @@ describe.skipIf(!dbUrl)('Multi-tenant foundation', () => {
       membership_role?: string;
       trial_days?: number;
       error?: string;
+      detail?: string;
     };
 
-    expect(res.success).toBe(true);
+    expect(res.success, `register_tenant failed: ${res.error ?? 'UNKNOWN'} ${res.detail ?? ''}`.trim()).toBe(true);
     expect(res.organization_id).toBeTruthy();
     expect(res.branch_id).toBeTruthy();
     expect(res.warehouse_id).toBeTruthy();
