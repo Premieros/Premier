@@ -244,13 +244,13 @@ describe.skipIf(!dbUrl)('Multi-tenant Phase 2 — Branch Management', () => {
     );
     const whId = saleRes.rows[0]?.id;
     if (whId) {
-      const insRes = await client.query(
+      const insRes = await runAs(client, ownerAUserId,
         `INSERT INTO public.sales (invoice_number, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status)
          VALUES ($1, $2, $3, 0, 0, 0, 0, 0, 'cash', 'completed')`,
         [`INV-${randomUUID().slice(0, 8)}`, branchA2Id, whId],
-      ).catch((e: Error) => ({ error: e }));
+      );
       expect(insRes.error).toBeTruthy();
-      expect(insRes.error!.message).toContain('BRANCH_INACTIVE');
+      expect(insRes.error!).toContain('BRANCH_INACTIVE');
     }
   });
 
@@ -266,7 +266,7 @@ describe.skipIf(!dbUrl)('Multi-tenant Phase 2 — Branch Management', () => {
     );
     // Trigger should raise exception
     expect(res.error).toBeTruthy();
-    expect(res.error!.message).toContain('ORG_CHANGE_FORBIDDEN');
+    expect(res.error!).toContain('ORG_CHANGE_FORBIDDEN');
 
     // Verify organization_id is still A
     const verify = await client.query(
