@@ -580,7 +580,7 @@ CREATE POLICY auth_select_bank_statement_lines ON public.bank_statement_lines
   USING (
     EXISTS (
       SELECT 1 FROM public.bank_reconciliations br
-      WHERE br.id = bank_statement_lines.bank_reconciliation_id
+      WHERE br.id = bank_statement_lines.reconciliation_id
         AND public.user_may_access_branch(br.branch_id)
     )
   );
@@ -591,7 +591,7 @@ CREATE POLICY auth_insert_bank_statement_lines ON public.bank_statement_lines
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.bank_reconciliations br
-      WHERE br.id = bank_statement_lines.bank_reconciliation_id
+      WHERE br.id = bank_statement_lines.reconciliation_id
         AND public.user_may_access_branch(br.branch_id)
     )
   );
@@ -602,14 +602,14 @@ CREATE POLICY auth_update_bank_statement_lines ON public.bank_statement_lines
   USING (
     EXISTS (
       SELECT 1 FROM public.bank_reconciliations br
-      WHERE br.id = bank_statement_lines.bank_reconciliation_id
+      WHERE br.id = bank_statement_lines.reconciliation_id
         AND public.user_may_access_branch(br.branch_id)
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.bank_reconciliations br
-      WHERE br.id = bank_statement_lines.bank_reconciliation_id
+      WHERE br.id = bank_statement_lines.reconciliation_id
         AND public.user_may_access_branch(br.branch_id)
     )
   );
