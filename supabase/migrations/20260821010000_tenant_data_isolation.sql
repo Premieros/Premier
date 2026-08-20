@@ -880,7 +880,7 @@ CREATE POLICY auth_select_warehouse_transfer_items ON public.warehouse_transfer_
   USING (
     EXISTS (
       SELECT 1 FROM public.warehouse_transfers wt
-      WHERE wt.id = warehouse_transfer_items.warehouse_transfer_id
+      WHERE wt.id = warehouse_transfer_items.transfer_id
         AND public.user_may_access_branch(wt.branch_id)
     )
   );
@@ -891,7 +891,7 @@ CREATE POLICY auth_insert_warehouse_transfer_items ON public.warehouse_transfer_
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.warehouse_transfers wt
-      WHERE wt.id = warehouse_transfer_items.warehouse_transfer_id
+      WHERE wt.id = warehouse_transfer_items.transfer_id
         AND public.user_may_access_branch(wt.branch_id)
     )
   );
@@ -902,14 +902,14 @@ CREATE POLICY auth_update_warehouse_transfer_items ON public.warehouse_transfer_
   USING (
     EXISTS (
       SELECT 1 FROM public.warehouse_transfers wt
-      WHERE wt.id = warehouse_transfer_items.warehouse_transfer_id
+      WHERE wt.id = warehouse_transfer_items.transfer_id
         AND public.user_may_access_branch(wt.branch_id)
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.warehouse_transfers wt
-      WHERE wt.id = warehouse_transfer_items.warehouse_transfer_id
+      WHERE wt.id = warehouse_transfer_items.transfer_id
         AND public.user_may_access_branch(wt.branch_id)
     )
   );
