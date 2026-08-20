@@ -29,7 +29,7 @@ DECLARE
 BEGIN
   v_email := lower(btrim(p_email));
 
-  IF v_email = '' OR v_email !~ '@' OR v_email !~ '\\.' THEN
+  IF v_email = '' OR v_email !~ '@' OR v_email !~ '\.' THEN
     RETURN jsonb_build_object('success', false, 'error', 'INVALID_EMAIL');
   END IF;
   IF p_password IS NULL OR length(p_password) < 6 THEN
