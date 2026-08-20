@@ -16,9 +16,11 @@ describe.skipIf(skip)('send_to_kitchen + order_kitchen_sends (048)', () => {
   async function sendToKitchen(orderId: string) { return asUser(async () => { const res = await client.query(`SELECT public.send_to_kitchen($1) AS r`, [orderId]); return res.rows[0].r; }); }
   async function sendRows(orderId: string): Promise<number> { return (await client.query(`SELECT count(*)::int AS c FROM public.order_kitchen_sends WHERE order_id = $1`, [orderId])).rows[0].c; }
 
+  const orgId = randomUUID();
   beforeAll(async () => {
     client = openDb(dbUrl!); await client.connect(); await client.query('BEGIN'); await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, $2)`, [branchId, '048 Branch']);
+    await client.query(`INSERT INTO public.organizations (id, name, slug) VALUES ($1, $2, $3)`, [orgId, '048 Org', `048-${randomUUID().slice(0,8)}`]);
+    await client.query(`INSERT INTO public.branches (id, name, organization_id) VALUES ($1, $2, $3)`, [branchId, '048 Branch', orgId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, $2, $3, true)`, [whId, '048 WH', branchId]);
     for (const [prod, unit, name] of [[prodA, unitA, 'A'], [prodB, unitB, 'B']] as const) {
       await client.query(`INSERT INTO public.products (id, name, branch_id, sale_price, cost_price, is_active) VALUES ($1, $2, $3, 100, 50, true)`, [prod, `048 Product ${name}`, branchId]);
@@ -27,6 +29,7 @@ describe.skipIf(skip)('send_to_kitchen + order_kitchen_sends (048)', () => {
       await client.query(`INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost) VALUES ($1, $2, $3, 100, 50)`, [unit, branchId, whId]);
     }
     await client.query(`INSERT INTO public.users (id, email, full_name, role, branch_id, is_active) VALUES ($1, $2, $3, 'cashier', $4, true)`, [cashierId, `k-${randomUUID()}@test.local`, 'Cashier', branchId]);
+    await client.query(`INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES ($1, $2, 'member', true)`, [orgId, cashierId]);
     await client.query(`INSERT INTO public.shifts (branch_id, cashier_id, opening_amount, status) VALUES ($1, $2, 0, 'open')`, [branchId, cashierId]);
     await client.query(`UPDATE public.settings SET tax_enabled = false`);
   });

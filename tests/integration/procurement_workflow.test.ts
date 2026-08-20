@@ -63,7 +63,9 @@ describe.skipIf(skip)('procurement workflow (075)', () => {
 
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
 
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, $2), ($3, $4)`, [branchA, 'Proc A', branchB, 'Proc B']);
+    const orgId = randomUUID();
+    await client.query(`INSERT INTO public.organizations (id, name, slug) VALUES ($1, $2, $3)`, [orgId, 'Proc Org', `proc-${randomUUID().slice(0, 8)}`]);
+    await client.query(`INSERT INTO public.branches (id, name, organization_id) VALUES ($1, $2, $3), ($4, $5, $6)`, [branchA, 'Proc A', orgId, branchB, 'Proc B', orgId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, $2, $3, true)`, [whId, 'Proc WH', branchA]);
     await client.query(`INSERT INTO public.products (id, name, branch_id, sale_price, cost_price, is_active) VALUES ($1, $2, $3, 200, 50, true)`, [prodId, 'Proc Product', branchA]);
     await client.query(`INSERT INTO public.raw_materials (id, code, name, branch_id, is_active) VALUES ($1, $2, $3, $4, true)`, [rmId, `RM-${rmId.slice(0, 8)}`, 'Proc Raw', branchA]);
@@ -79,6 +81,7 @@ describe.skipIf(skip)('procurement workflow (075)', () => {
     await mkUser(managerId, 'branch_manager', branchA);
     await mkUser(managerBId, 'branch_manager', branchB);
     await mkUser(accountantId, 'accountant', branchA);
+    await client.query(`INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES ($1, $2, 'owner', true), ($1, $3, 'member', true), ($1, $4, 'member', true), ($1, $5, 'member', true)`, [orgId, adminId, managerId, managerBId, accountantId]);
 
     await client.query(`SELECT public.ensure_chart_of_accounts($1)`, [branchA]);
     await client.query(`SELECT public.seed_account_mappings($1)`, [branchA]);
