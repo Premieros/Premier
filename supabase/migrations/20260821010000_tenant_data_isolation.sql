@@ -298,6 +298,10 @@ CREATE POLICY auth_delete_stock_transactions ON public.stock_transactions
 
 -- chart_of_accounts
 DROP POLICY IF EXISTS auth_select_chart_of_accounts ON public.chart_of_accounts;
+DROP POLICY IF EXISTS coa_select ON public.chart_of_accounts;
+DROP POLICY IF EXISTS coa_insert ON public.chart_of_accounts;
+DROP POLICY IF EXISTS coa_update ON public.chart_of_accounts;
+DROP POLICY IF EXISTS coa_delete ON public.chart_of_accounts;
 CREATE POLICY auth_select_chart_of_accounts ON public.chart_of_accounts
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -329,6 +333,10 @@ CREATE POLICY auth_delete_chart_of_accounts ON public.chart_of_accounts
 
 -- account_mappings
 DROP POLICY IF EXISTS auth_select_account_mappings ON public.account_mappings;
+DROP POLICY IF EXISTS account_mappings_select ON public.account_mappings;
+DROP POLICY IF EXISTS account_mappings_insert ON public.account_mappings;
+DROP POLICY IF EXISTS account_mappings_update ON public.account_mappings;
+DROP POLICY IF EXISTS account_mappings_delete ON public.account_mappings;
 CREATE POLICY auth_select_account_mappings ON public.account_mappings
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -360,6 +368,8 @@ CREATE POLICY auth_delete_account_mappings ON public.account_mappings
 
 -- journal_entries
 DROP POLICY IF EXISTS auth_select_journal_entries ON public.journal_entries;
+DROP POLICY IF EXISTS journal_entries_select ON public.journal_entries;
+DROP POLICY IF EXISTS journal_entries_insert ON public.journal_entries;
 CREATE POLICY auth_select_journal_entries ON public.journal_entries
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -382,6 +392,8 @@ CREATE POLICY auth_delete_journal_entries ON public.journal_entries
 
 -- journal_entry_lines
 DROP POLICY IF EXISTS auth_select_journal_entry_lines ON public.journal_entry_lines;
+DROP POLICY IF EXISTS journal_entry_lines_select ON public.journal_entry_lines;
+DROP POLICY IF EXISTS journal_entry_lines_insert ON public.journal_entry_lines;
 CREATE POLICY auth_select_journal_entry_lines ON public.journal_entry_lines
   FOR SELECT TO authenticated
   USING (
@@ -428,6 +440,8 @@ CREATE POLICY auth_delete_journal_entry_lines ON public.journal_entry_lines
 
 -- customer_payments
 DROP POLICY IF EXISTS auth_select_customer_payments ON public.customer_payments;
+DROP POLICY IF EXISTS customer_payments_select ON public.customer_payments;
+DROP POLICY IF EXISTS customer_payments_insert ON public.customer_payments;
 CREATE POLICY auth_select_customer_payments ON public.customer_payments
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -450,6 +464,8 @@ CREATE POLICY auth_delete_customer_payments ON public.customer_payments
 
 -- supplier_payments
 DROP POLICY IF EXISTS auth_select_supplier_payments ON public.supplier_payments;
+DROP POLICY IF EXISTS supplier_payments_select ON public.supplier_payments;
+DROP POLICY IF EXISTS supplier_payments_insert ON public.supplier_payments;
 CREATE POLICY auth_select_supplier_payments ON public.supplier_payments
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -472,6 +488,10 @@ CREATE POLICY auth_delete_supplier_payments ON public.supplier_payments
 
 -- treasury_accounts
 DROP POLICY IF EXISTS auth_select_treasury_accounts ON public.treasury_accounts;
+DROP POLICY IF EXISTS treasury_accounts_select ON public.treasury_accounts;
+DROP POLICY IF EXISTS treasury_accounts_insert ON public.treasury_accounts;
+DROP POLICY IF EXISTS treasury_accounts_update ON public.treasury_accounts;
+DROP POLICY IF EXISTS treasury_accounts_delete ON public.treasury_accounts;
 CREATE POLICY auth_select_treasury_accounts ON public.treasury_accounts
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -503,6 +523,8 @@ CREATE POLICY auth_delete_treasury_accounts ON public.treasury_accounts
 
 -- treasury_transactions
 DROP POLICY IF EXISTS auth_select_treasury_transactions ON public.treasury_transactions;
+DROP POLICY IF EXISTS treasury_transactions_select ON public.treasury_transactions;
+DROP POLICY IF EXISTS treasury_transactions_insert ON public.treasury_transactions;
 CREATE POLICY auth_select_treasury_transactions ON public.treasury_transactions
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -525,6 +547,9 @@ CREATE POLICY auth_delete_treasury_transactions ON public.treasury_transactions
 
 -- bank_reconciliations
 DROP POLICY IF EXISTS auth_select_bank_reconciliations ON public.bank_reconciliations;
+DROP POLICY IF EXISTS bank_reconciliations_select ON public.bank_reconciliations;
+DROP POLICY IF EXISTS bank_reconciliations_insert ON public.bank_reconciliations;
+DROP POLICY IF EXISTS bank_reconciliations_update ON public.bank_reconciliations;
 CREATE POLICY auth_select_bank_reconciliations ON public.bank_reconciliations
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -547,6 +572,9 @@ CREATE POLICY auth_delete_bank_reconciliations ON public.bank_reconciliations
 
 -- bank_statement_lines
 DROP POLICY IF EXISTS auth_select_bank_statement_lines ON public.bank_statement_lines;
+DROP POLICY IF EXISTS bank_statement_lines_select ON public.bank_statement_lines;
+DROP POLICY IF EXISTS bank_statement_lines_insert ON public.bank_statement_lines;
+DROP POLICY IF EXISTS bank_statement_lines_update ON public.bank_statement_lines;
 CREATE POLICY auth_select_bank_statement_lines ON public.bank_statement_lines
   FOR SELECT TO authenticated
   USING (
@@ -597,6 +625,7 @@ CREATE POLICY auth_delete_bank_statement_lines ON public.bank_statement_lines
 
 -- raw_materials (open read, permission-gated writes)
 DROP POLICY IF EXISTS auth_select_raw_materials ON public.raw_materials;
+DROP POLICY IF EXISTS raw_materials_select ON public.raw_materials;
 CREATE POLICY auth_select_raw_materials ON public.raw_materials
   FOR SELECT TO authenticated
   USING (true);
@@ -628,6 +657,8 @@ CREATE POLICY auth_delete_raw_materials ON public.raw_materials
 
 -- raw_material_inventory
 DROP POLICY IF EXISTS auth_select_raw_material_inventory ON public.raw_material_inventory;
+DROP POLICY IF EXISTS raw_material_inventory_select ON public.raw_material_inventory;
+DROP POLICY IF EXISTS raw_material_inventory_write ON public.raw_material_inventory;
 CREATE POLICY auth_select_raw_material_inventory ON public.raw_material_inventory
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -656,6 +687,8 @@ CREATE POLICY auth_delete_raw_material_inventory ON public.raw_material_inventor
 
 -- raw_material_batches
 DROP POLICY IF EXISTS auth_select_raw_material_batches ON public.raw_material_batches;
+DROP POLICY IF EXISTS raw_material_batches_select ON public.raw_material_batches;
+DROP POLICY IF EXISTS raw_material_batches_write ON public.raw_material_batches;
 CREATE POLICY auth_select_raw_material_batches ON public.raw_material_batches
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -684,6 +717,8 @@ CREATE POLICY auth_delete_raw_material_batches ON public.raw_material_batches
 
 -- recipes
 DROP POLICY IF EXISTS auth_select_recipes ON public.recipes;
+DROP POLICY IF EXISTS recipes_select ON public.recipes;
+DROP POLICY IF EXISTS recipes_write ON public.recipes;
 CREATE POLICY auth_select_recipes ON public.recipes
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -712,6 +747,8 @@ CREATE POLICY auth_delete_recipes ON public.recipes
 
 -- recipe_items
 DROP POLICY IF EXISTS auth_select_recipe_items ON public.recipe_items;
+DROP POLICY IF EXISTS recipe_items_select ON public.recipe_items;
+DROP POLICY IF EXISTS recipe_items_write ON public.recipe_items;
 CREATE POLICY auth_select_recipe_items ON public.recipe_items
   FOR SELECT TO authenticated
   USING (
@@ -758,6 +795,8 @@ CREATE POLICY auth_delete_recipe_items ON public.recipe_items
 
 -- production_orders
 DROP POLICY IF EXISTS auth_select_production_orders ON public.production_orders;
+DROP POLICY IF EXISTS production_orders_select ON public.production_orders;
+DROP POLICY IF EXISTS production_orders_write ON public.production_orders;
 CREATE POLICY auth_select_production_orders ON public.production_orders
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -786,6 +825,8 @@ CREATE POLICY auth_delete_production_orders ON public.production_orders
 
 -- production_waste
 DROP POLICY IF EXISTS auth_select_production_waste ON public.production_waste;
+DROP POLICY IF EXISTS production_waste_select ON public.production_waste;
+DROP POLICY IF EXISTS production_waste_write ON public.production_waste;
 CREATE POLICY auth_select_production_waste ON public.production_waste
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -808,6 +849,8 @@ CREATE POLICY auth_delete_production_waste ON public.production_waste
 
 -- warehouse_transfers
 DROP POLICY IF EXISTS auth_select_warehouse_transfers ON public.warehouse_transfers;
+DROP POLICY IF EXISTS warehouse_transfers_select ON public.warehouse_transfers;
+DROP POLICY IF EXISTS warehouse_transfers_write ON public.warehouse_transfers;
 CREATE POLICY auth_select_warehouse_transfers ON public.warehouse_transfers
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -830,6 +873,8 @@ CREATE POLICY auth_delete_warehouse_transfers ON public.warehouse_transfers
 
 -- warehouse_transfer_items
 DROP POLICY IF EXISTS auth_select_warehouse_transfer_items ON public.warehouse_transfer_items;
+DROP POLICY IF EXISTS warehouse_transfer_items_select ON public.warehouse_transfer_items;
+DROP POLICY IF EXISTS warehouse_transfer_items_write ON public.warehouse_transfer_items;
 CREATE POLICY auth_select_warehouse_transfer_items ON public.warehouse_transfer_items
   FOR SELECT TO authenticated
   USING (
@@ -876,6 +921,8 @@ CREATE POLICY auth_delete_warehouse_transfer_items ON public.warehouse_transfer_
 
 -- inventory_batches
 DROP POLICY IF EXISTS auth_select_inventory_batches ON public.inventory_batches;
+DROP POLICY IF EXISTS inventory_batches_select ON public.inventory_batches;
+DROP POLICY IF EXISTS inventory_batches_write ON public.inventory_batches;
 CREATE POLICY auth_select_inventory_batches ON public.inventory_batches
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -898,6 +945,8 @@ CREATE POLICY auth_delete_inventory_batches ON public.inventory_batches
 
 -- inventory_ledger
 DROP POLICY IF EXISTS auth_select_inventory_ledger ON public.inventory_ledger;
+DROP POLICY IF EXISTS inventory_ledger_select ON public.inventory_ledger;
+DROP POLICY IF EXISTS inventory_ledger_write ON public.inventory_ledger;
 CREATE POLICY auth_select_inventory_ledger ON public.inventory_ledger
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -924,6 +973,9 @@ CREATE POLICY auth_delete_inventory_ledger ON public.inventory_ledger
 
 -- dining_areas
 DROP POLICY IF EXISTS auth_select_dining_areas ON public.dining_areas;
+DROP POLICY IF EXISTS auth_write_dining_areas ON public.dining_areas;
+DROP POLICY IF EXISTS auth_write_dining_areas_del ON public.dining_areas;
+DROP POLICY IF EXISTS auth_write_dining_areas_upd ON public.dining_areas;
 CREATE POLICY auth_select_dining_areas ON public.dining_areas
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -946,6 +998,9 @@ CREATE POLICY auth_delete_dining_areas ON public.dining_areas
 
 -- dining_tables
 DROP POLICY IF EXISTS auth_select_dining_tables ON public.dining_tables;
+DROP POLICY IF EXISTS auth_write_dining_tables ON public.dining_tables;
+DROP POLICY IF EXISTS auth_write_dining_tables_del ON public.dining_tables;
+DROP POLICY IF EXISTS auth_write_dining_tables_upd ON public.dining_tables;
 CREATE POLICY auth_select_dining_tables ON public.dining_tables
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -968,6 +1023,9 @@ CREATE POLICY auth_delete_dining_tables ON public.dining_tables
 
 -- orders
 DROP POLICY IF EXISTS auth_select_orders ON public.orders;
+DROP POLICY IF EXISTS auth_write_orders ON public.orders;
+DROP POLICY IF EXISTS auth_write_orders_del ON public.orders;
+DROP POLICY IF EXISTS auth_write_orders_upd ON public.orders;
 CREATE POLICY auth_select_orders ON public.orders
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -990,6 +1048,9 @@ CREATE POLICY auth_delete_orders ON public.orders
 
 -- order_items
 DROP POLICY IF EXISTS auth_select_order_items ON public.order_items;
+DROP POLICY IF EXISTS auth_write_order_items ON public.order_items;
+DROP POLICY IF EXISTS auth_write_order_items_del ON public.order_items;
+DROP POLICY IF EXISTS auth_write_order_items_upd ON public.order_items;
 CREATE POLICY auth_select_order_items ON public.order_items
   FOR SELECT TO authenticated
   USING (
@@ -1042,6 +1103,9 @@ CREATE POLICY auth_delete_order_items ON public.order_items
 
 -- branch_settings
 DROP POLICY IF EXISTS auth_select_branch_settings ON public.branch_settings;
+DROP POLICY IF EXISTS auth_write_branch_settings ON public.branch_settings;
+DROP POLICY IF EXISTS auth_write_branch_settings_del ON public.branch_settings;
+DROP POLICY IF EXISTS auth_write_branch_settings_upd ON public.branch_settings;
 CREATE POLICY auth_select_branch_settings ON public.branch_settings
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
@@ -1219,6 +1283,9 @@ CREATE POLICY auth_delete_settings ON public.settings
 
 -- order_kitchen_sends
 DROP POLICY IF EXISTS auth_select_order_kitchen_sends ON public.order_kitchen_sends;
+DROP POLICY IF EXISTS auth_write_order_kitchen_sends ON public.order_kitchen_sends;
+DROP POLICY IF EXISTS auth_write_order_kitchen_sends_del ON public.order_kitchen_sends;
+DROP POLICY IF EXISTS auth_write_order_kitchen_sends_upd ON public.order_kitchen_sends;
 CREATE POLICY auth_select_order_kitchen_sends ON public.order_kitchen_sends
   FOR SELECT TO authenticated
   USING (
@@ -1265,6 +1332,8 @@ CREATE POLICY auth_delete_order_kitchen_sends ON public.order_kitchen_sends
 
 -- waste_entries
 DROP POLICY IF EXISTS auth_select_waste_entries ON public.waste_entries;
+DROP POLICY IF EXISTS we_admin_all ON public.waste_entries;
+DROP POLICY IF EXISTS we_branch_read ON public.waste_entries;
 CREATE POLICY auth_select_waste_entries ON public.waste_entries
   FOR SELECT TO authenticated
   USING (public.user_may_access_branch(branch_id));
