@@ -168,7 +168,8 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
       ($1, $7, 'member', true),
      ($8, $9, 'member', true),
      ($1, $10, 'member', true),
-     ($8, $10, 'member', true)`,
+     ($8, $10, 'member', true),
+     ($8, $2, 'member', true)`,
     [
       orgA, ids.users.owner, ids.users.branch_manager, ids.users.cashier,
       ids.users.warehouse_manager, ids.users.accountant, ids.users.production_manager,
