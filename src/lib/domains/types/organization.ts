@@ -1,3 +1,12 @@
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Branch {
   id: string;
   name: string;
@@ -5,6 +14,7 @@ export interface Branch {
   address: string | null;
   phone: string | null;
   is_active: boolean;
+  organization_id: string | null;
   created_at: string;
 }
 
