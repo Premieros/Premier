@@ -221,7 +221,7 @@ CREATE POLICY auth_select_branches ON public.branches
   USING (
     is_pos_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
-    OR (organization_id IS NULL AND branch_id = public.get_branch_id())
+    OR (organization_id IS NULL AND id = public.get_branch_id())
   );
 
 DROP POLICY IF EXISTS auth_insert_branches ON public.branches;
@@ -235,12 +235,12 @@ CREATE POLICY auth_update_branches ON public.branches
   USING (
     is_pos_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
-    OR (organization_id IS NULL AND branch_id = public.get_branch_id())
+    OR (organization_id IS NULL AND id = public.get_branch_id())
   )
   WITH CHECK (
     is_pos_admin()
     OR organization_id IN (SELECT public.user_organization_ids())
-    OR (organization_id IS NULL AND branch_id = public.get_branch_id())
+    OR (organization_id IS NULL AND id = public.get_branch_id())
   );
 
 DROP POLICY IF EXISTS auth_delete_branches ON public.branches;
