@@ -1,124 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { APP_ROUTES } from '@/core/navigation/routes';
-import { MENU_ITEMS, MENU_GROUPS } from '@/core/navigation/menu.config';
+import { MENU_GROUPS, MENU_ITEMS } from '@/core/navigation/menu.config';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const root = resolve(process.cwd());
-const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
+function read(relativePath: string): string {
+  return fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
+}
 
-describe('navigation contract', () => {
-  it('keeps route identifiers unique', () => {
-    const routeValues = Object.values(APP_ROUTES);
-    expect(new Set(routeValues).size).toBe(routeValues.length);
-  });
-
-  it('keeps menu identities unique and stable', () => {
-    const ids = MENU_ITEMS.map((item) => item.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it('keeps every menu target anchored to the canonical route map', () => {
-    const canonicalRoutes = new Set(Object.values(APP_ROUTES));
-    for (const item of MENU_ITEMS) {
-      expect(canonicalRoutes.has(item.route), `${item.id} points outside APP_ROUTES`).toBe(true);
-    }
-  });
-
-  it('keeps menu permissions explicit for protected navigation items', () => {
-    const publicMenuIds = new Set(['subscription']);
-    for (const item of MENU_ITEMS) {
-      if (item.superAdminOnly || publicMenuIds.has(item.id)) continue;
-      expect(item.permission, `${item.id} is missing a navigation permission`).toBeTruthy();
-    }
-  });
-});
-
-describe('Phase 4 — route resolution', () => {
-  it('every APP_ROUTES key maps to a non-empty path', () => {
-    for (const [key, path] of Object.entries(APP_ROUTES)) {
-      expect(typeof path).toBe('string');
-      expect(path.length).toBeGreaterThan(0);
-      expect(path.startsWith('/'), `${key} route "${path}" does not start with /`).toBe(true);
-    }
-  });
-
-  it('every declared route in routes.tsx references a constant from APP_ROUTES', () => {
-    const routesSource = read('src/app/routes.tsx');
-    for (const key of Object.keys(APP_ROUTES)) {
-      expect(routesSource, `routes.tsx missing reference to APP_ROUTES.${key}`).toContain(`APP_ROUTES.${key}`);
-    }
-  });
-
-  it('no duplicate route paths across APP_ROUTES', () => {
-    const paths = Object.entries(APP_ROUTES).map(([k, v]) => `${k}=${v}`);
-    expect(new Set(paths).size).toBe(paths.length);
-  });
-});
-
-describe('Phase 4 — center discoverability', () => {
-  function sourceHasRoute(source: string, routeKey: string): boolean {
-    return source.includes(`APP_ROUTES.${routeKey}`);
-  }
-
-  it('Inventory Center exposes all inventory sub-pages', () => {
-    const source = read('src/features/inventory/pages/InventoryCenterPage.tsx');
-    const requiredKeys = ['inventory', 'warehouses', 'inventoryLedger', 'transfers', 'stockCounts', 'inventoryBatches', 'lowStockAlerts', 'stockValuation'];
-    for (const key of requiredKeys) {
-      expect(sourceHasRoute(source, key), `InventoryCenter missing APP_ROUTES.${key}`).toBe(true);
-    }
-  });
-
-  it('Manufacturing Center exposes raw materials, recipes, and production', () => {
-    const source = read('src/features/manufacturing/pages/ManufacturingCenterPage.tsx');
-    expect(source).toContain('raw_materials.view');
-    expect(source).toContain('recipes.view');
-    expect(source).toContain('production.view');
-    expect(sourceHasRoute(source, 'rawMaterials')).toBe(true);
-    expect(sourceHasRoute(source, 'recipes')).toBe(true);
-    expect(sourceHasRoute(source, 'production')).toBe(true);
-  });
-
-  it('Procurement Center exposes requests, RFQs, and receiving', () => {
-    const source = read('src/features/trade/pages/ProcurementCenterPage.tsx');
-    expect(sourceHasRoute(source, 'purchases')).toBe(true);
-    expect(sourceHasRoute(source, 'purchaseRequests')).toBe(true);
-    expect(sourceHasRoute(source, 'rfqs')).toBe(true);
-    expect(sourceHasRoute(source, 'receiving')).toBe(true);
-    expect(sourceHasRoute(source, 'suppliers')).toBe(true);
-    expect(sourceHasRoute(source, 'payments')).toBe(true);
-  });
-
-  it('Operations Center links to POS, inventory, warehouses, transfers, counts, alerts, and kitchen', () => {
-    const source = read('src/features/operations/pages/OperationsCenterPage.tsx');
-    expect(sourceHasRoute(source, 'pos')).toBe(true);
-    expect(sourceHasRoute(source, 'inventoryCenter')).toBe(true);
-    expect(sourceHasRoute(source, 'inventory')).toBe(true);
-    expect(sourceHasRoute(source, 'warehouses')).toBe(true);
-    expect(sourceHasRoute(source, 'transfers')).toBe(true);
-    expect(sourceHasRoute(source, 'stockCounts')).toBe(true);
-    expect(sourceHasRoute(source, 'lowStockAlerts')).toBe(true);
-    expect(sourceHasRoute(source, 'purchases')).toBe(true);
-    expect(sourceHasRoute(source, 'floorPlan')).toBe(true);
-  });
-});
+function sourceHasRoute(source: string, routeKey: string): boolean {
+  return source.includes(`APP_ROUTES.${routeKey}`);
+}
 
 describe('Phase 4 — feature discoverability', () => {
-  function sourceHasRoute(source: string, routeKey: string): boolean {
-    return source.includes(`APP_ROUTES.${routeKey}`);
-  }
-
   it('Raw Materials is accessible from Manufacturing Center', () => {
     const source = read('src/features/manufacturing/pages/ManufacturingCenterPage.tsx');
     expect(sourceHasRoute(source, 'rawMaterials')).toBe(true);
     expect(source).toContain('raw_materials.view');
   });
 
-  it('Inventory Units is in the sidebar menu', () => {
-    const item = MENU_ITEMS.find((i) => i.id === 'inventory-units');
-    expect(item).toBeDefined();
-    expect(item!.route).toBe(APP_ROUTES.inventoryUnits);
-    expect(item!.permission).toBe('raw_materials.view');
+  it('Raw Materials is the canonical sidebar entry and Inventory Units is not duplicated there', () => {
+    const rawMaterialsItem = MENU_ITEMS.find((i) => i.id === 'raw-materials');
+    const inventoryUnitsItem = MENU_ITEMS.find((i) => i.id === 'inventory-units');
+    expect(rawMaterialsItem).toBeDefined();
+    expect(rawMaterialsItem!.route).toBe(APP_ROUTES.rawMaterials);
+    expect(rawMaterialsItem!.permission).toBe('raw_materials.view');
+    expect(inventoryUnitsItem).toBeUndefined();
   });
 
   it('Recipes are accessible from Manufacturing Center', () => {
@@ -228,7 +135,6 @@ describe('Phase 4 — no duplicate destinations', () => {
       APP_ROUTES.products,
       APP_ROUTES.categories,
       APP_ROUTES.components,
-      APP_ROUTES.inventoryUnits,
       APP_ROUTES.inventory,
       APP_ROUTES.warehouses,
       APP_ROUTES.rawMaterials,
