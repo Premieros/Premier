@@ -378,7 +378,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
           await runProbe(client, `${tbl.name} UPDATE admin own`, adminId(), upd(own), 'ok');
           await runProbe(client, `${tbl.name} UPDATE cashier own`, cashierId(), upd(own), 'denied');
         }
-        await runProbe(client, `${tbl.name} DELETE admin other`, adminId(), del(other), 'ok');
+        await runProbe(client, `${tbl.name} DELETE admin other`, adminId(), del(other), 'denied');
         await runProbe(client, `${tbl.name} DELETE cashier other`, cashierId(), del(other), 'denied');
         break;
     }
@@ -421,7 +421,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await runProbe(client, 'shifts UPDATE cashier own', cashierId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'denied', [ids.shiftA]);
       await runProbe(client, 'shifts UPDATE admin other', adminId(), `UPDATE public.shifts SET notes = 'probe' WHERE id::text = $1`, 'ok', [ids.shiftB]);
       await runProbe(client, 'shifts DELETE cashier other', cashierId(), `DELETE FROM public.shifts WHERE id::text = $1`, 'denied', [ids.shiftB]);
-      await runProbe(client, 'shifts DELETE admin other', adminId(), `DELETE FROM public.shifts WHERE id::text = $1`, 'ok', [ids.shiftB]);
+      await runProbe(client, 'shifts DELETE admin other', adminId(), `DELETE FROM public.shifts WHERE id::text = $1`, 'denied', [ids.shiftB]);
     });
   });
 
@@ -453,10 +453,10 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await runProbe(client, 'users UPDATE bm other-branch', bmId(), upd(cashierB()), 'denied');
     });
 
-    t('DELETE: admins and branch managers (own branch, non-admin staff) only', async () => {
+    t('DELETE: Phase 3 uses USING(false) on users — all deletes denied', async () => {
       await runProbe(client, 'users DELETE cashier other-branch', cashierId(), del(cashierB()), 'denied');
-      await runProbe(client, 'users DELETE admin other-branch', adminId(), del(cashierB()), 'ok');
-      await runProbe(client, 'users DELETE bm own-branch staff', bmId(), del(whMgr()), 'ok');
+      await runProbe(client, 'users DELETE admin other-branch', adminId(), del(cashierB()), 'denied');
+      await runProbe(client, 'users DELETE bm own-branch staff', bmId(), del(whMgr()), 'denied');
       await runProbe(client, 'users DELETE bm other-branch', bmId(), del(cashierB()), 'denied');
     });
 
@@ -475,8 +475,14 @@ describe.skipIf(skip)('RLS branch isolation', () => {
     // branch_settings keys on branch_id (PK), and branch A/B already own seeded
     // rows, so INSERT probes target throwaway branches created by the session
     // role (bypasses RLS; all discarded at the final ROLLBACK).
-    const tmpBranch = async () =>
-      (await client.query<{ id: string }>(`INSERT INTO public.branches (name) VALUES ('tmp') RETURNING id`)).rows[0].id;
+    const tmpBranch = async () => {
+      const orgId = (await client.query<{ organization_id: string }>(
+        `SELECT organization_id FROM public.branches WHERE id = $1`, [ids.branchA],
+      )).rows[0].organization_id;
+      return (await client.query<{ id: string }>(
+        `INSERT INTO public.branches (name, organization_id) VALUES ('tmp', $1) RETURNING id`, [orgId],
+      )).rows[0].id;
+    };
     const tmpRow = async () => {
       const b = await tmpBranch();
       await client.query(`INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H')`, [b]);
@@ -502,7 +508,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await runProbe(client, 'branch_settings INSERT bm', bmId(), ins(await tmpBranch()), 'denied');
       await runProbe(client, 'branch_settings UPDATE admin', adminId(), `UPDATE public.branch_settings SET receipt_header = 'X' WHERE branch_id = '${await tmpRow()}'`, 'ok');
       await runProbe(client, 'branch_settings UPDATE cashier own row', cashierId(), `UPDATE public.branch_settings SET receipt_header = 'X' WHERE branch_id = '${own()}'`, 'denied');
-      await runProbe(client, 'branch_settings DELETE admin', adminId(), `DELETE FROM public.branch_settings WHERE branch_id = '${await tmpRow()}'`, 'ok');
+      await runProbe(client, 'branch_settings DELETE admin', adminId(), `DELETE FROM public.branch_settings WHERE branch_id = '${await tmpRow()}'`, 'denied');
       await runProbe(client, 'branch_settings DELETE cashier own row', cashierId(), `DELETE FROM public.branch_settings WHERE branch_id = '${own()}'`, 'denied');
     });
 
@@ -521,7 +527,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await client.query(`INSERT INTO public.branch_settings (branch_id, receipt_header) VALUES ($1, 'H')`, [own()]);
       await runProbe(client, 'branch_settings UPDATE bm own', bmId(), `UPDATE public.branch_settings SET receipt_header = 'Y' WHERE branch_id = '${own()}'`, 'ok');
       await runProbe(client, 'branch_settings UPDATE bm other', bmId(), `UPDATE public.branch_settings SET receipt_header = 'Y' WHERE branch_id = '${await tmpRow()}'`, 'denied');
-      await runProbe(client, 'branch_settings DELETE bm own', bmId(), `DELETE FROM public.branch_settings WHERE branch_id = '${own()}'`, 'ok');
+      await runProbe(client, 'branch_settings DELETE bm own', bmId(), `DELETE FROM public.branch_settings WHERE branch_id = '${own()}'`, 'denied');
       await runProbe(client, 'branch_settings DELETE bm other', bmId(), `DELETE FROM public.branch_settings WHERE branch_id = '${await tmpRow()}'`, 'denied');
     });
   });
@@ -549,35 +555,36 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       mode: 'parentWrite' | 'adminWrite' | 'permRecipes' | 'adminInsOnly' | 'adminInsUpd' | 'shiftOps';
       ins: (ownParent: string, otherParent: string) => { sql: string; paramsA: unknown[]; paramsB: unknown[] };
       noDel?: 'all' | 'cashier';
+      updSet?: string;
     }
 
     const CHILDREN: ChildSpec[] = [
       {
-        name: 'sale_items', key: 'sale_items', parent: 'sales', fk: 'sale_id', mode: 'parentWrite', noDel: 'cashier',
+        name: 'sale_items', key: 'sale_items', parent: 'sales', fk: 'sale_id', mode: 'parentWrite',
         ins: () => ({ sql: `INSERT INTO public.sale_items (sale_id, product_id, unit_name, quantity, unit_price, total) VALUES ($1, $2, 'piece', 1, 20, 20)`, paramsA: [ids.saleA, ids.prodA], paramsB: [ids.saleB, ids.prodB] }),
       },
       {
-        name: 'purchase_items', key: 'purchase_items', parent: 'purchases', fk: 'purchase_id', mode: 'parentWrite', noDel: 'cashier',
+        name: 'purchase_items', key: 'purchase_items', parent: 'purchases', fk: 'purchase_id', mode: 'parentWrite',
         ins: () => ({ sql: `INSERT INTO public.purchase_items (purchase_id, product_id, unit_name, quantity, unit_cost, total) VALUES ($1, $2, 'piece', 1, 10, 10)`, paramsA: [ids.purchA, ids.prodA], paramsB: [ids.purchB, ids.prodB] }),
       },
       {
-        name: 'warehouse_transfer_items', key: 'warehouse_transfer_items', parent: 'warehouse_transfers', fk: 'transfer_id', mode: 'adminWrite', noDel: 'all',
+        name: 'warehouse_transfer_items', key: 'warehouse_transfer_items', parent: 'warehouse_transfers', fk: 'transfer_id', mode: 'parentWrite', noDel: 'all',
         ins: () => ({ sql: `INSERT INTO public.warehouse_transfer_items (transfer_id, product_id, quantity) VALUES ($1, $2, 1)`, paramsA: [ids.rows.warehouse_transfers.own, ids.prodA], paramsB: [ids.rows.warehouse_transfers.other, ids.prodB] }),
       },
       {
-        name: 'recipe_items', key: 'recipe_items', parent: 'recipes', fk: 'recipe_id', mode: 'permRecipes', noDel: 'all',
+        name: 'recipe_items', key: 'recipe_items', parent: 'recipes', fk: 'recipe_id', mode: 'parentWrite', noDel: 'all',
         ins: () => ({ sql: `INSERT INTO public.recipe_items (recipe_id, raw_material_id, quantity) VALUES ($1, $2, 1)`, paramsA: [ids.rows.recipes.own, ids.rm], paramsB: [ids.rows.recipes.other, ids.rm] }),
       },
       {
-        name: 'journal_entry_lines', key: 'journal_entry_lines', parent: 'journal_entries', fk: 'journal_entry_id', mode: 'parentWrite', noDel: 'all',
+        name: 'journal_entry_lines', key: 'journal_entry_lines', parent: 'journal_entries', fk: 'journal_entry_id', mode: 'parentWrite', noDel: 'all', updSet: 'SET debit = 0',
         ins: () => ({ sql: `INSERT INTO public.journal_entry_lines (journal_entry_id, account_id, debit, credit) VALUES ($1, $2, 0, 10)`, paramsA: [ids.jeA, ids.coaCashA], paramsB: [ids.jeB, ids.coaCashB] }),
       },
       {
-        name: 'bank_statement_lines', key: 'bank_statement_lines', parent: 'bank_reconciliations', fk: 'reconciliation_id', mode: 'parentWrite', noDel: 'all',
+        name: 'bank_statement_lines', key: 'bank_statement_lines', parent: 'bank_reconciliations', fk: 'reconciliation_id', mode: 'parentWrite', noDel: 'all', updSet: 'SET amount = 0',
         ins: () => ({ sql: `INSERT INTO public.bank_statement_lines (reconciliation_id, statement_date, amount) VALUES ($1, CURRENT_DATE, 10)`, paramsA: [ids.rows.bank_reconciliations.own], paramsB: [ids.rows.bank_reconciliations.other] }),
       },
       {
-        name: 'shift_operations', key: 'shift_operations', parent: 'shifts', fk: 'shift_id', mode: 'parentWrite', noDel: 'all',
+        name: 'shift_operations', key: 'shift_operations', parent: 'shifts', fk: 'shift_id', mode: 'parentWrite', noDel: 'all', updSet: 'SET amount = 0',
         ins: () => ({ sql: `INSERT INTO public.shift_operations (shift_id, operation_type, amount, payment_method) VALUES ($1, 'opening', 0, 'cash')`, paramsA: [ids.shiftA], paramsB: [ids.shiftB] }),
       },
       {
@@ -618,8 +625,8 @@ describe.skipIf(skip)('RLS branch isolation', () => {
             await runProbe(client, `${ch.name} INSERT cashier own parent`, cashierId(), sql, 'ok', paramsA);
             await runProbe(client, `${ch.name} INSERT cashier other parent`, cashierId(), sql, 'denied', paramsB);
             await runProbe(client, `${ch.name} INSERT admin other parent`, adminId(), sql, 'ok', paramsB);
-            await runProbe(client, `${ch.name} UPDATE cashier own`, cashierId(), upd(own, `SET quantity = 2`), 'ok');
-            await runProbe(client, `${ch.name} UPDATE cashier other`, cashierId(), upd(other, `SET quantity = 2`), 'denied');
+            await runProbe(client, `${ch.name} UPDATE cashier own`, cashierId(), upd(own, ch.updSet ?? `SET quantity = 2`), 'ok');
+            await runProbe(client, `${ch.name} UPDATE cashier other`, cashierId(), upd(other, ch.updSet ?? `SET quantity = 2`), 'denied');
             if (ch.noDel === 'all') {
               await runProbe(client, `${ch.name} DELETE cashier own`, cashierId(), del(own), 'denied');
               await runProbe(client, `${ch.name} DELETE cashier other`, cashierId(), del(other), 'denied');
@@ -716,7 +723,6 @@ describe.skipIf(skip)('RLS branch isolation', () => {
   describe('deny-by-default (no policy = denied, even for admins)', () => {
     const probes: [string, string, string][] = [
       ['stock_transactions', `DELETE FROM public.stock_transactions WHERE id::text = $1`, 'own'],
-      ['shift_operations', `UPDATE public.shift_operations SET amount = 2 WHERE id::text = $1`, 'own'],
       ['shift_operations', `DELETE FROM public.shift_operations WHERE id::text = $1`, 'own'],
       ['journal_entries', `DELETE FROM public.journal_entries WHERE id::text = $1`, 'own'],
       ['journal_entry_lines', `DELETE FROM public.journal_entry_lines WHERE id::text = $1`, 'own'],
