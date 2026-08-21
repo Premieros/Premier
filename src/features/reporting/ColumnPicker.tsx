@@ -37,7 +37,7 @@ export function ColumnPicker({ columns, visibleColumns, onToggle, onShowAll, lan
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-56 bg-ui-surface border border-ui-border rounded-ui shadow-lg p-2">
+        <div className="absolute end-0 top-full mt-1 z-50 w-56 bg-ui-surface border border-ui-border rounded-ui shadow-lg p-2">
           <button
             onClick={() => { onShowAll(); setOpen(false); }}
             className="w-full text-start px-2 py-1.5 text-sm rounded-ui hover:bg-ui-page-alt text-ui-primary font-medium"

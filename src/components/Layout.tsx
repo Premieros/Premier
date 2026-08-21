@@ -129,11 +129,117 @@ export function Layout({ children }: { children: ReactNode }) {
           : '';
 
   return (
-    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen bg-ui-page text-ui-text" data-testid="app-shell">
-      {/* Sidebar */}
-      <aside data-testid="app-sidebar" className={`fixed inset-y-0 ${ar ? 'end-0' : 'start-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}>
+    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen bg-ui-page text-ui-text overflow-x-hidden" data-testid="app-shell">
+
+      {/* ── Header: fixed, full-width, z-[60] ── */}
+      <header data-testid="app-header" className="fixed top-0 inset-inline-0 z-[60] flex h-[64px] items-center justify-between gap-3 border-b border-ui-border bg-ui-surface/80 backdrop-blur-md px-4 shadow-ui-sm sm:px-6">
+        {/* Left side: hamburger + command + tabs */}
+        <div className="flex min-w-0 items-center gap-3">
+          <button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ui-muted hover:bg-ui-page-alt lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}>
+            <Menu className="h-5 w-5" />
+          </button>
+          <CommandPaletteTrigger />
+          <div className="hidden h-6 w-px bg-ui-border lg:block" />
+          <div data-testid="top-navigation" className="flex min-w-0 items-center gap-1 overflow-x-auto">
+            {TOP_TABS.map((tab) => {
+              const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view');
+              if (!allowed) return null;
+              return (
+                <NavLink
+                  data-testid={`top-tab-${tab.key}`}
+                  key={tab.key}
+                  to={tab.route}
+                  className={`relative whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeTop === tab.key
+                      ? 'bg-ui-primary-soft text-ui-primary'
+                      : 'text-ui-muted hover:bg-ui-page-alt hover:text-ui-text'
+                  }`}
+                >
+                  {tab.label[ar ? 0 : 1]}
+                  {tab.key === 'kitchen' && (
+                    <span className="ms-1.5 rounded-full bg-ui-success px-1.5 py-0.5 text-[9px] font-bold text-ui-primary-fg">{ar ? 'جديد' : 'New'}</span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right side: branch + actions */}
+        <div className="relative flex items-center gap-1.5 sm:gap-2" ref={branchMenuRef}>
+          {/* Branch selector */}
+          <div className="relative">
+            <button
+              data-testid="branch-indicator"
+              type="button"
+              onClick={isAdmin ? () => setBranchMenuOpen((v) => !v) : undefined}
+              aria-expanded={isAdmin ? branchMenuOpen : undefined}
+              aria-label={ar ? 'الفرع النشط' : 'Active branch'}
+              className={`flex items-center gap-2 rounded-xl border border-ui-border px-3 py-1.5 text-xs font-semibold text-ui-text transition-colors ${isAdmin ? 'hover:bg-ui-page-alt' : 'cursor-default'}`}
+            >
+              <Building2 className="h-4 w-4 shrink-0 text-ui-primary" />
+              <span className="max-w-[140px] truncate">{branchLabel}</span>
+              {isAdmin && <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-ui-muted transition-transform duration-150 ${branchMenuOpen ? 'rotate-180' : ''}`} />}
+            </button>
+            {isAdmin && branchMenuOpen && (
+              <div data-testid="branch-menu" className="absolute end-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-ui-border bg-ui-surface py-1 shadow-ui-lg animate-slide-down">
+                <button data-testid="branch-option-all" type="button" onClick={() => { setActiveBranchId(null); setBranchMenuOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${effectiveBranch === null ? 'bg-ui-primary-soft font-bold text-ui-primary' : 'text-ui-muted hover:bg-ui-page-alt'}`}>
+                  {ar ? 'كل الفروع' : 'All branches'}
+                </button>
+                {branches.map((b) => (
+                  <button key={b.id} data-testid={`branch-option-${b.id}`} type="button" onClick={() => { setActiveBranchId(b.id); setBranchMenuOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${effectiveBranch === b.id ? 'bg-ui-primary-soft font-bold text-ui-primary' : 'text-ui-muted hover:bg-ui-page-alt'}`}>
+                    <span className="truncate">{lang === 'ar' ? b.name : (b.name_en || b.name)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Active orders */}
+          <button data-testid="active-orders-button" type="button" onClick={() => navigate('/floor-plan')} className="relative rounded-xl p-2 text-ui-muted transition-colors hover:bg-ui-page-alt hover:text-ui-text" aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}>
+            <Activity className="h-5 w-5" />
+            {counts.active > 0 && (
+              <span data-testid="active-orders-count" className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ui-danger px-1 text-[9px] font-bold text-ui-primary-fg">
+                {counts.active}
+              </span>
+            )}
+          </button>
+
+          <div className="hidden h-6 w-px bg-ui-border sm:block" />
+
+          {/* User */}
+          <button data-testid="user-menu-button" type="button" onClick={() => navigate(APP_ROUTES.settings)} className="flex items-center gap-2.5 rounded-xl p-1.5 pe-2 transition-colors hover:bg-ui-page-alt">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ui-primary-soft text-xs font-bold text-ui-primary">
+              {(user?.full_name || user?.email || 'A').slice(0, 1).toUpperCase()}
+            </div>
+            <div className="hidden text-start sm:block">
+              <p className="text-sm font-semibold leading-tight text-ui-text">{user?.full_name || user?.email || (ar ? 'مدير النظام' : 'System Admin')}</p>
+              <p className="text-[10px] leading-tight text-ui-subtle">{user?.role || 'admin'}</p>
+            </div>
+          </button>
+
+          {/* Language */}
+          <button data-testid="language-toggle" type="button" onClick={() => setLang(ar ? 'en' : 'ar')} className="hidden items-center gap-1.5 rounded-xl border border-ui-border px-2.5 py-1.5 text-xs font-semibold text-ui-muted transition-colors hover:bg-ui-page-alt sm:flex">
+            <Globe className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">{ar ? 'العربية' : 'English'}</span>
+          </button>
+
+          {/* Theme */}
+          <button data-testid="theme-toggle" type="button" onClick={toggleTheme} className="rounded-xl p-2 text-ui-muted transition-colors hover:bg-ui-page-alt hover:text-ui-text" aria-label={ar ? 'تغيير المظهر' : 'Toggle theme'}>
+            {theme === 'light' ? <Moon className="h-4.5 w-4.5" /> : <Sun className="h-4.5 w-4.5" />}
+          </button>
+
+          {/* Sign out */}
+          <button data-testid="sign-out-button" type="button" onClick={signOut} className="rounded-xl p-2 text-ui-subtle transition-colors hover:bg-ui-danger-soft hover:text-ui-danger" aria-label={ar ? 'تسجيل الخروج' : 'Sign out'}>
+            <LogOut className="h-4.5 w-4.5" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Sidebar: fixed, z-50, below header ── */}
+      <aside data-testid="app-sidebar" className={`fixed top-[64px] bottom-0 ${ar ? 'end-0' : 'start-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}>
         {/* Sidebar header */}
-        <div className="flex h-[64px] items-center justify-between border-b border-ui-border px-5">
+        <div className="flex h-14 items-center justify-between border-b border-ui-border px-5">
           <Logo variant="horizontal" size={28} tone="mono" showTagline={false} className="text-ui-primary" />
           <button data-testid="sidebar-close" type="button" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-ui-muted hover:bg-ui-page-alt lg:hidden" aria-label={ar ? 'إغلاق القائمة' : 'Close sidebar'}>
             <X className="h-5 w-5" />
@@ -141,7 +247,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav data-testid="app-navigation" className="h-[calc(100%-64px)] overflow-y-auto px-3 py-4">
+        <nav data-testid="app-navigation" className="h-[calc(100%-56px)] overflow-y-auto px-3 py-4">
           {(Object.keys(MENU_GROUPS) as MenuGroup[]).map((group) => {
             const items = grouped[group] ?? [];
             if (!items.length) return null;
@@ -192,119 +298,13 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      {/* Mobile backdrop */}
+      {/* ── Mobile backdrop ── */}
       {mobileOpen && (
         <button data-testid="mobile-sidebar-backdrop" type="button" className="fixed inset-0 z-40 bg-ui-text/20 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} aria-label={ar ? 'إغلاق' : 'Close'} />
       )}
 
-      {/* Main content area */}
-      <div className={`${ar ? 'lg:me-[260px]' : 'lg:ms-[260px]'} min-h-screen`}>
-        {/* Header */}
-        <header data-testid="app-header" className="sticky top-0 z-40 flex h-[64px] items-center justify-between gap-3 border-b border-ui-border bg-ui-surface/80 backdrop-blur-md px-4 shadow-ui-sm sm:px-6">
-          {/* Left: hamburger + search + tabs */}
-          <div className="flex min-w-0 items-center gap-3">
-            <button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ui-muted hover:bg-ui-page-alt lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}>
-              <Menu className="h-5 w-5" />
-            </button>
-            <CommandPaletteTrigger />
-            <div className="hidden h-6 w-px bg-ui-border lg:block" />
-            <div data-testid="top-navigation" className="flex min-w-0 items-center gap-1 overflow-x-auto">
-              {TOP_TABS.map((tab) => {
-                const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view');
-                if (!allowed) return null;
-                return (
-                  <NavLink
-                    data-testid={`top-tab-${tab.key}`}
-                    key={tab.key}
-                    to={tab.route}
-                    className={`relative whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                      activeTop === tab.key
-                        ? 'bg-ui-primary-soft text-ui-primary'
-                        : 'text-ui-muted hover:bg-ui-page-alt hover:text-ui-text'
-                    }`}
-                  >
-                    {tab.label[ar ? 0 : 1]}
-                    {tab.key === 'kitchen' && (
-                      <span className="ms-1.5 rounded-full bg-ui-success px-1.5 py-0.5 text-[9px] font-bold text-ui-primary-fg">{ar ? 'جديد' : 'New'}</span>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right: branch + actions */}
-          <div className="relative flex items-center gap-1.5 sm:gap-2" ref={branchMenuRef}>
-            {/* Branch selector */}
-            <div className="relative">
-              <button
-                data-testid="branch-indicator"
-                type="button"
-                onClick={isAdmin ? () => setBranchMenuOpen((v) => !v) : undefined}
-                aria-expanded={isAdmin ? branchMenuOpen : undefined}
-                aria-label={ar ? 'الفرع النشط' : 'Active branch'}
-                className={`flex items-center gap-2 rounded-xl border border-ui-border px-3 py-1.5 text-xs font-semibold text-ui-text transition-colors ${isAdmin ? 'hover:bg-ui-page-alt' : 'cursor-default'}`}
-              >
-                <Building2 className="h-4 w-4 shrink-0 text-ui-primary" />
-                <span className="max-w-[140px] truncate">{branchLabel}</span>
-                {isAdmin && <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-ui-muted transition-transform duration-150 ${branchMenuOpen ? 'rotate-180' : ''}`} />}
-              </button>
-              {isAdmin && branchMenuOpen && (
-                <div data-testid="branch-menu" className="absolute end-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-ui-border bg-ui-surface py-1 shadow-ui-lg animate-slide-down">
-                  <button data-testid="branch-option-all" type="button" onClick={() => { setActiveBranchId(null); setBranchMenuOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${effectiveBranch === null ? 'bg-ui-primary-soft font-bold text-ui-primary' : 'text-ui-muted hover:bg-ui-page-alt'}`}>
-                    {ar ? 'كل الفروع' : 'All branches'}
-                  </button>
-                  {branches.map((b) => (
-                    <button key={b.id} data-testid={`branch-option-${b.id}`} type="button" onClick={() => { setActiveBranchId(b.id); setBranchMenuOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${effectiveBranch === b.id ? 'bg-ui-primary-soft font-bold text-ui-primary' : 'text-ui-muted hover:bg-ui-page-alt'}`}>
-                      <span className="truncate">{lang === 'ar' ? b.name : (b.name_en || b.name)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Active orders */}
-            <button data-testid="active-orders-button" type="button" onClick={() => navigate('/floor-plan')} className="relative rounded-xl p-2 text-ui-muted transition-colors hover:bg-ui-page-alt hover:text-ui-text" aria-label={ar ? 'الطلبات النشطة' : 'Active orders'}>
-              <Activity className="h-5 w-5" />
-              {counts.active > 0 && (
-                <span data-testid="active-orders-count" className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ui-danger px-1 text-[9px] font-bold text-ui-primary-fg">
-                  {counts.active}
-                </span>
-              )}
-            </button>
-
-            <div className="hidden h-6 w-px bg-ui-border sm:block" />
-
-            {/* User */}
-            <button data-testid="user-menu-button" type="button" onClick={() => navigate(APP_ROUTES.settings)} className="flex items-center gap-2.5 rounded-xl p-1.5 pe-2 transition-colors hover:bg-ui-page-alt">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ui-primary-soft text-xs font-bold text-ui-primary">
-                {(user?.full_name || user?.email || 'A').slice(0, 1).toUpperCase()}
-              </div>
-              <div className="hidden text-start sm:block">
-                <p className="text-sm font-semibold leading-tight text-ui-text">{user?.full_name || user?.email || (ar ? 'مدير النظام' : 'System Admin')}</p>
-                <p className="text-[10px] leading-tight text-ui-subtle">{user?.role || 'admin'}</p>
-              </div>
-            </button>
-
-            {/* Language */}
-            <button data-testid="language-toggle" type="button" onClick={() => setLang(ar ? 'en' : 'ar')} className="hidden items-center gap-1.5 rounded-xl border border-ui-border px-2.5 py-1.5 text-xs font-semibold text-ui-muted transition-colors hover:bg-ui-page-alt sm:flex">
-              <Globe className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">{ar ? 'العربية' : 'English'}</span>
-            </button>
-
-            {/* Theme */}
-            <button data-testid="theme-toggle" type="button" onClick={toggleTheme} className="rounded-xl p-2 text-ui-muted transition-colors hover:bg-ui-page-alt hover:text-ui-text" aria-label={ar ? 'تغيير المظهر' : 'Toggle theme'}>
-              {theme === 'light' ? <Moon className="h-4.5 w-4.5" /> : <Sun className="h-4.5 w-4.5" />}
-            </button>
-
-            {/* Sign out */}
-            <button data-testid="sign-out-button" type="button" onClick={signOut} className="rounded-xl p-2 text-ui-subtle transition-colors hover:bg-ui-danger-soft hover:text-ui-danger" aria-label={ar ? 'تسجيل الخروج' : 'Sign out'}>
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
-          </div>
-        </header>
-
-        {/* Main content */}
+      {/* ── Main content: offset for header (pt) + sidebar (ms/me) ── */}
+      <div className={`pt-[64px] ${ar ? 'lg:me-[260px]' : 'lg:ms-[260px]'} min-h-screen`}>
         <main data-testid="app-main" className="min-h-[calc(100vh-64px)] bg-ui-page p-4 sm:p-6 lg:p-7">
           <div data-testid="design-content-surface" className="mx-auto min-h-[calc(100vh-64px-56px)] w-full max-w-[1600px] space-y-5">
             {children}

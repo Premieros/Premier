@@ -85,9 +85,9 @@ export function KitchenPanel({ open, onClose, orders, itemsByOrder, kitchenSends
     <>
       {open && <div className="fixed inset-0 top-16 z-40 bg-ui-text/40 backdrop-blur-[1px]" onClick={onClose} />}
       <aside
-        className={`fixed top-16 bottom-0 z-50 w-[360px] max-w-[88vw] bg-ui-surface border-s border-ui-border shadow-ui-xl transition-transform duration-300 flex flex-col ${
-          isAr ? 'left-0' : 'right-0'
-        } ${open ? 'translate-x-0' : isAr ? '-translate-x-full' : 'translate-x-full'}`}
+        className={`fixed top-16 bottom-0 z-50 w-[360px] max-w-[88vw] bg-ui-surface border-s border-ui-border shadow-ui-xl transition-transform duration-300 flex flex-col end-0 ${
+          open ? 'translate-x-0' : isAr ? '-translate-x-full' : 'translate-x-full'
+        }`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-ui-border flex-shrink-0">
           <h2 className="text-sm font-bold text-ui-text flex items-center gap-2">

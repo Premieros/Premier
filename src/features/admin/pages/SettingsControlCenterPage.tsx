@@ -569,8 +569,7 @@ function FieldControl({ field, value, onChange }: { field: FieldDef; value: unkn
 }
 
 function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  const { dir } = useLanguage();
-  const knobPos = checked ? (dir === 'rtl' ? 'right-0.5' : 'left-0.5') : (dir === 'rtl' ? 'left-0.5' : 'right-0.5');
+  const knobPos = checked ? 'start-0.5' : 'end-0.5';
   return (
     <div className="flex items-center justify-between gap-4 bg-ui-page-alt rounded-xl px-4 py-3 border border-ui-border">
       <span className="text-sm font-medium text-ui-muted">{label}</span>
