@@ -6,17 +6,27 @@ const root = resolve(process.cwd());
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 describe('sidebar direction contract', () => {
-  it('pins the RTL sidebar to the physical right edge', () => {
-    const css = read('src/index.css');
-    expect(css).toContain("[data-testid='app-shell'][dir='rtl'] [data-testid='app-sidebar']");
-    expect(css).toMatch(/\[data-testid='app-shell'\]\[dir='rtl'\]\s+\[data-testid='app-sidebar'\][\s\S]*?right:\s*0;/);
-    expect(css).toMatch(/\[data-testid='app-shell'\]\[dir='rtl'\]\s+\[data-testid='app-sidebar'\][\s\S]*?left:\s*auto;/);
+  it('positions sidebar via logical end-0/start-0 from ar flag', () => {
+    const layout = read('src/components/Layout.tsx');
+    expect(layout).toContain("ar ? 'end-0' : 'start-0'");
+    expect(layout).toContain("ar ? 'translate-x-full' : '-translate-x-full'");
   });
 
-  it('pins the LTR sidebar to the physical left edge', () => {
-    const css = read('src/index.css');
-    expect(css).toMatch(/\[data-testid='app-shell'\]\[dir='ltr'\]\s+\[data-testid='app-sidebar'\][\s\S]*?left:\s*0;/);
-    expect(css).toMatch(/\[data-testid='app-shell'\]\[dir='ltr'\]\s+\[data-testid='app-sidebar'\][\s\S]*?right:\s*auto;/);
+  it('sidebar starts below the fixed header at top-[64px]', () => {
+    const layout = read('src/components/Layout.tsx');
+    expect(layout).toContain('fixed top-[64px] bottom-0');
+  });
+
+  it('header is fixed and offsets by sidebar width on desktop', () => {
+    const layout = read('src/components/Layout.tsx');
+    expect(layout).toContain('fixed top-0 start-0 end-0');
+    expect(layout).toContain("ar ? 'lg:end-[260px]' : 'lg:start-[260px]'");
+  });
+
+  it('main content offsets for sidebar and header', () => {
+    const layout = read('src/components/Layout.tsx');
+    expect(layout).toContain('pt-[64px]');
+    expect(layout).toContain("ar ? 'lg:me-[260px]' : 'lg:ms-[260px]'");
   });
 
   it('keeps the shared shell direction source on the Layout root', () => {

@@ -213,24 +213,3 @@
   100% { transform: scale(4); opacity: 0; }
 }
 
-/* App-shell direction contract: explicit physical edges prevent a browser/Tailwind
-   logical-positioning mismatch from placing the fixed sidebar on the wrong side. */
-[data-testid='app-shell'][dir='rtl'] [data-testid='app-sidebar'] {
-  right: 0;
-  left: auto;
-}
-
-[data-testid='app-shell'][dir='ltr'] [data-testid='app-sidebar'] {
-  left: 0;
-  right: auto;
-}
-
-@media (max-width: 1023px) {
-  [data-testid='app-shell'][dir='rtl'] [data-testid='app-sidebar'] {
-    right: 0;
-  }
-
-  [data-testid='app-shell'][dir='ltr'] [data-testid='app-sidebar'] {
-    left: 0;
-  }
-}
