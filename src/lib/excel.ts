@@ -64,6 +64,9 @@ export async function exportToExcelAdvanced(options: ExcelExportOptions): Promis
 
   const range = XLSX.utils.decode_range(ws['!ref']!);
 
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
   for (let c = range.s.c; c <= range.e.c; c++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c });
     const cell = ws[addr];
