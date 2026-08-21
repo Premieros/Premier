@@ -12,10 +12,10 @@
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
 - **Current gate:** NOT READY TO MERGE
-- **Latest code fix:** `cf619b2aac05e1b9cd195372bb0c229017b67099`
+- **Latest code fix:** `c40d4bd94094dabc8cca547c2978b72d9ba11e12`
 - **Latest verified CI:** `3cd1b28a306d3a52a9a5ef634371048769de15ec` passed lint, typecheck, unit, build, schema verification, integration/security/RLS, and browser smoke.
-- **Latest CI issue fixed:** run #371 failed at lint because `SubscriptionsAdminPage.tsx` called `useMemo` after a conditional return; fixed in `751a074...`.
-- **Current verification required:** fresh CI for the latest navigation commit and subsequent functional/security tests.
+- **Latest CI issue found:** Run #377 failed unit navigation-contract tests because the test still required the intentionally removed duplicate `inventory-units` sidebar entry.
+- **Current verification required:** fresh CI for `c40d4bd...` and subsequent functional/security tests.
 
 ## Non-Negotiable Rules
 
@@ -86,7 +86,9 @@
 - [ ] Build interaction identity list.
 - [ ] Remove duplicate buttons/icons/tabs producing the same result.
 - [ ] Command Palette remains an alternate access path to the same canonical action only.
+- [x] Inventory Units removed from the Sidebar so Raw Materials is the canonical material entry.
 - [ ] Ensure each module has one clear primary navigation entry.
+- [x] Updated navigation contract tests to assert the canonical Raw Materials entry and intentional absence of the duplicate Inventory Units menu item.
 - [ ] Add/extend duplicate-action contract tests.
 
 ### Phase G — Full Verification & Release Gate
@@ -135,9 +137,17 @@
 ### 2026-08-22 — Raw Materials canonical navigation
 - Confirmed `APP_ROUTES.rawMaterials` already exists.
 - Added a single canonical Sidebar/menu entry using the existing `raw_materials.view` permission and `rawMaterials` icon.
-- Avoided adding another entry for the same destination.
+- Removed the old duplicate `inventory-units` Sidebar entry instead of keeping two entries for the same material-management destination.
 - Commit: `cf619b2aac05e1b9cd195372bb0c229017b67099`.
-- **Required next action:** verify the raw-material route is branch-scoped and included in subscription/navigation gates.
+
+### 2026-08-22 — Navigation contract failure found and corrected
+- Run #377 failed `npm run test:unit` with 2 failures in `tests/unit/navigation-contract.test.ts`.
+- The failures were stale assertions requiring `inventory-units` to remain in the Sidebar and requiring `/inventory-units` to be discoverable.
+- This contradicted the approved no-duplicate navigation rule and the implemented canonical Raw Materials entry.
+- Updated the regression contract to require `raw-materials` as the canonical Sidebar entry and explicitly require `inventory-units` to be absent from `MENU_ITEMS`.
+- Removed `APP_ROUTES.inventoryUnits` from the list of routes that must be discoverable through primary navigation/centers; the route remains a legacy/deep-link route and is not presented as a duplicate navigation destination.
+- Fix commit: `c40d4bd94094dabc8cca547c2978b72d9ba11e12`.
+- **Required next action:** fresh CI for the fix; do not weaken/remove the feature itself to satisfy tests.
 
 ## Merge Checklist
 - [ ] All Phase A–F required items complete.
