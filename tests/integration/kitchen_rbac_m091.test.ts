@@ -6,7 +6,7 @@ import type pg from 'pg';
 const dbUrl = getDbUrl();
 const skip = !dbUrl;
 
-describe.skipIf(skip)('Kitchen M091/M092 RBAC + branch isolation', () => {
+describe.skipIf(skip)('Kitchen branch isolation', () => {
   let client: pg.Client;
   const branchA = randomUUID();
   const branchB = randomUUID();
@@ -50,34 +50,45 @@ describe.skipIf(skip)('Kitchen M091/M092 RBAC + branch isolation', () => {
     await client.end().catch(() => {});
   });
 
-  it('production_manager can query get_kitchen_queue (branch isolation enforced at app layer)', async () => {
-    const rows = await asUser(productionUser, async () => {
+  it('branch user can only query its own kitchen queue', async () => {
+    const ownRows = await asUser(productionUser, async () => {
       const r = await client.query<{ order_id: string }>(
-        `SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB],
+        `SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchA],
       );
       return r.rows;
     });
-    expect(rows.length).toBeGreaterThanOrEqual(0);
+    expect(ownRows.map(r => r.order_id)).toContain(orderA);
+    expect(ownRows.map(r => r.order_id)).not.toContain(orderB);
+
+    await expect(asUser(productionUser, async () => {
+      await client.query(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]);
+    })).rejects.toThrow(/BRANCH_ACCESS_DENIED/);
   });
 
-  it('production_manager can call route_to_station (branch isolation enforced at app layer)', async () => {
+  it('branch user cannot route another branch order', async () => {
     await asUser(productionUser, async () => {
-      const r = await client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]);
-      expect(r.rowCount).toBe(1);
+      await expect(client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]))
+        .rejects.toThrow(/BRANCH_ACCESS_DENIED/);
+      const own = await client.query(`SELECT public.route_to_station($1, 'grill')`, [orderA]);
+      expect(own.rowCount).toBe(1);
     });
   });
 
-  it('cashier can call get_kitchen_queue (RBAC enforced at app layer, not DB)', async () => {
+  it('cashier cannot query another branch through the SECURITY DEFINER RPC', async () => {
     await asUser(cashierUser, async () => {
-      const r = await client.query(`SELECT * FROM public.get_kitchen_queue(NULL, NULL)`);
-      expect(r.rowCount).toBe(0);
+      await expect(client.query(`SELECT * FROM public.get_kitchen_queue(NULL, $1)`, [branchB]))
+        .rejects.toThrow(/BRANCH_ACCESS_DENIED/);
     });
   });
 
-  it('cashier can call route_to_station (RBAC enforced at app layer, not DB)', async () => {
-    await asUser(cashierUser, async () => {
-      const r = await client.query(`SELECT public.route_to_station($1, 'grill')`, [orderA]);
-      expect(r.rowCount).toBe(1);
+  it('ready orders remain visible in the active kitchen queue', async () => {
+    await client.query(`UPDATE public.orders SET kitchen_status = 'ready' WHERE id = $1`, [orderA]);
+    const rows = await asUser(productionUser, async () => {
+      const r = await client.query<{ order_id: string; kitchen_status: string }>(
+        `SELECT order_id, kitchen_status FROM public.get_kitchen_queue(NULL, $1)`, [branchA],
+      );
+      return r.rows;
     });
+    expect(rows).toContainEqual(expect.objectContaining({ order_id: orderA, kitchen_status: 'ready' }));
   });
 });
