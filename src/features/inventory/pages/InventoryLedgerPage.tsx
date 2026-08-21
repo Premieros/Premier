@@ -78,14 +78,14 @@ export function InventoryLedgerPage() {
 
   const typePill = (type: string) => {
     const map: Record<string, string> = {
-      opening: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-      purchase: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      sale: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-      refund: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+      opening: 'bg-ui-page-alt text-ui-muted',
+      purchase: 'bg-ui-info-soft text-ui-info',
+      sale: 'bg-ui-success-soft text-ui-success  dark:text-ui-success',
+      refund: 'bg-ui-info-soft text-ui-info',
       production: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      waste: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      transfer: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-      adjustment: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      waste: 'bg-ui-warning-soft text-ui-warning',
+      transfer: 'bg-ui-info-soft text-ui-info',
+      adjustment: 'bg-ui-danger-soft text-ui-danger',
     };
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[type] || map.opening}`}>
       {entryTypes.find((x) => x.key === type)?.label || type}
@@ -95,27 +95,27 @@ export function InventoryLedgerPage() {
   const columns: Column<LedgerRow>[] = [
     { key: 'created_at', header: t('from'), render: (r) => (
       <div className="text-sm">
-        <p className="text-slate-800 dark:text-slate-200">{formatDateTime(r.entry.created_at, lang)}</p>
-        <p className="text-xs text-slate-400">#{r.entry.id}</p>
+        <p className="text-ui-text">{formatDateTime(r.entry.created_at, lang)}</p>
+        <p className="text-xs text-ui-subtle">#{r.entry.id}</p>
       </div>
     )},
     { key: 'entry_type', header: t('entryType'), render: (r) => typePill(r.entry.entry_type) },
     { key: 'item', header: t('product'), render: (r) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           <BookOpenText className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{r.entry.product?.name || r.entry.raw_material?.name || '-'}</p>
+          <p className="font-medium text-ui-text">{r.entry.product?.name || r.entry.raw_material?.name || '-'}</p>
           {r.entry.product && <p className="text-xs text-purple-500 dark:text-purple-400">{t('product')}</p>}
-          {r.entry.raw_material && <p className="text-xs text-emerald-500 dark:text-emerald-400">{t('rawMaterial')}</p>}
+          {r.entry.raw_material && <p className="text-xs text-ui-success dark:text-ui-success">{t('rawMaterial')}</p>}
         </div>
       </div>
     )},
     { key: 'warehouse', header: t('warehouse'), render: (r) => (r.entry.warehouse as Warehouse | undefined)?.name || '-' },
     { key: 'batch', header: t('batchNumber'), render: (r) => r.entry.batch_number || '-' },
     { key: 'quantity', header: t('quantity'), render: (r) => (
-      <span className={`font-semibold ${r.entry.quantity >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+      <span className={`font-semibold ${r.entry.quantity >= 0 ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger'}`}>
         {r.entry.quantity >= 0 ? '+' : ''}{formatNumber(Number(r.entry.quantity))}
       </span>
     )},
@@ -127,7 +127,7 @@ export function InventoryLedgerPage() {
   return (
     <DesignSurface testId="inventory-ledger-page">
       <DesignPageHeader title={t('inventoryLedger')} subtitle={lang === 'ar' ? 'سجل كامل لحركات المخزون (منتجات ومواد خام)' : 'Full movement log for inventory (products and raw materials)'} actions={
-        <button onClick={handleExport} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all">
+        <button onClick={handleExport} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-ui-border hover:bg-ui-page-alt dark:hover:bg-ui-surface text-ui-text transition-all">
           {t('exportExcel')}
         </button>
       } />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Play, CheckCircle2, XCircle, Trash2, Factory, PackageOpen } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -175,10 +175,10 @@ export function ProductionOrdersPage() {
 
   const statusPill = (status: string) => {
     const map: Record<string, string> = {
-      planned: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-      in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      planned: 'bg-ui-page-alt text-ui-muted',
+      in_progress: 'bg-ui-warning-soft text-ui-warning',
+      completed: 'bg-ui-success-soft text-ui-success',
+      cancelled: 'bg-ui-danger-soft text-ui-danger',
     };
     const label: Record<string, string> = {
       planned: t('statusPlanned'),
@@ -192,12 +192,12 @@ export function ProductionOrdersPage() {
   const columns: Column<ProductionOrder>[] = [
     { key: 'order_number', header: t('orderNumber'), render: (o) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <div className="w-8 h-8 rounded-lg bg-ui-info-soft flex items-center justify-center text-ui-info">
           <Factory className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-semibold text-slate-800 dark:text-slate-200">{o.order_number}</p>
-          {o.batch_number && <p className="text-xs text-slate-400">{t('batchNumber')}: {o.batch_number}</p>}
+          <p className="font-semibold text-ui-text">{o.order_number}</p>
+          {o.batch_number && <p className="text-xs text-ui-subtle">{t('batchNumber')}: {o.batch_number}</p>}
         </div>
       </div>
     )},
@@ -210,17 +210,17 @@ export function ProductionOrdersPage() {
     { key: 'actions', header: t('actions'), render: (o) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('production.manage') && o.status === 'planned' && (
-          <button onClick={() => startOrder(o)} className="p-1.5 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500" title={t('startProduction')}>
+          <button onClick={() => startOrder(o)} className="p-1.5 rounded-md hover:bg-ui-warning-soft text-ui-warning" title={t('startProduction')}>
             <Play className="w-4 h-4" />
           </button>
         )}
         {can('production.manage') && (o.status === 'planned' || o.status === 'in_progress') && (
-          <button onClick={() => openComplete(o)} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500" title={t('completeProduction')}>
+          <button onClick={() => openComplete(o)} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success" title={t('completeProduction')}>
             <CheckCircle2 className="w-4 h-4" />
           </button>
         )}
         {can('production.manage') && (o.status === 'planned' || o.status === 'in_progress') && (
-          <button onClick={() => openCancel(o)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('cancelProduction')}>
+          <button onClick={() => openCancel(o)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('cancelProduction')}>
             <XCircle className="w-4 h-4" />
           </button>
         )}
@@ -279,15 +279,15 @@ export function ProductionOrdersPage() {
       <Modal open={!!completeTarget} onClose={() => setCompleteTarget(null)} title={`${t('completeProduction')} — ${completeTarget?.order_number || ''}`} size="lg">
         {completeTarget && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-slate-50 dark:bg-navy-800/50 p-4">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('consumedMaterials')}</p>
-              {recipeItems.length === 0 && <p className="text-sm text-slate-400">{t('noData')}</p>}
+            <div className="rounded-xl bg-ui-page-alt dark:bg-navy-800/50 p-4">
+              <p className="text-sm font-bold text-ui-muted mb-2">{t('consumedMaterials')}</p>
+              {recipeItems.length === 0 && <p className="text-sm text-ui-subtle">{t('noData')}</p>}
               <div className="space-y-1.5">
                 {recipeItems.map((it) => (
                   <div key={it.id} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-300">{it.raw_material?.name || '-'}</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">
-                      {formatNumber(Number(it.quantity) * factor)} {it.wastage_percent > 0 && <span className="text-amber-500">+{it.wastage_percent}%</span>}
+                    <span className="text-ui-muted">{it.raw_material?.name || '-'}</span>
+                    <span className="font-semibold text-ui-text">
+                      {formatNumber(Number(it.quantity) * factor)} {it.wastage_percent > 0 && <span className="text-ui-warning">+{it.wastage_percent}%</span>}
                     </span>
                   </div>
                 ))}
@@ -297,7 +297,7 @@ export function ProductionOrdersPage() {
             {(can('production.waste') || can('production.manage')) && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('waste')}</p>
+                  <p className="text-sm font-bold text-ui-muted">{t('waste')}</p>
                   <Button variant="outline" size="sm" onClick={() => setWasteItems([...wasteItems, { ...EMPTY_WASTE }])}><Plus className="w-4 h-4" /> {t('addWaste')}</Button>
                 </div>
                 <div className="space-y-2">
@@ -311,7 +311,7 @@ export function ProductionOrdersPage() {
                       </Select>
                       <Input type="number" step="0.0001" value={w.quantity} onChange={(e) => setWasteItems(wasteItems.map((x, i) => i === idx ? { ...x, quantity: parseFloat(e.target.value) || 0 } : x))} />
                       <Input value={w.reason} onChange={(e) => setWasteItems(wasteItems.map((x, i) => i === idx ? { ...x, reason: e.target.value } : x))} placeholder={isAr ? 'السبب' : 'Reason'} />
-                      <button onClick={() => setWasteItems(wasteItems.filter((_, i) => i !== idx))} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('delete')}>
+                      <button onClick={() => setWasteItems(wasteItems.filter((_, i) => i !== idx))} className="p-2 rounded-lg text-ui-danger hover:bg-ui-danger-soft" title={t('delete')}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -320,9 +320,9 @@ export function ProductionOrdersPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-ui-subtle">
               <PackageOpen className="w-4 h-4" />
-              <span>{t('outputQuantity')}: <b className="text-slate-800 dark:text-slate-100">{formatNumber(Number(completeTarget.quantity))}</b></span>
+              <span>{t('outputQuantity')}: <b className="text-ui-text">{formatNumber(Number(completeTarget.quantity))}</b></span>
             </div>
 
             <div className="flex justify-end gap-2">

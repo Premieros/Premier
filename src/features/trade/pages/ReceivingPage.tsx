@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { PackageOpen, Save, History, Trophy } from 'lucide-react';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -116,12 +116,12 @@ export function ReceivingPage() {
   };
 
   const boColumns: Column<PurchaseBackorderRow>[] = [
-    { key: 'invoice_number', header: t('purchaseOrder'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.invoice_number}</span> },
+    { key: 'invoice_number', header: t('purchaseOrder'), render: (r) => <span className="font-medium text-ui-text">{r.invoice_number}</span> },
     { key: 'supplier_name', header: t('supplier'), render: (r) => r.supplier_name },
     { key: 'item_name', header: t('item'), render: (r) => r.item_name },
     { key: 'ordered_quantity', header: t('orderedQty'), render: (r) => r.ordered_quantity },
     { key: 'received_quantity', header: t('receivedQty'), render: (r) => r.received_quantity },
-    { key: 'remaining', header: t('remainingQty'), render: (r) => <span className="font-semibold text-red-500">{r.remaining}</span> },
+    { key: 'remaining', header: t('remainingQty'), render: (r) => <span className="font-semibold text-ui-danger">{r.remaining}</span> },
     { key: 'unit_cost', header: t('unitCost'), render: (r) => formatCurrency(r.unit_cost, currency, lang) },
     { key: 'actions', header: t('actions'), render: (r) => can('purchases.receiving') ? (
       <Button size="sm" onClick={() => openReceive(r)}><PackageOpen className="w-4 h-4" /> {t('receive')}</Button>
@@ -129,7 +129,7 @@ export function ReceivingPage() {
   ];
 
   const rColumns: Column<PurchaseReceiptRow>[] = [
-    { key: 'receipt_number', header: t('receiptNumber'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.receipt_number}</span> },
+    { key: 'receipt_number', header: t('receiptNumber'), render: (r) => <span className="font-medium text-ui-text">{r.receipt_number}</span> },
     { key: 'invoice_number', header: t('purchaseOrder'), render: (r) => r.invoice_number },
     { key: 'supplier_name', header: t('supplier'), render: (r) => r.supplier_name },
     { key: 'item_count', header: t('itemsReceived'), render: (r) => r.item_count },
@@ -138,7 +138,7 @@ export function ReceivingPage() {
   ];
 
   const evColumns: Column<SupplierEvaluationRow>[] = [
-    { key: 'supplier_name', header: t('supplier'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.supplier_name}</span> },
+    { key: 'supplier_name', header: t('supplier'), render: (r) => <span className="font-medium text-ui-text">{r.supplier_name}</span> },
     { key: 'orders_count', header: t('ordersCount'), render: (r) => r.orders_count },
     { key: 'total_purchased', header: t('totalPurchases'), render: (r) => <span className="font-semibold">{formatCurrency(r.total_purchased, currency, lang)}</span> },
     { key: 'total_returned', header: t('totalReturned'), render: (r) => formatCurrency(r.total_returned, currency, lang) },
@@ -177,32 +177,32 @@ export function ReceivingPage() {
         {receiveModal && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-slate-500">{t('purchaseOrder')}: </span><span className="font-medium">{receiveModal.invoice_number}</span></div>
-              <div><span className="text-slate-500">{t('supplier')}: </span><span className="font-medium">{receiveModal.supplier_name}</span></div>
+              <div><span className="text-ui-subtle">{t('purchaseOrder')}: </span><span className="font-medium">{receiveModal.invoice_number}</span></div>
+              <div><span className="text-ui-subtle">{t('supplier')}: </span><span className="font-medium">{receiveModal.supplier_name}</span></div>
             </div>
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                <th className="text-start py-2 font-semibold text-slate-600 dark:text-slate-300">{t('item')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('orderedQty')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('receivedQty')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('remainingQty')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('receive')}</th>
+              <thead><tr className="border-b border-ui-border">
+                <th className="text-start py-2 font-semibold text-ui-muted">{t('item')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('orderedQty')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('receivedQty')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('remainingQty')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('receive')}</th>
               </tr></thead>
               <tbody>
                 {lines.map((l, i) => (
-                  <tr key={l.purchase_item_id} className="border-b border-slate-100 dark:border-slate-800">
-                    <td className="py-2 text-slate-700 dark:text-slate-200">{l.name}</td>
-                    <td className="py-2 text-center text-slate-700 dark:text-slate-200">{l.ordered}</td>
-                    <td className="py-2 text-center text-slate-700 dark:text-slate-200">{l.received}</td>
-                    <td className="py-2 text-center font-semibold text-red-500">{l.ordered - l.received}</td>
+                  <tr key={l.purchase_item_id} className="border-b border-ui-border">
+                    <td className="py-2 text-ui-text">{l.name}</td>
+                    <td className="py-2 text-center text-ui-text">{l.ordered}</td>
+                    <td className="py-2 text-center text-ui-text">{l.received}</td>
+                    <td className="py-2 text-center font-semibold text-ui-danger">{l.ordered - l.received}</td>
                     <td className="py-2 text-center">
-                      <input type="number" min="0" step="0.01" value={l.qty} placeholder="0" onChange={(e) => updateQty(i, e.target.value)} className="w-24 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm" />
+                      <input type="number" min="0" step="0.01" value={l.qty} placeholder="0" onChange={(e) => updateQty(i, e.target.value)} className="w-24 rounded-md border border-ui-border bg-ui-surface px-2 py-1 text-sm" />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end gap-2 pt-2 border-t border-ui-border">
               <Button variant="secondary" onClick={() => setReceiveModal(null)}>{t('cancel')}</Button>
               <Button onClick={saveReceipt} disabled={saving}><Save className="w-4 h-4" /> {saving ? t('loading') : t('save')}</Button>
             </div>

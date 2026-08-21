@@ -129,6 +129,29 @@ export const catalog = {
   },
 
   // ─── Kitchen ──────────────────────────────────────────────
+  async listKitchenStations() {
+    const { data, error } = await supabase.from('kitchen_stations').select('*').order('sort_order');
+    if (error) throw error;
+    return data;
+  },
+
+  async createKitchenStation(station: { code: string; name_ar: string; name_en: string; sort_order?: number }) {
+    const { data, error } = await supabase.from('kitchen_stations').insert(station).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateKitchenStation(id: string, updates: { name_ar?: string; name_en?: string; is_active?: boolean; sort_order?: number }) {
+    const { data, error } = await supabase.from('kitchen_stations').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteKitchenStation(id: string) {
+    const { error } = await supabase.from('kitchen_stations').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   async getKitchenQueue(p_station?: string) {
     const { data, error } = await supabase.rpc('get_kitchen_queue', { p_station: p_station ?? null });
     if (error) throw error;
@@ -137,6 +160,11 @@ export const catalog = {
 
   async routeToStation(p_order_id: string, p_station: string) {
     const { error } = await supabase.rpc('route_to_station', { p_order_id, p_station });
+    if (error) throw error;
+  },
+
+  async setKitchenStatus(p_order_id: string, p_status: string) {
+    const { error } = await supabase.rpc('set_kitchen_status', { p_order_id, p_status });
     if (error) throw error;
   },
 };

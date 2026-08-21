@@ -151,16 +151,16 @@ export function ReconciliationPage() {
   const statusLabel = (s: string) => ({ open: t('reconOpen'), completed: t('reconCompleted'), cancelled: t('reconCancelled') })[s] || s;
 
   const columns: Column<BankReconciliation>[] = [
-    { key: 'treasury_account', header: t('accountName'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.treasury_account?.account_name || '-'}</span> },
+    { key: 'treasury_account', header: t('accountName'), render: (r) => <span className="font-medium text-ui-text">{r.treasury_account?.account_name || '-'}</span> },
     { key: 'statement_date', header: t('statementDate'), render: (r) => formatDateTime(r.statement_date, lang) },
     { key: 'statement_balance', header: t('statementBalance'), render: (r) => formatCurrency(r.statement_balance, currency, lang) },
     { key: 'book_balance', header: t('bookBalance'), render: (r) => formatCurrency(r.book_balance, currency, lang) },
-    { key: 'difference', header: t('difference'), render: (r) => <span className={`font-semibold ${Math.abs(Number(r.difference)) > 0.001 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(r.difference, currency, lang)}</span> },
+    { key: 'difference', header: t('difference'), render: (r) => <span className={`font-semibold ${Math.abs(Number(r.difference)) > 0.001 ? 'text-ui-danger' : 'text-ui-success dark:text-ui-success'}`}>{formatCurrency(r.difference, currency, lang)}</span> },
     { key: 'status', header: t('status'), render: (r) => (
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-        r.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
-        r.status === 'open' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
-        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
+        r.status === 'completed' ? 'bg-ui-success-soft text-ui-success  dark:text-ui-success' :
+        r.status === 'open' ? 'bg-ui-warning-soft text-ui-warning  text-ui-warning' :
+        'bg-ui-danger-soft text-ui-danger  dark:text-ui-danger'}`}>
         {statusLabel(r.status)}
       </span>
     ) },
@@ -183,9 +183,9 @@ export function ReconciliationPage() {
       {isAdminRole(user?.role) && branches.length > 0 && (
         <DesignPanel testId="reconciliation-branch-panel">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
+            <label className="text-sm font-medium text-ui-muted">{t('filterByBranch')}</label>
             <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+              className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
               <option value="">{t('allBranches')}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>
@@ -219,56 +219,56 @@ export function ReconciliationPage() {
         ) : detail?.header ? (
           <div className="space-y-5">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('statementBalance')}</p>
-                <p className="font-bold text-slate-800 dark:text-white mt-1">{formatCurrency(detail.header.statement_balance, currency, lang)}</p>
+              <div className="bg-ui-page-alt/60 rounded-xl p-3">
+                <p className="text-xs text-ui-subtle dark:text-ui-subtle">{t('statementBalance')}</p>
+                <p className="font-bold text-ui-text dark:text-white mt-1">{formatCurrency(detail.header.statement_balance, currency, lang)}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('bookBalance')}</p>
-                <p className="font-bold text-slate-800 dark:text-white mt-1">{formatCurrency(detail.header.book_balance, currency, lang)}</p>
+              <div className="bg-ui-page-alt/60 rounded-xl p-3">
+                <p className="text-xs text-ui-subtle dark:text-ui-subtle">{t('bookBalance')}</p>
+                <p className="font-bold text-ui-text dark:text-white mt-1">{formatCurrency(detail.header.book_balance, currency, lang)}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('difference')}</p>
-                <p className={`font-bold mt-1 ${Math.abs(Number(detail.header.difference)) > 0.001 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(detail.header.difference, currency, lang)}</p>
+              <div className="bg-ui-page-alt/60 rounded-xl p-3">
+                <p className="text-xs text-ui-subtle dark:text-ui-subtle">{t('difference')}</p>
+                <p className={`font-bold mt-1 ${Math.abs(Number(detail.header.difference)) > 0.001 ? 'text-ui-danger' : 'text-ui-success dark:text-ui-success'}`}>{formatCurrency(detail.header.difference, currency, lang)}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('status')}</p>
+              <div className="bg-ui-page-alt/60 rounded-xl p-3">
+                <p className="text-xs text-ui-subtle dark:text-ui-subtle">{t('status')}</p>
                 <p className="font-bold mt-1">{statusLabel(detail.header.status)}</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('statementLines')}</h3>
+              <h3 className="text-sm font-bold text-ui-text">{t('statementLines')}</h3>
               {detail.header.status === 'open' && (
                 <Button size="sm" variant="outline" onClick={() => { setLineForm({ statement_date: todayISO(), description: '', amount: '', reference: '' }); setAddLineOpen(true); }}><Plus className="w-4 h-4" /> {t('addStatementLine')}</Button>
               )}
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-ui-border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('date')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('description')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('reference')}</th>
-                    <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('amount')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('status')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('actions')}</th>
+                  <tr className="border-b border-ui-border bg-ui-page-alt/60">
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('date')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('description')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('reference')}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('amount')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('status')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.statement_lines.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                  {detail.statement_lines.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                   {detail.statement_lines.map((l) => (
-                    <tr key={l.id} className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{l.statement_date}</td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{l.description || '-'}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">{l.reference || '-'}</td>
-                      <td className="px-4 py-3 text-end font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(l.amount, currency, lang)}</td>
+                    <tr key={l.id} className="border-b border-ui-border">
+                      <td className="px-4 py-3 text-ui-muted">{l.statement_date}</td>
+                      <td className="px-4 py-3 text-ui-text">{l.description || '-'}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-ui-subtle dark:text-ui-subtle">{l.reference || '-'}</td>
+                      <td className="px-4 py-3 text-end font-semibold text-ui-text">{formatCurrency(l.amount, currency, lang)}</td>
                       <td className="px-4 py-3">
                         {l.matched_journal_entry_id ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"><CheckCircle2 className="w-3.5 h-3.5" /> {t('matched')}</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-ui-success-soft text-ui-success  dark:text-ui-success"><CheckCircle2 className="w-3.5 h-3.5" /> {t('matched')}</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"><CircleDashed className="w-3.5 h-3.5" /> {t('unmatched')}</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-ui-page-alt text-ui-muted"><CircleDashed className="w-3.5 h-3.5" /> {t('unmatched')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -277,7 +277,7 @@ export function ReconciliationPage() {
                             <select
                               value={matchSelections[l.id] || ''}
                               onChange={(e) => setMatchSelections((m) => ({ ...m, [l.id]: e.target.value }))}
-                              className="px-2 py-1.5 rounded-lg text-xs border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                              className="px-2 py-1.5 rounded-lg text-xs border border-ui-border bg-ui-surface text-ui-text">
                               <option value="">{t('selectAccount')}</option>
                               {availableCandidates.map((c) => <option key={c.id} value={c.id}>{c.entry_number} - {formatCurrency(c.amount, currency, lang)}</option>)}
                             </select>
@@ -291,27 +291,27 @@ export function ReconciliationPage() {
               </table>
             </div>
 
-            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('bookCandidates')}</h3>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-ui-text">{t('bookCandidates')}</h3>
+            <div className="overflow-x-auto rounded-xl border border-ui-border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('entryNumber')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('date')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('description')}</th>
-                    <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('amount')}</th>
+                  <tr className="border-b border-ui-border bg-ui-page-alt/60">
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('entryNumber')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('date')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('description')}</th>
+                    <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('amount')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.book_candidates.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                  {detail.book_candidates.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                   {detail.book_candidates.map((c) => {
                     const isMatched = detail.statement_lines.some((l) => l.matched_journal_entry_id === c.id);
                     return (
-                      <tr key={c.id} className={`border-b border-slate-100 dark:border-slate-800 ${isMatched ? 'opacity-50' : ''}`}>
-                        <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-200">{c.entry_number}</td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{c.entry_date}</td>
-                        <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{c.description || '-'}</td>
-                        <td className="px-4 py-3 text-end font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(c.amount, currency, lang)}</td>
+                      <tr key={c.id} className={`border-b border-ui-border ${isMatched ? 'opacity-50' : ''}`}>
+                        <td className="px-4 py-3 font-mono text-ui-text">{c.entry_number}</td>
+                        <td className="px-4 py-3 text-ui-muted">{c.entry_date}</td>
+                        <td className="px-4 py-3 text-ui-text">{c.description || '-'}</td>
+                        <td className="px-4 py-3 text-end font-semibold text-ui-text">{formatCurrency(c.amount, currency, lang)}</td>
                       </tr>
                     );
                   })}
@@ -327,7 +327,7 @@ export function ReconciliationPage() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12 text-slate-400">{t('noData')}</div>
+          <div className="text-center py-12 text-ui-subtle">{t('noData')}</div>
         )}
       </Modal>
 

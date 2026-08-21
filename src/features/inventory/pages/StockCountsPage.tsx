@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { ClipboardCheck, Plus, Eye, Send, CheckCircle2, XCircle, CheckCheck, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -189,11 +189,11 @@ export function StockCountsPage() {
 
   const statusPill = (status: string) => {
     const map: Record<string, string> = {
-      draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-      submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+      draft: 'bg-ui-page-alt text-ui-muted',
+      submitted: 'bg-ui-info-soft text-ui-info',
+      approved: 'bg-ui-success-soft text-ui-success  dark:text-ui-success',
       applied: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      rejected: 'bg-ui-danger-soft text-ui-danger',
     };
     const label = statusOptions.find((s) => s.key === status)?.label || status;
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || map.draft}`}>{label}</span>;
@@ -201,14 +201,14 @@ export function StockCountsPage() {
 
   const typePill = (type: string) => {
     const label = typeOptions.find((x) => x.key === type)?.label || type;
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{label}</span>;
+    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-page-alt text-ui-muted">{label}</span>;
   };
 
   const columns: Column<StockCount>[] = [
     { key: 'number', header: t('countNumber'), render: (c) => (
       <div className="text-sm">
-        <p className="font-medium text-slate-800 dark:text-slate-200">{c.count_number || '#' + String(c.id).slice(0, 8)}</p>
-        <p className="text-xs text-slate-400">{formatDateTime(c.created_at, lang)}</p>
+        <p className="font-medium text-ui-text">{c.count_number || '#' + String(c.id).slice(0, 8)}</p>
+        <p className="text-xs text-ui-subtle">{formatDateTime(c.created_at, lang)}</p>
       </div>
     )},
     { key: 'branch', header: t('branch'), render: (c) => c.branch?.name || '-' },
@@ -218,25 +218,25 @@ export function StockCountsPage() {
     { key: 'status', header: t('status'), render: (c) => statusPill(c.status) },
     { key: 'actions', header: t('actions'), render: (c) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => setViewTarget(c)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title={t('viewCountItems')}>
+        <button onClick={() => setViewTarget(c)} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle" title={t('viewCountItems')}>
           <Eye className="w-4 h-4" />
         </button>
         {can('inventory.manage') && c.status === 'draft' && (
           <>
-            <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('addCountItem')}>
+            <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('addCountItem')}>
               <Plus className="w-4 h-4" />
             </button>
-            <button onClick={() => setConfirmTarget({ count: c, action: 'submit' })} className="p-1.5 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500" title={t('submitCount')}>
+            <button onClick={() => setConfirmTarget({ count: c, action: 'submit' })} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success" title={t('submitCount')}>
               <Send className="w-4 h-4" />
             </button>
           </>
         )}
         {can('inventory.manage') && c.status === 'submitted' && (
           <>
-            <button onClick={() => setConfirmTarget({ count: c, action: 'approve' })} className="p-1.5 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500" title={t('approveCount')}>
+            <button onClick={() => setConfirmTarget({ count: c, action: 'approve' })} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success" title={t('approveCount')}>
               <CheckCircle2 className="w-4 h-4" />
             </button>
-            <button onClick={() => { setConfirmTarget({ count: c, action: 'reject' }); setRejectReason(''); }} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('rejectCount')}>
+            <button onClick={() => { setConfirmTarget({ count: c, action: 'reject' }); setRejectReason(''); }} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('rejectCount')}>
               <XCircle className="w-4 h-4" />
             </button>
           </>
@@ -253,19 +253,19 @@ export function StockCountsPage() {
   const itemColumns: Column<StockCountItem>[] = [
     { key: 'product', header: t('product'), render: (i) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {((i.product as Product | undefined)?.name || '?')[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{(i.product as Product | undefined)?.name || '-'}</p>
-          <p className="text-xs text-slate-400">{(i.product as Product | undefined)?.barcode || ''}</p>
+          <p className="font-medium text-ui-text">{(i.product as Product | undefined)?.name || '-'}</p>
+          <p className="text-xs text-ui-subtle">{(i.product as Product | undefined)?.barcode || ''}</p>
         </div>
       </div>
     )},
     { key: 'system', header: t('systemQuantity'), render: (i) => formatNumber(Number(i.system_quantity)) },
     { key: 'counted', header: t('countedQuantity'), render: (i) => formatNumber(Number(i.counted_quantity)) },
     { key: 'variance', header: t('varianceQuantity'), render: (i) => (
-      <span className={`font-semibold ${Number(i.variance_quantity) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+      <span className={`font-semibold ${Number(i.variance_quantity) >= 0 ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger'}`}>
         {Number(i.variance_quantity) >= 0 ? '+' : ''}{formatNumber(Number(i.variance_quantity))}
       </span>
     )},
@@ -319,7 +319,7 @@ export function StockCountsPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('countItems')}</p>
+              <p className="text-sm font-medium text-ui-muted">{t('countItems')}</p>
               <Button variant="outline" size="sm" onClick={addFormItem}><Plus className="w-4 h-4" /> {t('addCountItem')}</Button>
             </div>
             <div className="space-y-2">
@@ -338,7 +338,7 @@ export function StockCountsPage() {
                     <Input label={idx === 0 ? t('reason') : undefined} value={l.reason} onChange={(e) => updateFormItem(idx, 'reason', e.target.value)} placeholder={isAr ? 'سبب' : 'Reason'} />
                   </div>
                   <div className="col-span-1 flex justify-end">
-                    <button onClick={() => removeFormItem(idx)} className="p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => removeFormItem(idx)} className="p-2 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
@@ -362,7 +362,7 @@ export function StockCountsPage() {
         {editTarget && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('countItems')}</p>
+              <p className="text-sm font-medium text-ui-muted">{t('countItems')}</p>
               <Button variant="outline" size="sm" onClick={addEditLine}><Plus className="w-4 h-4" /> {t('addCountItem')}</Button>
             </div>
             <div className="space-y-2">
@@ -381,7 +381,7 @@ export function StockCountsPage() {
                     <Input label={idx === 0 ? t('reason') : undefined} value={l.reason} onChange={(e) => updateEditLine(idx, 'reason', e.target.value)} placeholder={isAr ? 'سبب' : 'Reason'} />
                   </div>
                   <div className="col-span-1 flex justify-end">
-                    <button onClick={() => removeEditLine(idx)} className="p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => removeEditLine(idx)} className="p-2 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
@@ -406,7 +406,7 @@ export function StockCountsPage() {
 
       <Modal open={!!confirmTarget && confirmTarget.action === 'reject'} onClose={() => setConfirmTarget(null)} title={t('rejectCount')} size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">{t('rejectCountConfirm')}</p>
+          <p className="text-sm text-ui-subtle">{t('rejectCountConfirm')}</p>
           <Input label={t('reason')} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder={isAr ? 'سبب الرفض' : 'Rejection reason'} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConfirmTarget(null)}>{t('cancel')}</Button>

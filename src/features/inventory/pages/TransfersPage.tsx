@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, CheckCircle2, XCircle, ArrowLeftRight, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -161,9 +161,9 @@ export function TransfersPage() {
 
   const statusPill = (status: string) => {
     const map: Record<string, string> = {
-      pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      pending: 'bg-ui-warning-soft text-ui-warning',
+      approved: 'bg-ui-success-soft text-ui-success',
+      rejected: 'bg-ui-danger-soft text-ui-danger',
     };
     const label: Record<string, string> = {
       pending: t('statusPending'),
@@ -176,12 +176,12 @@ export function TransfersPage() {
   const columns: Column<WarehouseTransfer>[] = [
     { key: 'transfer_number', header: t('transferNumber'), render: (tr) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+        <div className="w-8 h-8 rounded-lg bg-ui-info-soft flex items-center justify-center text-ui-info">
           <ArrowLeftRight className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-semibold text-slate-800 dark:text-slate-200">{tr.transfer_number}</p>
-          {tr.reason && <p className="text-xs text-slate-400">{tr.reason}</p>}
+          <p className="font-semibold text-ui-text">{tr.transfer_number}</p>
+          {tr.reason && <p className="text-xs text-ui-subtle">{tr.reason}</p>}
         </div>
       </div>
     )},
@@ -193,12 +193,12 @@ export function TransfersPage() {
     { key: 'actions', header: t('actions'), render: (tr) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('inventory.transfers.approve') && tr.status === 'pending' && (
-          <button onClick={() => approve(tr)} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500" title={t('approveTransfer')}>
+          <button onClick={() => approve(tr)} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success" title={t('approveTransfer')}>
             <CheckCircle2 className="w-4 h-4" />
           </button>
         )}
         {can('inventory.transfers.approve') && tr.status === 'pending' && (
-          <button onClick={() => openReject(tr)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('rejectTransfer')}>
+          <button onClick={() => openReject(tr)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('rejectTransfer')}>
             <XCircle className="w-4 h-4" />
           </button>
         )}
@@ -243,7 +243,7 @@ export function TransfersPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('transferItems')}</p>
+              <p className="text-sm font-bold text-ui-muted">{t('transferItems')}</p>
               <Button variant="outline" size="sm" onClick={addLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
@@ -255,7 +255,7 @@ export function TransfersPage() {
                   </Select>
                   <Input type="number" step="0.0001" value={l.quantity} onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)} placeholder={t('quantity')} />
                   <Input type="number" step="0.01" value={l.unit_cost} onChange={(e) => updateLine(idx, 'unit_cost', parseFloat(e.target.value) || 0)} placeholder={t('unitCost')} />
-                  <button onClick={() => removeLine(idx)} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('delete')}>
+                  <button onClick={() => removeLine(idx)} className="p-2 rounded-lg text-ui-danger hover:bg-ui-danger-soft" title={t('delete')}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -275,7 +275,7 @@ export function TransfersPage() {
       <Modal open={!!rejectTarget} onClose={() => setRejectTarget(null)} title={t('rejectTransfer')} size="sm">
         {rejectTarget && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t('transferNumber')}: <b>{rejectTarget.transfer_number}</b></p>
+            <p className="text-sm text-ui-muted">{t('transferNumber')}: <b>{rejectTarget.transfer_number}</b></p>
             <Input label={t('rejectReason')} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setRejectTarget(null)}>{t('cancel')}</Button>

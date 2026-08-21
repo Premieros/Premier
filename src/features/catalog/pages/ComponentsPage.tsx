@@ -129,7 +129,7 @@ export function ComponentsPage() {
         {!loading && selectedProductId && (
           <>
             {components.length === 0 && (
-              <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+              <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-ui-warning-soft border border-ui-warning/20  text-ui-warning text-sm">
                 <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                 <p>{isAr ? 'هذا المنتج مصنّع لكن لا توجد له وصفة — لن يمكن بيعه حتى تُضيف مكوناته.' : 'This product is manufactured but has no recipe — it cannot be sold until components are added.'}</p>
               </div>
@@ -137,17 +137,17 @@ export function ComponentsPage() {
 
             {/* Product info */}
             {selectedProduct && (
-              <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="flex items-center gap-4 mb-4 p-3 bg-ui-page-alt rounded-lg">
                 <div className="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
                   <Package className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-800 dark:text-slate-200">{selectedProduct.name}</p>
-                  <p className="text-xs text-slate-400">{isAr ? 'سعر البيع' : 'Sale Price'}: {formatCurrency(selectedProduct.sale_price, currency, lang)} | {isAr ? 'التكلفة' : 'Cost'}: {formatCurrency(selectedProduct.cost_price, currency, lang)}</p>
+                  <p className="font-medium text-ui-text">{selectedProduct.name}</p>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'سعر البيع' : 'Sale Price'}: {formatCurrency(selectedProduct.sale_price, currency, lang)} | {isAr ? 'التكلفة' : 'Cost'}: {formatCurrency(selectedProduct.cost_price, currency, lang)}</p>
                 </div>
                 <div className="text-end">
-                  <p className="text-xs text-slate-400">{isAr ? 'تكلفة المكونات' : 'Component Cost'}</p>
-                  <p className={`font-bold ${componentCost > selectedProduct.sale_price ? 'text-red-500' : 'text-brand-600'}`}>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'تكلفة المكونات' : 'Component Cost'}</p>
+                  <p className={`font-bold ${componentCost > selectedProduct.sale_price ? 'text-ui-danger' : 'text-brand-600'}`}>
                     {formatCurrency(componentCost, currency, lang)}
                   </p>
                 </div>
@@ -156,7 +156,7 @@ export function ComponentsPage() {
 
             {/* Add button */}
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <h3 className="text-sm font-semibold text-ui-muted">
                 {isAr ? 'المكونات' : 'Components'} ({components.length})
               </h3>
               <Button onClick={() => { setForm({ component_product_id: '', quantity: 1 }); setModalOpen(true); }} disabled={!availableComponents.length || !can('components.manage')}>
@@ -166,28 +166,28 @@ export function ComponentsPage() {
 
             {/* Components list */}
             {components.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-ui-subtle">
                 <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">{t('noComponents')}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {components.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                  <div key={c.id} className="flex items-center gap-3 p-3 bg-ui-surface rounded-lg border border-ui-border">
+                    <div className="w-10 h-10 rounded-lg bg-ui-page-alt flex items-center justify-center overflow-hidden">
                       {c.component_product?.image_url ? (
                         <img src={c.component_product.image_url} className="w-full h-full object-cover" alt="" />
                       ) : (
-                        <Package className="w-5 h-5 text-slate-400" />
+                        <Package className="w-5 h-5 text-ui-subtle" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{c.component_product?.name || '-'}</p>
-                      <p className="text-xs text-slate-400">{formatCurrency(c.component_product?.cost_price || 0, currency, lang)} × {c.quantity}</p>
+                      <p className="text-sm font-medium text-ui-text truncate">{c.component_product?.name || '-'}</p>
+                      <p className="text-xs text-ui-subtle">{formatCurrency(c.component_product?.cost_price || 0, currency, lang)} × {c.quantity}</p>
                     </div>
                     <div className="flex items-center gap-1 text-xs" title={t('componentStock')}>
-                      <Layers className="w-3.5 h-3.5 text-slate-400" />
-                      <span className={inventoryMap[c.component_product_id] > 0 ? 'text-brand-600 dark:text-brand-400 font-semibold' : 'text-red-500 font-semibold'}>
+                      <Layers className="w-3.5 h-3.5 text-ui-subtle" />
+                      <span className={inventoryMap[c.component_product_id] > 0 ? 'text-brand-600 dark:text-brand-400 font-semibold' : 'text-ui-danger font-semibold'}>
                         {formatNumber(inventoryMap[c.component_product_id] || 0)}
                       </span>
                     </div>
@@ -195,12 +195,12 @@ export function ComponentsPage() {
                       {formatCurrency((c.component_product?.cost_price || 0) * Number(c.quantity), currency, lang)}
                     </span>
                     {can('components.manage') && (
-                      <button onClick={() => setEditModal({ id: c.id, quantity: Number(c.quantity) })} className="p-2 text-slate-400 hover:text-blue-500">
+                      <button onClick={() => setEditModal({ id: c.id, quantity: Number(c.quantity) })} className="p-2 text-ui-subtle hover:text-ui-info">
                         <Edit2 className="w-4 h-4" />
                       </button>
                     )}
                     {can('components.manage') && (
-                      <button onClick={() => setDeleteId(c.id)} className="p-2 text-slate-400 hover:text-red-500">
+                      <button onClick={() => setDeleteId(c.id)} className="p-2 text-ui-subtle hover:text-ui-danger">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
@@ -212,7 +212,7 @@ export function ComponentsPage() {
         )}
 
         {!loading && !selectedProductId && (
-          <div className="text-center py-16 text-slate-400">
+          <div className="text-center py-16 text-ui-subtle">
             <Package className="w-16 h-16 mx-auto mb-3 opacity-30" />
             <p className="text-sm">{isAr ? 'اختر منتجاً مصنّعاً لإدارة مكوناته' : 'Select a manufactured product to manage its components'}</p>
           </div>

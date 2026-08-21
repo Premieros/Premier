@@ -3,24 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { getDbUrl, openDb } from './db';
 import type pg from 'pg';
 
-// Regression tests for migration 045 (audit C1):
-//
-//   OLD behaviour (038): the linked-order check ran AFTER the sale header,
-//   sale items, FIFO stock deduction and journal entry were already written.
-//   Because plpgsql RETURN does not abort the transaction, a rejected
-//   settlement "failed" while still committing a full sale:
-//     * held takeaway/delivery orders (table_id IS NULL) were unpayable and
-//       produced a phantom committed sale + stock deduction,
-//     * a second device paying an already-settled order duplicated the sale.
-//
-//   NEW behaviour (045): the order is validated BEFORE any write; a rejected
-//   settlement creates nothing.
-//
-// Runs inside a single BEGIN..ROLLBACK transaction — safe against the live DB.
-//
-//   Run:  npm run test:integration
-//   Skip: when no URL is configured
-
 const dbUrl = getDbUrl();
 const skip = !dbUrl;
 
@@ -29,6 +11,7 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
   const branchId = randomUUID();
   const warehouseId = randomUUID();
   const productId = randomUUID();
+  const unitId = randomUUID();
   const tableId = randomUUID();
 
   const itemJson = (qty: number, price = 100) =>
@@ -64,8 +47,8 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
 
   async function batchQty(): Promise<number> {
     const r = await client.query<{ q: string }>(
-      `SELECT quantity::text AS q FROM public.inventory_batches WHERE product_id = $1`,
-      [productId],
+      `SELECT quantity::text AS q FROM public.inventory_unit_batches WHERE unit_id = $1 AND warehouse_id = $2`,
+      [unitId, warehouseId],
     );
     return Number(r.rows[0].q);
   }
@@ -85,9 +68,18 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
       [productId, '045 C1 Product', branchId],
     );
     await client.query(
-      `INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type)
-       VALUES ($1, $2, $3, 10, 50, 'opening')`,
-      [productId, warehouseId, branchId],
+      `INSERT INTO public.inventory_units (id, code, name, unit_type, branch_id, cost_price, sale_price, is_active)
+       VALUES ($1, $2, $3, 'ready', $4, 50, 100, true)`,
+      [unitId, `U-${randomUUID()}`, '045 C1 Unit', branchId],
+    );
+    await client.query(
+      `INSERT INTO public.product_unit_links (product_id, unit_id, quantity) VALUES ($1, $2, 1)`,
+      [productId, unitId],
+    );
+    await client.query(
+      `INSERT INTO public.inventory_unit_batches (unit_id, branch_id, warehouse_id, quantity, unit_cost)
+       VALUES ($1, $2, $3, 10, 50)`,
+      [unitId, branchId, warehouseId],
     );
     await client.query(
       `INSERT INTO public.dining_tables (id, name, branch_id, capacity, status) VALUES ($1, $2, $3, 4, 'vacant')`,
@@ -105,7 +97,7 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     }
   });
 
-  it('pays a held takeaway order (table_id NULL) — previously phantom-failed', async () => {
+  it('pays a held takeaway order (table_id NULL)', async () => {
     const orderId = await insertOrder('held', { tableId: null, orderType: 'takeaway' });
     const before = await batchQty();
 
@@ -122,8 +114,6 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     );
     expect(sale.rows[0].order_type).toBe('takeaway');
     expect(sale.rows[0].table_id).toBeNull();
-
-    // Stock deducted exactly once.
     expect(await batchQty()).toBe(before - 1);
   });
 
@@ -138,11 +128,8 @@ describe.skipIf(skip)('process_sale linked-order settlement (045 C1)', () => {
     const saleCountBefore = await saleCount(prefix);
 
     const second = await settle(prefix, orderId);
-    // The settlement is rejected BEFORE any write.
     expect(second.success).toBe(false);
     expect(second.error).toBe('ORDER_NOT_FOUND');
-
-    // No phantom sale, no second stock deduction, order stays completed.
     expect(await saleCount(prefix)).toBe(saleCountBefore);
     expect(await batchQty()).toBe(beforeQty - 1);
 

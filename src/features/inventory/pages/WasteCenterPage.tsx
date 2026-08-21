@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Plus, Check, X, BarChart3 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -57,7 +57,7 @@ export function WasteCenterPage() {
       if (entryRes.error) throw entryRes.error;
       setCategories(catRes.data ?? []);
       setEntries((entryRes.data ?? []) as unknown as WasteEntry[]);
-    } catch { show(ar ? 'خطأ في التحميل' : 'Load error', 'error'); }
+    } catch (err) { show(ar ? 'خطأ في التحميل' : 'Load error: ' + String((err as Error).message ?? err), 'error'); }
     finally { setLoading(false); }
   };
 
@@ -71,9 +71,10 @@ export function WasteCenterPage() {
 
   const handleCreate = async () => {
     if (!form.waste_category_id || form.quantity <= 0) { show(ar ? 'أكمل الحقول المطلوبة' : 'Fill required fields', 'error'); return; }
+    if (!branchFilter) { show(ar ? 'اختر الفرع أولاً' : 'Select a branch first', 'error'); return; }
     try {
       const { error } = await supabase.rpc('create_waste_entry', {
-        p_branch_id: branchFilter!,
+        p_branch_id: branchFilter,
         p_waste_category_id: form.waste_category_id,
         p_waste_type: form.waste_type,
         p_quantity: form.quantity,
@@ -89,8 +90,19 @@ export function WasteCenterPage() {
   };
 
   const handleApprove = async (id: string, approve: boolean) => {
+    if (!approve) {
+      const reason = prompt(ar ? 'سبب الرفض:' : 'Rejection reason:');
+      if (reason === null) return;
+      try {
+        const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: false, p_rejection_reason: reason || null });
+        if (error) throw error;
+        show(ar ? 'تم الرفض' : 'Rejected', 'success');
+        void load();
+      } catch (err) { show(String((err as Error).message ?? err), 'error'); }
+      return;
+    }
     try {
-      const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: approve });
+      const { error } = await supabase.rpc('approve_waste', { p_waste_id: id, p_approve: true });
       if (error) throw error;
       show(ar ? 'تم الاعتماد' : 'Approved', 'success');
       void load();
@@ -98,7 +110,7 @@ export function WasteCenterPage() {
   };
 
   const typeLabel = (v: string) => WASTE_TYPES.find(w => w.value === v)?.[ar ? 'ar' : 'en'] ?? v;
-  const statusColor = (s: string) => s === 'approved' ? 'text-green-600' : s === 'rejected' ? 'text-red-600' : 'text-amber-600';
+  const statusColor = (s: string) => s === 'approved' ? 'text-ui-success' : s === 'rejected' ? 'text-ui-danger' : 'text-ui-warning';
 
   const baseColumns: Column<WasteEntry>[] = [
     { key: 'created_at', header: ar ? 'التاريخ' : 'Date', render: r => new Date(r.created_at).toLocaleDateString() },
@@ -117,8 +129,8 @@ export function WasteCenterPage() {
         header: ar ? 'إجراءات' : 'Actions',
         render: (r: WasteEntry) => r.status === 'pending' ? (
           <div className="flex gap-1">
-            <button onClick={() => void handleApprove(r.id, true)} className="text-green-600 hover:text-green-800" title={ar ? 'اعتماد' : 'Approve'}><Check className="h-4 w-4" /></button>
-            <button onClick={() => void handleApprove(r.id, false)} className="text-red-600 hover:text-red-800" title={ar ? 'رفض' : 'Reject'}><X className="h-4 w-4" /></button>
+            <button onClick={() => void handleApprove(r.id, true)} className="text-ui-success hover:text-ui-success" title={ar ? 'اعتماد' : 'Approve'}><Check className="h-4 w-4" /></button>
+            <button onClick={() => void handleApprove(r.id, false)} className="text-ui-danger hover:text-ui-danger" title={ar ? 'رفض' : 'Reject'}><X className="h-4 w-4" /></button>
           </div>
         ) : null,
       }]
@@ -173,12 +185,14 @@ function WasteReport({ ar, branchFilter }: { ar: boolean; branchFilter: string |
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!branchFilter) { setLoading(false); return; }
     void (async () => {
-      const to = new Date().toISOString().slice(0, 10);
-      const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-      const { data } = await supabase.rpc('get_waste_report', { p_branch_id: branchFilter, p_from_date: from, p_to_date: to });
-      setRows((data ?? []) as Record<string, unknown>[]);
+      try {
+        const to = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        const { data, error } = await supabase.rpc('get_waste_report', { p_branch_id: branchFilter, p_from_date: from, p_to_date: to });
+        if (error) throw error;
+        setRows((data ?? []) as Record<string, unknown>[]);
+      } catch { /* report is optional, fail silently */ }
       setLoading(false);
     })();
   }, [branchFilter]);

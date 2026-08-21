@@ -37,8 +37,8 @@
   --gold-800: 115 91 31;
   --gold-900: 92 74 30;
 
-  /* Premier Foodics-style UI tokens. Components use these instead of hardcoded layout colors. */
-  /* 6H-A design system: violet primary (default), brand-engine-linked accent. */
+  /* Premier unified design tokens. Components MUST use these. */
+  /* === Identity === */
   --ui-primary: 91 43 216;
   --ui-primary-hover: 78 35 196;
   --ui-primary-active: 67 29 170;
@@ -46,36 +46,89 @@
   --ui-primary-fg: 255 255 255;
   --ui-accent: var(--brand-600);
 
+  /* === Surfaces === */
   --ui-surface: 255 255 255;
   --ui-surface-raised: 255 255 255;
   --ui-page: 246 247 251;
   --ui-page-alt: 238 240 247;
 
+  /* === Borders === */
   --ui-border: 232 232 239;
   --ui-border-strong: 214 215 226;
 
+  /* === Text === */
   --ui-text: 36 36 58;
   --ui-muted: 102 102 125;
   --ui-subtle: 143 145 160;
 
+  /* === Semantic === */
   --ui-success: 22 163 74;
+  --ui-success-soft: 220 252 231;
+  --ui-success-hover: 21 128 61;
+  --ui-success-active: 22 101 52;
   --ui-warning: 245 158 11;
+  --ui-warning-soft: 254 243 199;
+  --ui-warning-hover: 217 119 6;
+  --ui-warning-active: 180 83 9;
   --ui-danger: 225 29 72;
+  --ui-danger-soft: 254 226 226;
+  --ui-danger-hover: 190 18 60;
+  --ui-danger-active: 159 18 57;
   --ui-info: 37 99 235;
+  --ui-info-soft: 219 234 254;
+  --ui-info-hover: 29 78 216;
+  --ui-info-active: 30 64 175;
 
+  /* === Radius === */
   --ui-radius-sm: 10px;
   --ui-radius: 14px;
   --ui-radius-lg: 18px;
   --ui-radius-xl: 22px;
   --ui-radius-2xl: 28px;
 
+  /* === Shadows === */
   --ui-shadow-sm: 0 1px 2px rgba(20, 20, 55, 0.04), 0 1px 3px rgba(20, 20, 55, 0.03);
   --ui-shadow: 0 2px 14px rgba(20, 20, 55, 0.05);
   --ui-shadow-md: 0 6px 22px rgba(20, 20, 55, 0.07);
   --ui-shadow-lg: 0 12px 36px rgba(30, 20, 70, 0.09);
   --ui-shadow-xl: 0 24px 60px rgba(30, 20, 70, 0.12);
 
+  /* === Focus ring === */
   --ui-ring: 91 43 216;
+
+  /* === Spacing scale (logical) === */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-space-10: 40px;
+  --ui-space-12: 48px;
+
+  /* === Typography === */
+  --ui-text-xs: 0.6875rem;
+  --ui-text-sm: 0.8125rem;
+  --ui-text-base: 0.9375rem;
+  --ui-text-lg: 1.125rem;
+  --ui-text-xl: 1.3125rem;
+  --ui-text-2xl: 1.625rem;
+  --ui-text-3xl: 2rem;
+
+  /* === Z-index scale === */
+  --ui-z-sidebar: 50;
+  --ui-z-header: 40;
+  --ui-z-dropdown: 60;
+  --ui-z-modal: 70;
+  --ui-z-toast: 80;
+  --ui-z-command: 100;
+
+  /* === Motion === */
+  --ui-duration-fast: 120ms;
+  --ui-duration-normal: 200ms;
+  --ui-duration-slow: 300ms;
+  --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark {
@@ -89,6 +142,10 @@
   --ui-muted: 152 158 178;
   --ui-subtle: 112 120 142;
   --ui-primary-soft: 54 40 100;
+  --ui-success-soft: 20 83 54;
+  --ui-warning-soft: 120 80 10;
+  --ui-danger-soft: 120 20 40;
+  --ui-info-soft: 30 64 175;
   --ui-ring: 156 130 255;
 }
 
@@ -110,7 +167,7 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: rgb(var(--ui-border-strong)) transparent;
   }
 
   *::-webkit-scrollbar {
@@ -123,12 +180,12 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
+    background-color: rgb(var(--ui-border-strong));
     border-radius: 3px;
   }
 
   .dark *::-webkit-scrollbar-thumb {
-    background-color: #475569;
+    background-color: rgb(var(--ui-border));
   }
 }
 

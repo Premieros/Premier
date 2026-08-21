@@ -193,29 +193,29 @@ export function SalesPage() {
     { key: 'invoice_number', header: t('invoiceNumber'), render: (r) => (
       <div className="flex items-center gap-2">
         <FileText className="w-4 h-4 text-brand-500" />
-        <span className="font-medium text-slate-800 dark:text-slate-200">{r.invoice_number}</span>
+        <span className="font-medium text-ui-text">{r.invoice_number}</span>
       </div>
     )},
-    { key: 'created_at', header: t('date'), render: (r) => <span className="text-sm text-slate-500">{formatDateTime(r.created_at, lang)}</span> },
+    { key: 'created_at', header: t('date'), render: (r) => <span className="text-sm text-ui-subtle">{formatDateTime(r.created_at, lang)}</span> },
     { key: 'customer', header: t('customer'), render: (r) => r.customer?.name || '-' },
-    { key: 'total', header: t('total'), render: (r) => <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(r.total, currency, lang)}</span> },
+    { key: 'total', header: t('total'), render: (r) => <span className="font-semibold text-ui-text">{formatCurrency(r.total, currency, lang)}</span> },
     { key: 'paid_amount', header: isAr ? 'المدفوع' : 'Paid', render: (r) => formatCurrency(r.paid_amount, currency, lang) },
     { key: 'payment_method', header: isAr ? 'طريقة الدفع' : 'Payment', render: (r) => (
-      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-page-alt text-ui-muted">
         {PAYMENT_LABELS[r.payment_method] || r.payment_method}
       </span>
     )},
     { key: 'status', header: t('status'), render: (r) => (
       <div className="flex items-center gap-1.5">
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          r.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-          r.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+          r.status === 'completed' ? 'bg-ui-success-soft text-ui-success' :
+          r.status === 'returned' ? 'bg-ui-danger-soft text-ui-danger' :
+          'bg-ui-warning-soft text-ui-warning'
         }`}>
           {r.status}
         </span>
         {r.refunded_amount > 0 && r.status !== 'returned' && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-warning-soft text-ui-warning">
             {isAr ? `مرتجع ${formatCurrency(r.refunded_amount, currency, lang)}` : `Refunded ${formatCurrency(r.refunded_amount, currency, lang)}`}
           </span>
         )}
@@ -224,17 +224,17 @@ export function SalesPage() {
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('refunds.approve') && (
-          <button onClick={() => openViewSale(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}>
+          <button onClick={() => openViewSale(r)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('edit')}>
             <Edit2 className="w-4 h-4" />
           </button>
         )}
         {can('refunds.approve') && r.status !== 'returned' && (r.refunded_amount || 0) < r.total && (
-          <button onClick={() => openRefund(r)} className="p-1.5 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-500" title={isAr ? 'مرتجع' : 'Refund'}>
+          <button onClick={() => openRefund(r)} className="p-1.5 rounded-md hover:bg-ui-warning-soft text-ui-warning" title={isAr ? 'مرتجع' : 'Refund'}>
             <RotateCcw className="w-4 h-4" />
           </button>
         )}
         {can('refunds.approve') && r.status !== 'completed' && (
-          <button onClick={() => setDeleteId(r.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
+          <button onClick={() => setDeleteId(r.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('delete')}>
             <Trash2 className="w-4 h-4" />
           </button>
         )}
@@ -269,11 +269,11 @@ export function SalesPage() {
       <Modal open={!!viewSale} onClose={() => setViewSale(null)} title={isAr ? 'تفاصيل الفاتورة' : 'Invoice Details'} size="lg">
         {viewSale && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-ui-page-alt rounded-lg">
               <FileText className="w-8 h-8 text-brand-500" />
               <div>
-                <p className="font-bold text-lg text-slate-800 dark:text-slate-200">{viewSale.invoice_number}</p>
-                <p className="text-sm text-slate-500">{formatDateTime(viewSale.created_at, lang)}</p>
+                <p className="font-bold text-lg text-ui-text">{viewSale.invoice_number}</p>
+                <p className="text-sm text-ui-subtle">{formatDateTime(viewSale.created_at, lang)}</p>
               </div>
             </div>
 
@@ -299,24 +299,24 @@ export function SalesPage() {
 
             {viewSale.sale_items && viewSale.sale_items.length > 0 && (
               <div>
-                <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2">{isAr ? 'أصناف الفاتورة' : 'Invoice Items'}</h4>
+                <h4 className="font-semibold text-ui-muted mb-2">{isAr ? 'أصناف الفاتورة' : 'Invoice Items'}</h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{t('productName')}</th>
-                        <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'الكمية' : 'Qty'}</th>
-                        <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'السعر' : 'Price'}</th>
-                        <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{t('total')}</th>
+                      <tr className="border-b border-ui-border">
+                        <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{t('productName')}</th>
+                        <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{isAr ? 'الكمية' : 'Qty'}</th>
+                        <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{isAr ? 'السعر' : 'Price'}</th>
+                        <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{t('total')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {viewSale.sale_items.map((item) => (
-                        <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
-                          <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{item.product?.name || '-'}</td>
-                          <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{item.quantity}</td>
-                          <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{formatCurrency(item.unit_price, currency, lang)}</td>
-                          <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{formatCurrency(item.total, currency, lang)}</td>
+                        <tr key={item.id} className="border-b border-ui-border">
+                          <td className="px-3 py-2 text-ui-text">{item.product?.name || '-'}</td>
+                          <td className="px-3 py-2 text-ui-muted">{item.quantity}</td>
+                          <td className="px-3 py-2 text-ui-muted">{formatCurrency(item.unit_price, currency, lang)}</td>
+                          <td className="px-3 py-2 font-medium text-ui-text">{formatCurrency(item.total, currency, lang)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -325,11 +325,11 @@ export function SalesPage() {
               </div>
             )}
 
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 space-y-2">
+            <div className="bg-ui-page-alt rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm"><span>{t('total')}</span><span className="font-bold text-brand-600">{formatCurrency(viewSale.total, currency, lang)}</span></div>
               <div className="flex justify-between text-sm"><span>{isAr ? 'المدفوع' : 'Paid'}</span><span>{formatCurrency(viewSale.paid_amount, currency, lang)}</span></div>
               {viewSale.total - viewSale.paid_amount > 0 && (
-                <div className="flex justify-between text-sm text-red-600"><span>{isAr ? 'المتبقي' : 'Remaining'}</span><span>{formatCurrency(viewSale.total - viewSale.paid_amount, currency, lang)}</span></div>
+                <div className="flex justify-between text-sm text-ui-danger"><span>{isAr ? 'المتبقي' : 'Remaining'}</span><span>{formatCurrency(viewSale.total - viewSale.paid_amount, currency, lang)}</span></div>
               )}
             </div>
 
@@ -345,31 +345,31 @@ export function SalesPage() {
       <Modal open={!!refundSale} onClose={() => setRefundSale(null)} title={isAr ? 'مرتجع الفاتورة' : 'Invoice Refund'} size="lg">
         {refundSale && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-ui-page-alt rounded-lg">
               <div>
-                <p className="font-bold text-lg text-slate-800 dark:text-slate-200">{refundSale.invoice_number}</p>
-                <p className="text-sm text-slate-500">{formatDateTime(refundSale.created_at, lang)}</p>
+                <p className="font-bold text-lg text-ui-text">{refundSale.invoice_number}</p>
+                <p className="text-sm text-ui-subtle">{formatDateTime(refundSale.created_at, lang)}</p>
               </div>
-              <span className="text-sm text-slate-500">{isAr ? 'إجمالي الفاتورة' : 'Invoice total'}: <b>{formatCurrency(refundSale.total, currency, lang)}</b></span>
+              <span className="text-sm text-ui-subtle">{isAr ? 'إجمالي الفاتورة' : 'Invoice total'}: <b>{formatCurrency(refundSale.total, currency, lang)}</b></span>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div className="overflow-x-auto border border-ui-border rounded-xl">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
-                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{t('productName')}</th>
-                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'كمية المرتجع' : 'Refund Qty'}</th>
-                    <th className="px-3 py-2 text-start text-xs font-medium text-slate-500">{isAr ? 'قيمة المرتجع' : 'Refund Value'}</th>
+                  <tr className="border-b border-ui-border bg-ui-page-alt/60">
+                    <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{t('productName')}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{isAr ? 'كمية المرتجع' : 'Refund Qty'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-ui-subtle">{isAr ? 'قيمة المرتجع' : 'Refund Value'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {refundSale.sale_items?.map((item) => {
                     const remaining = item.quantity - (item.refunded_quantity || 0);
                     return (
-                      <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
+                      <tr key={item.id} className="border-b border-ui-border">
                         <td className="px-3 py-2">
-                          <p className="text-slate-800 dark:text-slate-200">{item.product?.name || '-'}</p>
-                          <p className="text-xs text-slate-400">{isAr ? 'الكمية المبيعة' : 'Sold'}: {item.quantity}{item.refunded_quantity > 0 ? ` · ${isAr ? 'مرتجع' : 'refunded'}: ${item.refunded_quantity}` : ''}</p>
+                          <p className="text-ui-text">{item.product?.name || '-'}</p>
+                          <p className="text-xs text-ui-subtle">{isAr ? 'الكمية المبيعة' : 'Sold'}: {item.quantity}{item.refunded_quantity > 0 ? ` · ${isAr ? 'مرتجع' : 'refunded'}: ${item.refunded_quantity}` : ''}</p>
                         </td>
                         <td className="px-3 py-2">
                           <input
@@ -379,10 +379,10 @@ export function SalesPage() {
                             step="any"
                             value={refundQty[item.id] ?? ''}
                             onChange={(e) => setRefundQty({ ...refundQty, [item.id]: e.target.value })}
-                            className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                            className="w-24 px-2 py-1.5 rounded-lg border border-ui-border bg-ui-surface text-sm text-ui-text focus:outline-none focus:ring-2 focus:ring-ui-primary"
                           />
                         </td>
-                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{formatCurrency(refundLineTotal(item), currency, lang)}</td>
+                        <td className="px-3 py-2 font-medium text-ui-text">{formatCurrency(refundLineTotal(item), currency, lang)}</td>
                       </tr>
                     );
                   })}
@@ -392,9 +392,9 @@ export function SalesPage() {
 
             <Textarea label={isAr ? 'سبب المرتجع (اختياري)' : 'Refund reason (optional)'} value={refundReason} onChange={(e) => setRefundReason(e.target.value)} rows={2} />
 
-            <div className="flex justify-between items-center bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-3">
-              <span className="font-semibold text-red-600 dark:text-red-400">{isAr ? 'قيمة المرتجع الإجمالية' : 'Total refund'}</span>
-              <span className="font-bold text-lg text-red-600 dark:text-red-400">{formatCurrency(refundTotal(), currency, lang)}</span>
+            <div className="flex justify-between items-center bg-ui-danger-soft rounded-lg px-4 py-3">
+              <span className="font-semibold text-ui-danger">{isAr ? 'قيمة المرتجع الإجمالية' : 'Total refund'}</span>
+              <span className="font-bold text-lg text-ui-danger">{formatCurrency(refundTotal(), currency, lang)}</span>
             </div>
 
             <div className="flex justify-end gap-2">

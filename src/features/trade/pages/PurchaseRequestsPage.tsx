@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Trash2, Eye, Send, Check, X, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api';
@@ -31,12 +31,12 @@ interface RequestFormItem {
 const EMPTY_LINE: RequestFormItem = { line_type: 'product', product_id: '', raw_material_id: '', unit_name: 'piece', quantity: 1, estimated_cost: 0, notes: '' };
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  draft: 'bg-ui-page-alt text-ui-muted',
+  submitted: 'bg-ui-info-soft text-ui-info',
+  approved: 'bg-ui-success-soft text-ui-success',
+  rejected: 'bg-ui-danger-soft text-ui-danger',
   ordered: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  cancelled: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  cancelled: 'bg-ui-page-alt text-ui-muted',
 };
 
 export function PurchaseRequestsPage() {
@@ -154,30 +154,30 @@ export function PurchaseRequestsPage() {
   };
 
   const columns: Column<PurchaseRequestRow & { supplier?: Supplier }>[] = [
-    { key: 'request_number', header: t('requestNumber'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.request_number}</span> },
+    { key: 'request_number', header: t('requestNumber'), render: (r) => <span className="font-medium text-ui-text">{r.request_number}</span> },
     { key: 'supplier', header: t('supplier'), render: (r) => r.supplier?.name || '-' },
-    { key: 'priority', header: t('priority'), render: (r) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 capitalize">{t(`priority${r.priority.charAt(0).toUpperCase() + r.priority.slice(1)}` as keyof typeof import('@/lib/i18n').translations.ar)}</span> },
+    { key: 'priority', header: t('priority'), render: (r) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-warning-soft text-ui-warning capitalize">{t(`priority${r.priority.charAt(0).toUpperCase() + r.priority.slice(1)}` as keyof typeof import('@/lib/i18n').translations.ar)}</span> },
     { key: 'expected_date', header: t('expectedDate'), render: (r) => (r.expected_date ? formatDate(r.expected_date, lang) : '-') },
     { key: 'created_at', header: t('date'), render: (r) => formatDate(r.created_at, lang) },
     { key: 'status', header: t('status'), render: (r) => <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] || ''}`}>{t(r.status as keyof typeof import('@/lib/i18n').translations.ar)}</span> },
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex items-center gap-1 justify-end">
         {r.status === 'draft' && can('purchases.manage') && (
-          <button title={t('submitRequest')} onClick={() => changeStatus(r.id, 'submitted')} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Send className="w-4 h-4" /></button>
+          <button title={t('submitRequest')} onClick={() => changeStatus(r.id, 'submitted')} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Send className="w-4 h-4" /></button>
         )}
         {r.status === 'submitted' && can('purchases.manage') && (
           <>
-            <button title={t('approveRequest')} onClick={() => changeStatus(r.id, 'approved')} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500"><Check className="w-4 h-4" /></button>
-            <button title={t('rejectRequest')} onClick={() => changeStatus(r.id, 'rejected')} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><X className="w-4 h-4" /></button>
+            <button title={t('approveRequest')} onClick={() => changeStatus(r.id, 'approved')} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success"><Check className="w-4 h-4" /></button>
+            <button title={t('rejectRequest')} onClick={() => changeStatus(r.id, 'rejected')} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><X className="w-4 h-4" /></button>
           </>
         )}
         {r.status === 'approved' && can('purchases.rfq') && (
           <button title={t('createRfqFromRequest')} onClick={() => createRfqFromRequest(r)} className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500"><FileText className="w-4 h-4" /></button>
         )}
         {(r.status === 'draft' || r.status === 'submitted') && can('purchases.manage') && (
-          <button title={t('cancel')} onClick={() => changeStatus(r.id, 'cancelled')} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button>
+          <button title={t('cancel')} onClick={() => changeStatus(r.id, 'cancelled')} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle"><X className="w-4 h-4" /></button>
         )}
-        <button onClick={() => viewRequest(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Eye className="w-4 h-4" /></button>
+        <button onClick={() => viewRequest(r)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Eye className="w-4 h-4" /></button>
       </div>
     )},
   ];
@@ -212,46 +212,46 @@ export function PurchaseRequestsPage() {
               <option value="urgent">{t('priorityUrgent')}</option>
             </Select>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{t('expectedDate')}</label>
-              <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
+              <label className="block text-xs font-medium text-ui-muted mb-1">{t('expectedDate')}</label>
+              <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('addItem')}</h3>
+              <h3 className="font-semibold text-ui-muted">{t('addItem')}</h3>
               <Button size="sm" variant="outline" onClick={addLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
               {lineItems.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                     <option value="product">{t('product')}</option>
                     <option value="raw">{t('rawMaterial')}</option>
                   </select>
                   <div className="col-span-3">
                     {l.line_type === 'product' ? (
-                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     ) : (
-                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
                       </select>
                     )}
                   </div>
-                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <input type="number" placeholder={t('estimatedCost')} step="0.01" value={l.estimated_cost || ''} onChange={(e) => updateLine(i, 'estimated_cost', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <input type="text" placeholder={t('notes')} value={l.notes} onChange={(e) => updateLine(i, 'notes', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"><Trash2 className="w-4 h-4" /></button>
+                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <input type="number" placeholder={t('estimatedCost')} step="0.01" value={l.estimated_cost || ''} onChange={(e) => updateLine(i, 'estimated_cost', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder={t('notes')} value={l.notes} onChange={(e) => updateLine(i, 'notes', e.target.value)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-ui-danger hover:bg-ui-danger-soft rounded-md"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex justify-end gap-2 pt-2 border-t border-ui-border">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
             <Button onClick={save} disabled={saving}>{saving ? t('loading') : t('save')}</Button>
           </div>
@@ -262,24 +262,24 @@ export function PurchaseRequestsPage() {
         {viewModal && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-slate-500">{t('requestNumber')}: </span><span className="font-medium">{viewModal.request_number}</span></div>
-              <div><span className="text-slate-500">{t('status')}: </span><span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[viewModal.status] || ''}`}>{t(viewModal.status as keyof typeof import('@/lib/i18n').translations.ar)}</span></div>
-              <div><span className="text-slate-500">{t('supplier')}: </span><span className="font-medium">{(viewModal as PurchaseRequestRow & { supplier?: Supplier }).supplier?.name || '-'}</span></div>
-              <div><span className="text-slate-500">{t('date')}: </span><span className="font-medium">{formatDate(viewModal.created_at, lang)}</span></div>
+              <div><span className="text-ui-subtle">{t('requestNumber')}: </span><span className="font-medium">{viewModal.request_number}</span></div>
+              <div><span className="text-ui-subtle">{t('status')}: </span><span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[viewModal.status] || ''}`}>{t(viewModal.status as keyof typeof import('@/lib/i18n').translations.ar)}</span></div>
+              <div><span className="text-ui-subtle">{t('supplier')}: </span><span className="font-medium">{(viewModal as PurchaseRequestRow & { supplier?: Supplier }).supplier?.name || '-'}</span></div>
+              <div><span className="text-ui-subtle">{t('date')}: </span><span className="font-medium">{formatDate(viewModal.created_at, lang)}</span></div>
             </div>
-            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+            <div className="border-t border-ui-border pt-3">
               <table className="w-full text-sm">
-                <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-start py-2 font-semibold text-slate-600 dark:text-slate-300">{t('productName')}</th>
-                  <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('quantity')}</th>
-                  <th className="text-end py-2 font-semibold text-slate-600 dark:text-slate-300">{t('estimatedCost')}</th>
+                <thead><tr className="border-b border-ui-border">
+                  <th className="text-start py-2 font-semibold text-ui-muted">{t('productName')}</th>
+                  <th className="text-center py-2 font-semibold text-ui-muted">{t('quantity')}</th>
+                  <th className="text-end py-2 font-semibold text-ui-muted">{t('estimatedCost')}</th>
                 </tr></thead>
                 <tbody>
                   {viewItems.map((i, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="py-2 text-slate-700 dark:text-slate-200">{i.name}</td>
-                      <td className="py-2 text-center text-slate-700 dark:text-slate-200">{i.quantity}</td>
-                      <td className="py-2 text-end text-slate-700 dark:text-slate-200">{i.estimated_cost ?? '-'}</td>
+                    <tr key={idx} className="border-b border-ui-border">
+                      <td className="py-2 text-ui-text">{i.name}</td>
+                      <td className="py-2 text-center text-ui-text">{i.quantity}</td>
+                      <td className="py-2 text-end text-ui-text">{i.estimated_cost ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>

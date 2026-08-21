@@ -175,13 +175,13 @@ export function ShiftsPage() {
   });
 
   const columns: Column<Shift>[] = [
-    { key: 'opened_at', header: t('openedAt'), render: (r) => <span className="text-sm text-slate-600 dark:text-slate-400">{formatDateTime(r.opened_at, lang)}</span> },
+    { key: 'opened_at', header: t('openedAt'), render: (r) => <span className="text-sm text-ui-muted">{formatDateTime(r.opened_at, lang)}</span> },
     { key: 'branch', header: t('branch'), render: (r) => r.branch?.name || '-' },
     { key: 'cashier', header: t('cashier'), render: (r) => r.cashier?.full_name || r.cashier?.email || '-' },
     { key: 'status', header: t('shiftStatus'), render: (r) => (
       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-        r.status === 'open' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-        'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+        r.status === 'open' ? 'bg-ui-success-soft text-ui-success' :
+        'bg-ui-page-alt text-ui-muted'
       }`}>
         {t(r.status === 'open' ? 'open' : 'closed')}
       </span>
@@ -190,14 +190,14 @@ export function ShiftsPage() {
     { key: 'expected_amount', header: t('expectedAmount'), render: (r) => <span className="text-sm">{formatCurrency(r.expected_amount, currency, lang)}</span> },
     { key: 'actual_amount', header: t('actualAmount'), render: (r) => <span className="text-sm">{formatCurrency(r.actual_amount ?? 0, currency, lang)}</span> },
     { key: 'difference', header: t('difference'), render: (r) => (
-      <span className={`text-sm font-semibold ${Math.abs(r.difference) > 0.009 ? 'text-red-500' : 'text-green-600'}`}>
+      <span className={`text-sm font-semibold ${Math.abs(r.difference) > 0.009 ? 'text-ui-danger' : 'text-ui-success'}`}>
         {formatCurrency(r.difference, currency, lang)}
       </span>
     )},
-    { key: 'closed_at', header: t('closedAt'), render: (r) => r.closed_at ? <span className="text-sm text-slate-500">{formatDateTime(r.closed_at, lang)}</span> : '-' },
+    { key: 'closed_at', header: t('closedAt'), render: (r) => r.closed_at ? <span className="text-sm text-ui-subtle">{formatDateTime(r.closed_at, lang)}</span> : '-' },
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => printReport(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('print')}>
+        <button onClick={() => printReport(r)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('print')}>
           <Printer className="w-4 h-4" />
         </button>
         {r.status === 'open' && can('shifts.close') && (
@@ -260,7 +260,7 @@ export function ShiftsPage() {
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} title={t('openShift')}>
         <div className="space-y-4">
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-600 dark:text-slate-300">
+          <div className="p-4 bg-ui-page-alt rounded-lg text-sm text-ui-muted">
             {isAr
               ? `الفرع: ${branches.find((b) => b.id === user?.branch_id)?.name || '-'}`
               : `Branch: ${branches.find((b) => b.id === user?.branch_id)?.name || '-'}`}
@@ -279,16 +279,16 @@ export function ShiftsPage() {
         {closeTarget && (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p className="text-xs text-slate-500 mb-1">{t('openingAmount')}</p>
+              <div className="p-3 bg-ui-page-alt rounded-lg">
+                <p className="text-xs text-ui-subtle mb-1">{t('openingAmount')}</p>
                 <p className="font-semibold">{formatCurrency(closeTarget.opening_amount, currency, lang)}</p>
               </div>
-              <div className="p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
-                <p className="text-xs text-slate-500 mb-1">{t('expectedAmount')}</p>
-                <p className="font-semibold text-brand-600">{formatCurrency(closeTarget.expected_amount, currency, lang)}</p>
+              <div className="p-3 bg-ui-primary-soft rounded-lg">
+                <p className="text-xs text-ui-subtle mb-1">{t('expectedAmount')}</p>
+                <p className="font-semibold text-ui-primary">{formatCurrency(closeTarget.expected_amount, currency, lang)}</p>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p className="text-xs text-slate-500 mb-1">{t('cashSales')}</p>
+              <div className="p-3 bg-ui-page-alt rounded-lg">
+                <p className="text-xs text-ui-subtle mb-1">{t('cashSales')}</p>
                 <p className="font-semibold">{formatCurrency(closeTarget.expected_amount - closeTarget.opening_amount, currency, lang)}</p>
               </div>
             </div>

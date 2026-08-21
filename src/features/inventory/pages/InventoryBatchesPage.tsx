@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Layers, AlertTriangle, Clock } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -139,28 +139,28 @@ export function InventoryBatchesPage() {
 
   const statusPill = (days: number | null) => {
     const s = expiryStatus(days);
-    if (!s) return <span className="text-xs text-slate-400">-</span>;
+    if (!s) return <span className="text-xs text-ui-subtle">-</span>;
     const expired = s.state === 'expired';
     const label = expired ? t('batchStatusExpired') : t('batchStatusExpiring');
     const icon = expired ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
-    const cls = expired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    const cls = expired ? 'bg-ui-danger-soft text-ui-danger' : 'bg-ui-warning-soft text-ui-warning';
     return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{icon} {label}</span>;
   };
 
   const sourcePill = (source: string) => {
     const label = sourceOptions.find((s) => s.key === source)?.label || source;
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{label}</span>;
+    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-page-alt text-ui-muted">{label}</span>;
   };
 
   const columns: Column<(BatchRow & { days: number | null })>[] = [
     { key: 'product', header: t('product'), render: (b) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {(b.product?.name || '?')[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{b.product?.name || '-'}</p>
-          <p className="text-xs text-slate-400">{b.product?.barcode || ''}</p>
+          <p className="font-medium text-ui-text">{b.product?.name || '-'}</p>
+          <p className="text-xs text-ui-subtle">{b.product?.barcode || ''}</p>
         </div>
       </div>
     )},
@@ -185,16 +185,16 @@ export function InventoryBatchesPage() {
       <DesignPanel testId="batches-expiry-summary">
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('expiredBatches')}</p>
-            <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{expiredCount}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('expiredBatches')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-danger">{expiredCount}</p>
           </div>
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('expiringBatches')}</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{expiringCount}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('expiringBatches')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-warning">{expiringCount}</p>
           </div>
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('totalValue')}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-200">{formatNumber(rowsWithStatus.reduce((s, b) => s + Number(b.quantity) * Number(b.unit_cost), 0), 2)}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('totalValue')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-text">{formatNumber(rowsWithStatus.reduce((s, b) => s + Number(b.quantity) * Number(b.unit_cost), 0), 2)}</p>
           </div>
         </div>
       </DesignPanel>

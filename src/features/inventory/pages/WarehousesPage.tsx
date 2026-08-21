@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -66,21 +66,21 @@ export function WarehousesPage() {
   };
 
   const columns: Column<Warehouse>[] = [
-    { key: 'name', header: t('name'), render: (w) => <span className="font-medium text-slate-800 dark:text-slate-200">{w.name}</span> },
+    { key: 'name', header: t('name'), render: (w) => <span className="font-medium text-ui-text">{w.name}</span> },
     { key: 'branch', header: t('branch'), render: (w) => (w as Warehouse & { branch?: Branch }).branch?.name || '-' },
     { key: 'address', header: t('address'), render: (w) => w.address || '-' },
     { key: 'is_active', header: t('status'), render: (w) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${w.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${w.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {w.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (w) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('warehouses.manage') && (
-          <button onClick={() => openEdit(w)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(w)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
         )}
         {can('warehouses.manage') && (
-          <button onClick={() => setDeleteId(w.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => setDeleteId(w.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
         )}
       </div>
     )},

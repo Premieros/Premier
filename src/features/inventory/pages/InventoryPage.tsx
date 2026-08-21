@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Edit2, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -113,15 +113,15 @@ export function InventoryPage() {
   const columns: Column<Inventory>[] = [
     { key: 'product', header: t('productName'), render: (i) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {(i.product?.name || '?')[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{i.product?.name || '-'}</p>
+          <p className="font-medium text-ui-text">{i.product?.name || '-'}</p>
           <div className="flex items-center gap-1">
-            <p className="text-xs text-slate-400">{i.product?.barcode || '-'}</p>
+            <p className="text-xs text-ui-subtle">{i.product?.barcode || '-'}</p>
             {componentIds.has(i.product_id) && (
-              <span className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-medium text-slate-500 dark:text-slate-400">{t('component')}</span>
+              <span className="px-1 py-0.5 rounded bg-ui-page-alt text-[10px] font-medium text-ui-subtle dark:text-ui-subtle">{t('component')}</span>
             )}
             {i.product?.product_type === 'manufactured' && (
               <span className="px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[10px] font-medium text-purple-700 dark:text-purple-400">{t('manufactured')}</span>
@@ -135,8 +135,8 @@ export function InventoryPage() {
       const isLow = i.quantity < (i.product?.low_stock_threshold || 5);
       return (
         <div className="flex items-center gap-2">
-          <span className={`font-semibold ${isLow ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>{formatNumber(i.quantity)}</span>
-          {isLow && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+          <span className={`font-semibold ${isLow ? 'text-ui-danger' : 'text-ui-text'}`}>{formatNumber(i.quantity)}</span>
+          {isLow && <AlertTriangle className="w-4 h-4 text-ui-warning" />}
         </div>
       );
     }},
@@ -145,9 +145,9 @@ export function InventoryPage() {
       const isOut = i.quantity <= 0;
       return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          isOut ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          isLow ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-          'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+          isOut ? 'bg-ui-danger-soft text-ui-danger' :
+          isLow ? 'bg-ui-warning-soft text-ui-warning' :
+          'bg-ui-success-soft text-ui-success'
         }`}>
           {isOut ? t('outOfStock') : isLow ? t('lowStock') : t('inStock')}
         </span>
@@ -156,12 +156,12 @@ export function InventoryPage() {
     { key: 'actions', header: t('actions'), render: (i) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('inventory.manage') && (
-          <button onClick={() => openAdjust(i)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('adjustStock')}>
+          <button onClick={() => openAdjust(i)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('adjustStock')}>
             <Edit2 className="w-4 h-4" />
           </button>
         )}
         {can('inventory.manage') && (
-          <button onClick={() => setDeleteId(i.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
+          <button onClick={() => setDeleteId(i.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('delete')}>
             <Trash2 className="w-4 h-4" />
           </button>
         )}
@@ -207,12 +207,12 @@ export function InventoryPage() {
         {adjustModal && (
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-slate-500">{t('productName')}</p>
-              <p className="font-medium text-slate-800 dark:text-slate-200">{adjustModal.product?.name}</p>
+              <p className="text-sm text-ui-subtle">{t('productName')}</p>
+              <p className="font-medium text-ui-text">{adjustModal.product?.name}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-500">{t('warehouse')}</p>
-              <p className="font-medium text-slate-800 dark:text-slate-200">{adjustModal.warehouse?.name}</p>
+              <p className="text-sm text-ui-subtle">{t('warehouse')}</p>
+              <p className="font-medium text-ui-text">{adjustModal.warehouse?.name}</p>
             </div>
             <Input label={t('currentStock')} type="number" step="0.0001" value={adjustQty} onChange={(e) => setAdjustQty(parseFloat(e.target.value) || 0)} />
             <Input label={t('reason')} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={isAr ? '����: ��ϡ ���ݡ �����' : 'e.g. count, damaged, correction'} />

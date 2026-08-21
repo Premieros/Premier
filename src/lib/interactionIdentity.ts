@@ -60,11 +60,11 @@ export const INTERACTION_CONTRACTS: InteractionContract[] = [
   { testId: 'kpi-returns', file: 'src/features/dashboard/pages/VisualDashboardPage.tsx', label: 'Returns KPI', marker: 'testId="kpi-returns"' },
   { testId: 'kpi-discounts', file: 'src/features/dashboard/pages/VisualDashboardPage.tsx', label: 'Discounts KPI', marker: 'testId="kpi-discounts"' },
 
-  // Reports Center (ReportsPage.tsx)
-  { testId: 'report-type-select', file: 'src/features/reporting/pages/ReportsPage.tsx', label: 'Report type dropdown (14 operational + 9 financial)', marker: 'data-testid="report-type-select"' },
-  { testId: 'report-context-filter', file: 'src/features/reporting/pages/ReportsPage.tsx', label: 'Contextual period filter dropdown', marker: 'data-testid="report-context-filter"' },
-  { testId: 'button[data-report-type]', file: 'src/features/reporting/pages/ReportsPage.tsx', label: 'Report-type quick-access buttons (deep-link contract)', marker: 'data-report-type={rt.key}' },
-  { testId: 'button[data-report-type] (financial)', file: 'src/features/reporting/pages/ReportsPage.tsx', label: 'Financial report-type buttons', marker: 'data-report-type={ft.key}' },
+  // Reports Center (ReportFilterBar.tsx + ReportsPage.tsx)
+  { testId: 'report-type-select', file: 'src/features/reporting/ReportFilterBar.tsx', label: 'Report type dropdown (14 operational + 9 financial)', marker: 'data-testid="report-type-select"' },
+  { testId: 'report-context-filter', file: 'src/features/reporting/ReportFilterBar.tsx', label: 'Contextual period filter dropdown', marker: 'data-testid="report-context-filter"' },
+  { testId: 'button[data-report-type]', file: 'src/features/reporting/ReportFilterBar.tsx', label: 'Report-type quick-access buttons (deep-link contract)', marker: 'data-report-type={rt.key}' },
+  { testId: 'button[data-report-type] (financial)', file: 'src/features/reporting/ReportFilterBar.tsx', label: 'Financial report-type buttons', marker: 'data-report-type={ft.key}' },
   { testId: 'financial deep link', file: 'src/features/reporting/pages/ReportsPage.tsx', label: 'Financial selection navigates with view + period context', marker: 'navigate(`/financial-reports?view=${value}&from=${from}&to=${to}`)' },
 
   // Deep-link resolver (ReportDeepLinkPage.tsx)

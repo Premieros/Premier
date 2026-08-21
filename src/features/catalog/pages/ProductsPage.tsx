@@ -13,7 +13,7 @@ import { Button } from '@/components/Button';
 import { Input, Select, Textarea } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { formatCurrency, formatNumber, generateBarcode } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { exportToExcel, importFromExcel } from '@/lib/excel';
 import { renderBarcode, generateQRCodeDataURL } from '@/lib/barcode';
 import { logAudit } from '@/lib/audit';
@@ -106,13 +106,7 @@ export function ProductsPage() {
   );
 
   const openAdd = () => {
-    setEditing(null);
-    setForm({ name: '', name_en: '', barcode: generateBarcode(), sku: '', category_id: '', description: '', cost_price: 0, sale_price: 0, wholesale_price: 0, image_url: '', is_active: true, low_stock_threshold: 5, min_stock: 0, max_stock: 0, reorder_point: 0, product_type: 'ready', branch_id: branchFilter || '' });
-    setUnits([{ id: '', product_id: '', unit_name: 'piece', unit_name_en: 'piece', conversion_factor: 1, sale_price: 0, cost_price: 0, barcode: '', is_base: true, created_at: '' }]);
-    setProductComponents([]);
-    setComponentSel('');
-    setComponentQty(1);
-    setModalOpen(true);
+    window.location.hash = '/products/setup';
   };
 
   const openEdit = async (p: Product) => {
@@ -150,7 +144,7 @@ export function ProductsPage() {
       const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
       if (error) { show(error.message, 'error'); return; }
       pid = editing.id;
-      const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: editing.id, p_units: unitPayload });
+      const { error: unitError } = await api.catalog.replaceProductUnits({ p_product_id: editing.id, p_units: unitPayload });
       if (unitError) { show(unitError.message, 'error'); return; }
       await logAudit('update', 'products', editing.id, { name: form.name });
     } else {
@@ -158,7 +152,7 @@ export function ProductsPage() {
       if (error) { show(error.message, 'error'); return; }
       pid = (data as { id: string }).id;
       if (unitPayload.length > 0) {
-        const { error: unitError } = await api.catalog.replaceProductUnits( { p_product_id: pid, p_units: unitPayload });
+        const { error: unitError } = await api.catalog.replaceProductUnits({ p_product_id: pid, p_units: unitPayload });
         if (unitError) { show(unitError.message, 'error'); return; }
       }
       await logAudit('create', 'products', pid, { name: form.name });
@@ -258,12 +252,12 @@ export function ProductsPage() {
   const columns: Column<Product>[] = [
     { key: 'name', header: t('productName'), render: (p) => (
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-          {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full rounded-lg object-cover" /> : <BarcodeIcon className="w-4 h-4 text-slate-400" />}
+        <div className="w-9 h-9 rounded-lg bg-ui-page-alt flex items-center justify-center flex-shrink-0">
+          {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full rounded-lg object-cover" /> : <BarcodeIcon className="w-4 h-4 text-ui-subtle" />}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{p.name}</p>
-          <p className="text-xs text-slate-400">{p.barcode || '-'}</p>
+          <p className="font-medium text-ui-text">{p.name}</p>
+          <p className="text-xs text-ui-subtle">{p.barcode || '-'}</p>
         </div>
         {p.product_type === 'manufactured' && (
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{t('manufactured')}</span>
@@ -275,19 +269,19 @@ export function ProductsPage() {
     { key: 'sale_price', header: t('salePrice'), render: (p) => <span className="font-semibold text-brand-600 dark:text-brand-400">{formatCurrency(p.sale_price, currency, lang)}</span> },
     { key: 'wholesale_price', header: t('wholesalePrice'), render: (p) => formatCurrency(p.wholesale_price, currency, lang) },
     { key: 'is_active', header: t('status'), render: (p) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {p.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (p) => (
       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => showBarcode(p)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title={t('barcode')}><BarcodeIcon className="w-4 h-4" /></button>
-        <button onClick={() => showQR(p)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title={t('generateQR')}><QrCode className="w-4 h-4" /></button>
+        <button onClick={() => showBarcode(p)} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle" title={t('barcode')}><BarcodeIcon className="w-4 h-4" /></button>
+        <button onClick={() => showQR(p)} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle" title={t('generateQR')}><QrCode className="w-4 h-4" /></button>
         {can('products.manage') && (
-          <button onClick={() => openEdit(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(p)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
         )}
         {can('products.manage') && (
-          <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('delete')}><Trash2 className="w-4 h-4" /></button>
         )}
       </div>
     )},
@@ -337,12 +331,12 @@ export function ProductsPage() {
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('productType')}</label>
+              <label className="block text-sm font-medium text-ui-muted mb-1">{t('productType')}</label>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setForm({ ...form, product_type: 'ready' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'ready' ? 'bg-brand-600 text-white border-brand-600' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-brand-400'}`}>
+                <button type="button" onClick={() => setForm({ ...form, product_type: 'ready' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'ready' ? 'bg-brand-600 text-white border-brand-600' : 'bg-ui-surface border-ui-border text-ui-text hover:border-brand-400'}`}>
                   {t('withoutIngredients')}
                 </button>
-                <button type="button" onClick={() => setForm({ ...form, product_type: 'manufactured' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'manufactured' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-purple-400'}`}>
+                <button type="button" onClick={() => setForm({ ...form, product_type: 'manufactured' })} className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.product_type === 'manufactured' ? 'bg-purple-600 text-white border-purple-600' : 'bg-ui-surface border-ui-border text-ui-text hover:border-purple-400'}`}>
                   {t('withIngredients')}
                 </button>
               </div>
@@ -368,24 +362,24 @@ export function ProductsPage() {
           {form.product_type === 'manufactured' && (
             <div className="rounded-xl border border-purple-200 dark:border-purple-800/50 bg-purple-50/40 dark:bg-purple-900/10 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('components')}</h3>
+                <h3 className="font-semibold text-ui-muted">{t('components')}</h3>
               </div>
 
               {productComponents.length === 0 && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">{t('selectComponent')}</p>
+                <p className="text-sm text-ui-subtle dark:text-ui-subtle">{t('selectComponent')}</p>
               )}
 
               <div className="space-y-2">
                 {productComponents.map((c, i) => {
                   const info = stockComponents.find((s) => s.product_id === c.component_product_id);
                   return (
-                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-ui-surface border border-ui-border">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{info?.name || c.component_product_id}</p>
-                        <p className="text-xs text-slate-400">{t('availableStock')}: {formatNumber(info?.total || 0)}</p>
+                        <p className="text-sm font-medium text-ui-text truncate">{info?.name || c.component_product_id}</p>
+                        <p className="text-xs text-ui-subtle">{t('availableStock')}: {formatNumber(info?.total || 0)}</p>
                       </div>
                       <Input label={t('usageQuantityPerUnit')} type="number" min={1} step="0.01" value={c.quantity || ''} onChange={(e) => updateComponentQty(i, parseFloat(e.target.value) || 1)} className="w-32" />
-                      <button onClick={() => removeComponentRow(i)} className="p-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => removeComponentRow(i)} className="p-2 rounded-md text-ui-danger hover:bg-ui-danger-soft"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   );
                 })}
@@ -405,7 +399,7 @@ export function ProductsPage() {
                   <Button size="sm" onClick={addComponentRow}><Plus className="w-4 h-4" /> {t('addComponent')}</Button>
                 </div>
               ) : (
-                <p className="text-sm text-amber-600 dark:text-amber-400">{t('noAvailableComponents')}</p>
+                <p className="text-sm text-ui-warning">{t('noAvailableComponents')}</p>
               )}
             </div>
           )}
@@ -413,15 +407,15 @@ export function ProductsPage() {
           {/* Units */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('units')}</h3>
+              <h3 className="font-semibold text-ui-muted">{t('units')}</h3>
               <Button size="sm" variant="outline" onClick={addUnit}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
               {units.map((u, i) => (
-                <div key={i} className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                <div key={i} className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end p-2 rounded-lg bg-ui-page-alt">
                   <div>
-                    <label className="text-xs text-slate-500">{t('unitName')}</label>
-                    <select value={u.unit_name} onChange={(e) => updateUnit(i, 'unit_name', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                    <label className="text-xs text-ui-subtle">{t('unitName')}</label>
+                    <select value={u.unit_name} onChange={(e) => updateUnit(i, 'unit_name', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                       {UNIT_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
@@ -429,7 +423,7 @@ export function ProductsPage() {
                   <Input label={t('salePrice')} type="number" step="0.01" value={u.sale_price || ''} onChange={(e) => updateUnit(i, 'sale_price', parseFloat(e.target.value) || 0)} />
                   <Input label={t('costPrice')} type="number" step="0.01" value={u.cost_price || ''} onChange={(e) => updateUnit(i, 'cost_price', parseFloat(e.target.value) || 0)} />
                   <Input label={t('barcode')} value={u.barcode || ''} onChange={(e) => updateUnit(i, 'barcode', e.target.value)} />
-                  <button onClick={() => removeUnit(i)} className="p-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => removeUnit(i)} className="p-2 rounded-md text-ui-danger hover:bg-ui-danger-soft"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
@@ -446,8 +440,8 @@ export function ProductsPage() {
       <Modal open={!!barcodeModal} onClose={() => setBarcodeModal(null)} title={t('barcode')} size="sm">
         {barcodeModal && (
           <div className="flex flex-col items-center gap-4">
-            <p className="font-medium text-slate-700 dark:text-slate-200">{barcodeModal.name}</p>
-            <canvas ref={barcodeCanvasRef} className="rounded-lg bg-white p-2" />
+            <p className="font-medium text-ui-text">{barcodeModal.name}</p>
+            <canvas ref={barcodeCanvasRef} className="rounded-lg bg-ui-surface p-2" />
             <Button variant="outline" onClick={() => window.print()}><BarcodeIcon className="w-4 h-4" /> {t('print')}</Button>
           </div>
         )}
