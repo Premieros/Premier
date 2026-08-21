@@ -1,5 +1,7 @@
 -- Final KDS security hardening.
 -- Keep the original RPC signatures for compatibility while enforcing branch isolation.
+-- Administrative access is based on the request role (auth.role()) or platform admin,
+-- so SECURITY DEFINER does not accidentally hide the caller's service role.
 
 CREATE OR REPLACE FUNCTION public.route_to_station(
   p_order_id uuid,
@@ -13,7 +15,7 @@ AS $$
 DECLARE
   v_order_branch uuid;
   v_user_branch uuid;
-  v_is_service boolean := (current_user = 'service_role');
+  v_is_service boolean := (auth.role() = 'service_role');
 BEGIN
   IF p_station NOT IN ('main','grill','salad','drinks','dessert','fryer') THEN
     RAISE EXCEPTION 'Invalid station: %', p_station;
@@ -27,7 +29,7 @@ BEGIN
     RAISE EXCEPTION 'ORDER_NOT_FOUND';
   END IF;
 
-  IF NOT v_is_service THEN
+  IF NOT v_is_service AND NOT public.is_platform_admin() THEN
     v_user_branch := public.get_branch_id();
     IF v_user_branch IS NULL OR v_order_branch <> v_user_branch THEN
       RAISE EXCEPTION 'BRANCH_ACCESS_DENIED';
@@ -67,8 +69,9 @@ AS $$
 DECLARE
   v_user_branch uuid := public.get_branch_id();
   v_target_branch uuid := p_branch_id;
+  v_is_service boolean := (auth.role() = 'service_role');
 BEGIN
-  IF current_user <> 'service_role' THEN
+  IF NOT v_is_service AND NOT public.is_platform_admin() THEN
     IF v_user_branch IS NULL OR v_target_branch IS NULL OR v_target_branch <> v_user_branch THEN
       RAISE EXCEPTION 'BRANCH_ACCESS_DENIED';
     END IF;
@@ -78,7 +81,7 @@ BEGIN
   SELECT
     o.id,
     o.order_number,
-    CASE WHEN dt.table_number ~ '^[0-9]+$' THEN dt.table_number::integer ELSE NULL END,
+    CASE WHEN dt.name ~ '^[0-9]+$' THEN dt.name::integer ELSE NULL END,
     o.station,
     o.kitchen_status,
     o.guest_count,
