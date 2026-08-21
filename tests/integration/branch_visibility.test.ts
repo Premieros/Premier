@@ -30,7 +30,7 @@ describe.skipIf(!dbUrl)('Branch visibility hardening', () => {
       ids.users.branch_manager,
       `SELECT id FROM public.branches ORDER BY id`,
     );
-    expect(result.error).toBeNull();
+    expect(result.error).toBeUndefined();
     expect(result.rows.map(r => String(r.id))).toEqual([ids.branchA]);
   });
 
@@ -42,7 +42,7 @@ describe.skipIf(!dbUrl)('Branch visibility hardening', () => {
       `UPDATE public.branches SET name = 'SHOULD-NOT-CHANGE' WHERE id = $1`,
       [ids.branchB],
     );
-    expect(result.error).toBeNull();
+    expect(result.error).toBeUndefined();
     expect(result.rowCount).toBe(0);
   });
 
@@ -53,7 +53,7 @@ describe.skipIf(!dbUrl)('Branch visibility hardening', () => {
       ids.users.owner,
       `SELECT id FROM public.branches ORDER BY id`,
     );
-    expect(result.error).toBeNull();
+    expect(result.error).toBeUndefined();
     expect(result.rows.map(r => String(r.id))).toEqual([ids.branchA]);
   });
 });
