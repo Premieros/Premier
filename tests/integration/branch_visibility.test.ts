@@ -31,7 +31,7 @@ describe.skipIf(!dbUrl)('Branch visibility hardening', () => {
       `SELECT id FROM public.branches ORDER BY id`,
     );
     expect(result.error).toBeNull();
-    expect(result.rows.map((r: { id: string }) => r.id)).toEqual([ids.branchA]);
+    expect(result.rows.map(r => String(r.id))).toEqual([ids.branchA]);
   });
 
   it('branch manager cannot update another branch metadata', async () => {
@@ -54,6 +54,6 @@ describe.skipIf(!dbUrl)('Branch visibility hardening', () => {
       `SELECT id FROM public.branches ORDER BY id`,
     );
     expect(result.error).toBeNull();
-    expect(result.rows.map((r: { id: string }) => r.id)).toEqual([ids.branchA]);
+    expect(result.rows.map(r => String(r.id))).toEqual([ids.branchA]);
   });
 });
