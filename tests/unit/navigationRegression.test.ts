@@ -63,4 +63,14 @@ describe('navigation regressions', () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it('sidebar uses logical inline positioning for RTL/LTR correctness', () => {
+    const layout = read('src/components/Layout.tsx');
+    expect(layout).toContain("ar ? 'end-0' : 'start-0'");
+    expect(layout).not.toMatch(/fixed[^`]*\bright-0\b/);
+    expect(layout).not.toMatch(/fixed[^`]*\bleft-0\b/);
+    expect(layout).toContain('fixed top-[64px] bottom-0');
+    expect(layout).toContain('fixed top-0 inset-inline-0');
+    expect(layout).toContain('pt-[64px]');
+  });
 });
