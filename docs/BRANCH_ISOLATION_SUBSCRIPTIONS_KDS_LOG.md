@@ -12,10 +12,10 @@
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
 - **Current gate:** NOT READY TO MERGE
-- **Latest code fix:** `3cc0936ab5b0f4109199ede0f5b6a147987d029a`
+- **Latest code fix:** `cf619b2aac05e1b9cd195372bb0c229017b67099`
 - **Latest verified CI:** `3cd1b28a306d3a52a9a5ef634371048769de15ec` passed lint, typecheck, unit, build, schema verification, integration/security/RLS, and browser smoke.
 - **Latest CI issue fixed:** run #371 failed at lint because `SubscriptionsAdminPage.tsx` called `useMemo` after a conditional return; fixed in `751a074...`.
-- **Current verification required:** fresh CI for the latest route-gating commit.
+- **Current verification required:** fresh CI for the latest navigation commit and subsequent functional/security tests.
 
 ## Non-Negotiable Rules
 
@@ -75,7 +75,7 @@
 
 ### Phase E — Raw Materials
 - [x] Confirm existing Raw Materials page and route.
-- [ ] Expose Raw Materials through one canonical navigation entry.
+- [x] Add one canonical Raw Materials entry to the main navigation using `APP_ROUTES.rawMaterials` and `raw_materials.view`.
 - [ ] Reuse existing inventory/material logic.
 - [ ] Verify branch-scoped reads/writes.
 - [ ] Verify recipes/components/production consumption.
@@ -131,7 +131,13 @@
 - Super Admin bypasses subscription feature gates as intended.
 - Existing permission/RBAC checks remain in place; subscription gating is an additional layer.
 - Commit: `3cc0936ab5b0f4109199ede0f5b6a147987d029a`.
-- **Required next action:** fresh CI and regression tests for enabled/disabled feature routing.
+
+### 2026-08-22 — Raw Materials canonical navigation
+- Confirmed `APP_ROUTES.rawMaterials` already exists.
+- Added a single canonical Sidebar/menu entry using the existing `raw_materials.view` permission and `rawMaterials` icon.
+- Avoided adding another entry for the same destination.
+- Commit: `cf619b2aac05e1b9cd195372bb0c229017b67099`.
+- **Required next action:** verify the raw-material route is branch-scoped and included in subscription/navigation gates.
 
 ## Merge Checklist
 - [ ] All Phase A–F required items complete.
