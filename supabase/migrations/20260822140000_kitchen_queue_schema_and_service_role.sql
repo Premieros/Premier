@@ -25,7 +25,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_user_branch uuid := public.get_branch_id();
-  v_service_role boolean := (session_user = 'service_role');
+  v_service_role boolean := (current_user = 'service_role');
 BEGIN
   IF NOT v_service_role
      AND NOT public.is_pos_admin()
@@ -78,7 +78,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_order_branch uuid;
-  v_service_role boolean := (session_user = 'service_role');
+  v_service_role boolean := (current_user = 'service_role');
 BEGIN
   IF p_station NOT IN ('main','grill','salad','drinks','dessert','fryer') THEN
     RAISE EXCEPTION 'Invalid station: %', p_station;
