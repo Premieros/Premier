@@ -32,17 +32,21 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-fade-in">
+      <div className="absolute inset-0 bg-ui-text/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
         ref={modalRef}
         className={`relative w-full ${sizes[size]} bg-ui-surface rounded-ui-xl shadow-ui-xl ring-1 ring-ui-border max-h-[90vh] flex flex-col animate-scale-in`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border">
           <h2 className="text-lg font-bold text-ui-text tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-ui flex items-center justify-center text-ui-subtle hover:text-ui-text hover:bg-ui-page-alt transition-all"
+            className="w-8 h-8 rounded-ui flex items-center justify-center text-ui-subtle hover:text-ui-text hover:bg-ui-page-alt transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ui-ring"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>

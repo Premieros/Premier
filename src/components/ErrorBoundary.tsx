@@ -20,17 +20,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
+      const ar = document.documentElement.dir === 'rtl';
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-          <div className="text-center max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
-            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+        <div className="min-h-screen flex items-center justify-center bg-ui-page p-4">
+          <div className="text-center max-w-md bg-ui-surface rounded-2xl shadow-ui-xl p-8 border border-ui-border">
+            <div className="w-16 h-16 rounded-full bg-ui-danger-soft flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-ui-danger" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">حدث خطأ</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{this.state.error.message}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-6 whitespace-pre-wrap text-start bg-slate-50 dark:bg-slate-900 p-3 rounded-xl max-h-40 overflow-auto">{this.state.error.stack}</p>
-            <button onClick={() => { this.setState({ error: null }); window.location.reload(); }} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
-              إعادة المحاولة
+            <h2 className="text-xl font-bold text-ui-text mb-2">{ar ? 'حدث خطأ' : 'Something went wrong'}</h2>
+            <p className="text-sm text-ui-muted mb-4">{this.state.error.message}</p>
+            <p className="text-xs text-ui-subtle mb-6 whitespace-pre-wrap text-start bg-ui-page p-3 rounded-xl max-h-40 overflow-auto">{this.state.error.stack}</p>
+            <button onClick={() => { this.setState({ error: null }); window.location.reload(); }} className="px-6 py-2.5 bg-ui-primary hover:bg-ui-primary-hover text-ui-primary-fg font-medium rounded-xl transition-colors">
+              {ar ? 'إعادة المحاولة' : 'Try again'}
             </button>
           </div>
         </div>

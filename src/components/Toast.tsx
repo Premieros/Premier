@@ -29,24 +29,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const remove = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-green-500" />,
-    error: <XCircle className="w-5 h-5 text-red-500" />,
-    warning: <AlertCircle className="w-5 h-5 text-amber-500" />,
-    info: <Info className="w-5 h-5 text-blue-500" />,
+    success: <CheckCircle className="w-5 h-5 text-ui-success" />,
+    error: <XCircle className="w-5 h-5 text-ui-danger" />,
+    warning: <AlertCircle className="w-5 h-5 text-ui-warning" />,
+    info: <Info className="w-5 h-5 text-ui-info" />,
   };
 
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4">
+      <div className="fixed top-4 start-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2 w-full max-w-sm px-4">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="flex items-center gap-3 bg-white dark:bg-navy-900 rounded-xl shadow-lg shadow-navy-950/20 ring-1 ring-slate-200 dark:ring-navy-800 px-4 py-3 animate-[slideDown_0.2s_ease-out]"
+            className="flex items-center gap-3 bg-ui-surface rounded-xl shadow-ui-lg ring-1 ring-ui-border px-4 py-3 animate-slide-down"
           >
             {icons[toast.type]}
-            <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{toast.message}</span>
-            <button onClick={() => remove(toast.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <span className="flex-1 text-sm text-ui-text">{toast.message}</span>
+            <button onClick={() => remove(toast.id)} className="text-ui-subtle hover:text-ui-text transition-colors" aria-label="Dismiss">
               <X className="w-4 h-4" />
             </button>
           </div>
