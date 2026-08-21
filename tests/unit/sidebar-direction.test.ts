@@ -8,8 +8,8 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 describe('sidebar direction contract', () => {
   it('positions sidebar via logical end-0/start-0 from ar flag', () => {
     const layout = read('src/components/Layout.tsx');
-    expect(layout).toContain("ar ? 'end-0' : 'start-0'");
-    expect(layout).toContain("ar ? 'translate-x-full' : '-translate-x-full'");
+    expect(layout).toContain("ar ? 'start-0' : 'end-0'");
+    expect(layout).toContain("ar ? '-translate-x-full' : 'translate-x-full'");
   });
 
   it('sidebar starts below the fixed header at top-[64px]', () => {
@@ -20,13 +20,13 @@ describe('sidebar direction contract', () => {
   it('header is fixed and offsets by sidebar width on desktop', () => {
     const layout = read('src/components/Layout.tsx');
     expect(layout).toContain('fixed top-0 start-0 end-0');
-    expect(layout).toContain("ar ? 'lg:end-[260px]' : 'lg:start-[260px]'");
+    expect(layout).toContain("ar ? 'lg:start-[260px]' : 'lg:end-[260px]'");
   });
 
   it('main content offsets for sidebar and header', () => {
     const layout = read('src/components/Layout.tsx');
     expect(layout).toContain('pt-[64px]');
-    expect(layout).toContain("ar ? 'lg:me-[260px]' : 'lg:ms-[260px]'");
+    expect(layout).toContain("ar ? 'lg:ms-[260px]' : 'lg:me-[260px]'");
   });
 
   it('keeps the shared shell direction source on the Layout root', () => {
