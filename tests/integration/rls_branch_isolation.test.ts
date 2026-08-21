@@ -809,7 +809,8 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       const compB = `INSERT INTO public.product_components (product_id, component_product_id, quantity) VALUES ('${ids.prodB}', '${ids.prodA}', 1)`;
       await runProbe(client, 'product_components INSERT bm own product', bmId(), compA, 'ok');
       await runProbe(client, 'product_components INSERT bm other product', bmId(), compB, 'denied');
-      await runProbe(client, 'product_components INSERT cashier own product', cashierId(), compA, 'denied');
+      await runProbe(client, 'product_components INSERT cashier own product', cashierId(), compA, 'ok');
+      await runProbe(client, 'product_components INSERT cashier other product', cashierId(), compB, 'denied');
       await runProbe(client, 'product_components INSERT admin other product', adminId(), compB, 'ok');
     });
 
