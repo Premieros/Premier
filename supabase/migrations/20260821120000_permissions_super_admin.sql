@@ -43,7 +43,7 @@ CREATE POLICY auth_org_admin_manage_user_branch_access ON public.user_branch_acc
           SELECT 1 FROM public.organization_members om
           WHERE om.user_id = auth.uid()
             AND om.organization_id = b.organization_id
-            AND om.role IN ('owner', 'admin')
+            AND om.membership_role IN ('owner', 'admin')
             AND om.is_active = true
         )
     )
@@ -67,7 +67,7 @@ INSERT INTO public.user_branch_access (user_id, branch_id)
 SELECT DISTINCT om.user_id, b.id
 FROM public.organization_members om
 JOIN public.branches b ON b.organization_id = om.organization_id
-WHERE om.role IN ('owner', 'admin')
+WHERE om.membership_role IN ('owner', 'admin')
   AND om.is_active = true
   AND b.is_active = true
 ON CONFLICT (user_id, branch_id) DO NOTHING;
@@ -105,7 +105,7 @@ AS $$
         ON om.organization_id = b.organization_id
       WHERE b.id = p_branch_id
         AND om.user_id = auth.uid()
-        AND om.role IN ('owner', 'admin')
+        AND om.membership_role IN ('owner', 'admin')
         AND om.is_active = true
     )
     -- Legacy fallback: NULL branch for platform admin only (already covered above)
@@ -146,7 +146,7 @@ AS $$
   FROM public.branches b
   JOIN public.organization_members om ON om.organization_id = b.organization_id
   WHERE om.user_id = p_user_id
-    AND om.role IN ('owner', 'admin')
+    AND om.membership_role IN ('owner', 'admin')
     AND om.is_active = true
     AND b.is_active = true
   ORDER BY 2;
@@ -177,7 +177,7 @@ BEGIN
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = v_caller_id
         AND om.organization_id = v_target_org
-        AND om.role IN ('owner', 'admin')
+        AND om.membership_role IN ('owner', 'admin')
         AND om.is_active = true
     ) THEN
       RETURN jsonb_build_object('success', false, 'error', 'PERMISSION_DENIED');
@@ -235,7 +235,7 @@ BEGIN
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = v_caller_id
         AND om.organization_id = v_target_org
-        AND om.role IN ('owner', 'admin')
+        AND om.membership_role IN ('owner', 'admin')
         AND om.is_active = true
     ) THEN
       RETURN jsonb_build_object('success', false, 'error', 'PERMISSION_DENIED');
@@ -290,7 +290,7 @@ BEGIN
         SELECT 1 FROM public.organization_members om
         WHERE om.user_id = v_caller_id
           AND om.organization_id = v_target_org
-          AND om.role IN ('owner', 'admin')
+          AND om.membership_role IN ('owner', 'admin')
           AND om.is_active = true
       ) THEN
         RETURN jsonb_build_object('success', false, 'error', 'PERMISSION_DENIED');
