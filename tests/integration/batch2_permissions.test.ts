@@ -97,12 +97,12 @@ describe('Batch 2: Owner creates branch', () => {
 });
 
 describe('Batch 2: Owner cannot create branch in another org', () => {
-  it('owner of org A cannot create branch in org B', async () => {
+  it('org A member cannot create branch in org B', async () => {
     if (skip()) return;
     const orgB = (await client.query(
       `SELECT id FROM public.organizations WHERE slug = 'org-b'`
     )).rows[0].id;
-    const r = await runAsPersist(client, ids.users.owner,
+    const r = await runAsPersist(client, ids.users.branch_manager,
       `SELECT public.create_organization_branch(
         $1, 'Unauthorized Branch', null, null, null
       )`, [orgB]);
@@ -110,7 +110,7 @@ describe('Batch 2: Owner cannot create branch in another org', () => {
       ? JSON.parse(r.rows[0].create_organization_branch)
       : r.rows[0].create_organization_branch;
     expect(result.success).toBe(false);
-    expect(result.error).toBe('PERMISSION_DENIED');
+    expect(result.error).toBe('FORBIDDEN');
   });
 });
 
@@ -269,15 +269,15 @@ describe('Batch 2: organization_id cannot be changed directly', () => {
 });
 
 describe('Batch 2: cross-tenant RPC access denied', () => {
-  it('org A owner cannot use RPCs targeting org B branches', async () => {
+  it('org A member cannot use RPCs targeting org B branches', async () => {
     if (skip()) return;
-    const r = await runAsPersist(client, ids.users.owner,
+    const r = await runAsPersist(client, ids.users.branch_manager,
       `SELECT public.update_branch($1, 'Hacked Name')`, [ids.branchB]);
     const result = typeof r.rows[0].update_branch === 'string'
       ? JSON.parse(r.rows[0].update_branch)
       : r.rows[0].update_branch;
     expect(result.success).toBe(false);
-    expect(result.error).toBe('PERMISSION_DENIED');
+    expect(result.error).toBe('FORBIDDEN');
   });
 });
 
