@@ -17,19 +17,25 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
 
   async function asUser<T>(userId: string, fn: () => Promise<T>): Promise<T> {
     await client.query(`SELECT set_config('app.user_id', $1, true)`, [userId]);
+    await client.query(`SELECT set_config('app.jwt', '{"role":"authenticated"}', true)`);
     await client.query(`SET LOCAL ROLE authenticated`);
     try { return await fn(); }
     finally {
       await client.query('RESET ROLE').catch(() => {});
       await client.query('RESET app.user_id').catch(() => {});
+      await client.query('RESET app.jwt').catch(() => {});
     }
   }
 
   async function asService<T>(fn: () => Promise<T>): Promise<T> {
     await client.query(`RESET app.user_id`);
+    await client.query(`SELECT set_config('app.jwt', '{"role":"service_role"}', true)`);
     await client.query(`SET LOCAL ROLE service_role`);
     try { return await fn(); }
-    finally { await client.query('RESET ROLE').catch(() => {}); }
+    finally {
+      await client.query('RESET ROLE').catch(() => {});
+      await client.query('RESET app.jwt').catch(() => {});
+    }
   }
 
   async function expectDbError(fn: () => Promise<unknown>, pattern: RegExp): Promise<void> {
@@ -70,19 +76,28 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
 
   it('branch user can only query its own kitchen queue', async () => {
     const ownRows = await asUser(productionUser, async () => {
-      const r = await client.query<{ order_id: string }>(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchA]);
+      const r = await client.query<{ order_id: string }>(
+        `SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchA],
+      );
       return r.rows;
     });
     expect(ownRows.map(r => r.order_id)).toContain(orderA);
     expect(ownRows.map(r => r.order_id)).not.toContain(orderB);
+
     await asUser(productionUser, async () => {
-      await expectDbError(() => client.query(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]), /BRANCH_ACCESS_DENIED/);
+      await expectDbError(
+        () => client.query(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
     });
   });
 
   it('branch user cannot route another branch order', async () => {
     await asUser(productionUser, async () => {
-      await expectDbError(() => client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]), /BRANCH_ACCESS_DENIED/);
+      await expectDbError(
+        () => client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
       const own = await client.query(`SELECT public.route_to_station($1, 'grill')`, [orderA]);
       expect(own.rowCount).toBe(1);
     });
@@ -90,13 +105,18 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
 
   it('cashier cannot query another branch through the SECURITY DEFINER RPC', async () => {
     await asUser(cashierUser, async () => {
-      await expectDbError(() => client.query(`SELECT * FROM public.get_kitchen_queue(NULL, $1)`, [branchB]), /BRANCH_ACCESS_DENIED/);
+      await expectDbError(
+        () => client.query(`SELECT * FROM public.get_kitchen_queue(NULL, $1)`, [branchB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
     });
   });
 
   it('service role can perform the administrative kitchen queue query', async () => {
     const rows = await asService(async () => {
-      const r = await client.query<{ order_id: string }>(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]);
+      const r = await client.query<{ order_id: string }>(
+        `SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB],
+      );
       return r.rows;
     });
     expect(rows.map(r => r.order_id)).toContain(orderB);
@@ -110,9 +130,13 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
   });
 
   it('ready orders remain visible in the active kitchen queue', async () => {
-    await client.query(`UPDATE public.orders SET kitchen_status = 'ready' WHERE id = $1`, [orderA]);
+    await asService(async () => {
+      await client.query(`UPDATE public.orders SET kitchen_status = 'ready' WHERE id = $1`, [orderA]);
+    });
     const rows = await asUser(productionUser, async () => {
-      const r = await client.query<{ order_id: string; kitchen_status: string }>(`SELECT order_id, kitchen_status FROM public.get_kitchen_queue(NULL, $1)`, [branchA]);
+      const r = await client.query<{ order_id: string; kitchen_status: string }>(
+        `SELECT order_id, kitchen_status FROM public.get_kitchen_queue(NULL, $1)`, [branchA],
+      );
       return r.rows;
     });
     expect(rows).toContainEqual(expect.objectContaining({ order_id: orderA, kitchen_status: 'ready' }));
