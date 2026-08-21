@@ -32,16 +32,25 @@ describe.skipIf(skipLocal)('PHASE 4 security contract', () => {
   });
 
   it('keeps admin visibility across both branches', async () => {
-    for (const userId of [ids.users.super_admin, ids.users.owner]) {
-      const result = await runAs(
-        client,
-        userId,
-        `SELECT count(*)::int AS n FROM public.products WHERE id IN ($1, $2)`,
-        [ids.prodA, ids.prodB],
-      );
-      expect(result.error).toBeUndefined();
-      expect(result.rows?.[0]?.n).toBe(2);
-    }
+    // Super admin is in both orgs → sees both products
+    const sa = await runAs(
+      client,
+      ids.users.super_admin,
+      `SELECT count(*)::int AS n FROM public.products WHERE id IN ($1, $2)`,
+      [ids.prodA, ids.prodB],
+    );
+    expect(sa.error).toBeUndefined();
+    expect(sa.rows?.[0]?.n).toBe(2);
+
+    // Owner is only in orgA → sees only prodA
+    const ow = await runAs(
+      client,
+      ids.users.owner,
+      `SELECT count(*)::int AS n FROM public.products WHERE id IN ($1, $2)`,
+      [ids.prodA, ids.prodB],
+    );
+    expect(ow.error).toBeUndefined();
+    expect(ow.rows?.[0]?.n).toBe(1);
   });
 
   it('keeps branch staff isolated for read and write', async () => {

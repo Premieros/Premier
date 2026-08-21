@@ -89,7 +89,10 @@ describe('Batch 2: Owner creates branch', () => {
       `SELECT public.create_organization_branch(
         $1, 'Owner Branch', 'en', null, null
       )`, [orgId]);
-    expect((r.rows[0] as Record<string, unknown>).success).toBe(true);
+    const result = typeof r.rows[0].create_organization_branch === 'string'
+      ? JSON.parse(r.rows[0].create_organization_branch)
+      : r.rows[0].create_organization_branch;
+    expect(result.success).toBe(true);
   });
 });
 
@@ -103,7 +106,9 @@ describe('Batch 2: Owner cannot create branch in another org', () => {
       `SELECT public.create_organization_branch(
         $1, 'Unauthorized Branch', null, null, null
       )`, [orgB]);
-    const result = r.rows[0] as Record<string, unknown>;
+    const result = typeof r.rows[0].create_organization_branch === 'string'
+      ? JSON.parse(r.rows[0].create_organization_branch)
+      : r.rows[0].create_organization_branch;
     expect(result.success).toBe(false);
     expect(result.error).toBe('PERMISSION_DENIED');
   });
@@ -159,8 +164,9 @@ describe('Batch 2: Warehouse cannot access accounting screens', () => {
   it('warehouse_manager can manage products and inventory', async () => {
     if (skip()) return;
     const r = await runAs(client, ids.users.warehouse_manager,
-      `SELECT public.can_permission('products.manage') AND public.can_permission('inventory.manage')`);
-    expect(r.rows[0].can_permission).toBe(true);
+      `SELECT public.can_permission('products.manage') AS products_ok, public.can_permission('inventory.manage') AS inventory_ok`);
+    expect(r.rows[0].products_ok).toBe(true);
+    expect(r.rows[0].inventory_ok).toBe(true);
   });
 });
 
@@ -175,8 +181,9 @@ describe('Batch 2: Accountant cannot access platform administration', () => {
   it('accountant can view financial reports', async () => {
     if (skip()) return;
     const r = await runAs(client, ids.users.accountant,
-      `SELECT public.can_permission('reports.financial') AND public.can_permission('accounts.manage')`);
-    expect(r.rows[0].can_permission).toBe(true);
+      `SELECT public.can_permission('reports.financial') AS reports_ok, public.can_permission('accounts.manage') AS accounts_ok`);
+    expect(r.rows[0].reports_ok).toBe(true);
+    expect(r.rows[0].accounts_ok).toBe(true);
   });
 });
 
@@ -266,7 +273,9 @@ describe('Batch 2: cross-tenant RPC access denied', () => {
     if (skip()) return;
     const r = await runAsPersist(client, ids.users.owner,
       `SELECT public.update_branch($1, 'Hacked Name')`, [ids.branchB]);
-    const result = r.rows[0] as Record<string, unknown>;
+    const result = typeof r.rows[0].update_branch === 'string'
+      ? JSON.parse(r.rows[0].update_branch)
+      : r.rows[0].update_branch;
     expect(result.success).toBe(false);
     expect(result.error).toBe('PERMISSION_DENIED');
   });
