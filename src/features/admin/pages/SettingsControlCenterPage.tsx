@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Save, Store, Receipt, Palette, ShoppingCart, FileText, Boxes, ShieldCheck,
   Building2, Trash2, Plus, FlaskConical, Search, SlidersHorizontal, Users,
@@ -287,12 +287,12 @@ export function SettingsControlCenterPage() {
         {/* Sidebar */}
         <Card className="h-fit p-3">
           <div className="relative mb-3">
-            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ui-subtle" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={isAr ? 'بحث في الإعدادات...' : 'Search settings...'}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 ps-9 pe-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-navy-700 dark:bg-navy-800"
+              className="w-full rounded-xl border border-ui-border bg-ui-page-alt ps-9 pe-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-navy-700 dark:bg-navy-800"
             />
           </div>
           <div className="space-y-1">
@@ -303,7 +303,7 @@ export function SettingsControlCenterPage() {
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-sm font-semibold transition ${
                   active === s.key
                     ? 'bg-brand-600 text-white shadow'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-navy-800'
+                    : 'text-ui-muted hover:bg-ui-page-alt dark:hover:bg-navy-800'
                 }`}
               >
                 {s.icon}
@@ -318,15 +318,15 @@ export function SettingsControlCenterPage() {
         <div className="min-w-0">
           {current.kind === 'fields' && (
             <Card className="p-5">
-              <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-navy-800">
+              <div className="mb-5 flex items-center gap-3 border-b border-ui-border pb-4 dark:border-navy-800">
                 {current.icon}
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{current.label}</h2>
+                <h2 className="text-lg font-bold text-ui-text dark:text-white">{current.label}</h2>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 {(current.fields || []).map((f) => (
-                  <div key={f.key as string} className="rounded-2xl border border-slate-200 p-4 dark:border-navy-700">
-                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">{f.label}</label>
-                    {f.help && <p className="mb-2 text-xs text-slate-400">{f.help}</p>}
+                  <div key={f.key as string} className="rounded-2xl border border-ui-border p-4 dark:border-navy-700">
+                    <label className="mb-2 block text-sm font-medium text-ui-muted">{f.label}</label>
+                    {f.help && <p className="mb-2 text-xs text-ui-subtle">{f.help}</p>}
                     <FieldControl field={f} value={form[f.key]} onChange={(v) => set(f.key, v as never)} />
                   </div>
                 ))}
@@ -336,22 +336,22 @@ export function SettingsControlCenterPage() {
 
           {current.kind === 'info' && (
             <Card className="p-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-navy-800">{current.icon}</div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{current.label}</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">{current.note}</p>
-              <p className="mt-3 text-xs text-slate-400">{isAr ? 'لا توجد مفتاحيات بصرية في هذه الفئة — كل ما يُعرض هنا موصول بوظيفة فعلية.' : 'No visual-only switches here — everything shown is wired to a real function.'}</p>
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ui-page-alt dark:bg-navy-800">{current.icon}</div>
+              <h2 className="text-lg font-bold text-ui-text dark:text-white">{current.label}</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-ui-subtle dark:text-ui-subtle">{current.note}</p>
+              <p className="mt-3 text-xs text-ui-subtle">{isAr ? 'لا توجد مفتاحيات بصرية في هذه الفئة — كل ما يُعرض هنا موصول بوظيفة فعلية.' : 'No visual-only switches here — everything shown is wired to a real function.'}</p>
             </Card>
           )}
 
           {current.kind === 'appearance' && (
             <Card className="p-5">
-              <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-navy-800">
+              <div className="mb-5 flex items-center gap-3 border-b border-ui-border pb-4 dark:border-navy-800">
                 <Palette className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{isAr ? 'المظهر / الثيم' : 'Appearance / Theme'}</h2>
+                <h2 className="text-lg font-bold text-ui-text dark:text-white">{isAr ? 'المظهر / الثيم' : 'Appearance / Theme'}</h2>
               </div>
 
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">{t('uiTheme')}</label>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('themeHint')}</p>
+              <label className="text-sm font-medium text-ui-muted mb-1 block">{t('uiTheme')}</label>
+              <p className="text-xs text-ui-subtle dark:text-ui-subtle mb-3">{t('themeHint')}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                 {UI_THEMES.map((p) => {
                   const activeTheme = form.brand_color === p.key;
@@ -362,24 +362,24 @@ export function SettingsControlCenterPage() {
                       key={p.key}
                       onClick={() => pickTheme(p.key)}
                       className={`group relative overflow-hidden rounded-2xl border-2 transition-all p-3 text-start ${
-                        activeTheme ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-slate-200 dark:border-navy-700 hover:border-brand-300'
+                        activeTheme ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-ui-border dark:border-navy-700 hover:border-brand-300'
                       }`}
                     >
-                      <div className={`h-9 rounded-xl mb-2.5 flex items-end gap-1 p-1.5 border border-black/10 ${p.mode === 'dark' ? '' : 'bg-slate-100'}`} style={{ background: surfaceDark }}>
+                      <div className={`h-9 rounded-xl mb-2.5 flex items-end gap-1 p-1.5 border border-black/10 ${p.mode === 'dark' ? '' : 'bg-ui-page-alt'}`} style={{ background: surfaceDark }}>
                         <span className="w-4 h-2.5 rounded-[4px]" style={{ background: `hsl(${p.brandHue} ${p.brandSat}% 45%)` }} />
                         <span className="w-4 h-2.5 rounded-[4px] opacity-80" style={{ background: surfaceMid }} />
                         <span className="w-4 h-2.5 rounded-[4px] opacity-60" style={{ background: surfaceMid }} />
                       </div>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-100">{isAr ? p.ar : p.en}</div>
-                      <div className="text-[10px] text-slate-400">{p.mode === 'dark' ? t('darkMode') : t('lightMode')}</div>
+                      <div className="text-xs font-semibold text-ui-text">{isAr ? p.ar : p.en}</div>
+                      <div className="text-[10px] text-ui-subtle">{p.mode === 'dark' ? t('darkMode') : t('lightMode')}</div>
                       {activeTheme && <span className="absolute top-2 end-2 w-2.5 h-2.5 rounded-full bg-brand-500 shadow" />}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="border-t border-slate-100 dark:border-navy-800 pt-5">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">{t('brandColor')}</label>
+              <div className="border-t border-ui-border dark:border-navy-800 pt-5">
+                <label className="text-sm font-medium text-ui-muted mb-3 block">{t('brandColor')}</label>
                 <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-5">
                   {BRAND_PRESETS.map((p) => {
                     const activeColor = form.brand_color === p.key;
@@ -388,7 +388,7 @@ export function SettingsControlCenterPage() {
                         key={p.key}
                         onClick={() => pickPreset(p.key)}
                         title={isAr ? p.ar : p.en}
-                        className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${activeColor ? 'border-slate-800 dark:border-white scale-105' : 'border-transparent hover:scale-105'}`}
+                        className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${activeColor ? 'border-ui-border dark:border-white scale-105' : 'border-transparent hover:scale-105'}`}
                         style={{ backgroundColor: `hsl(${p.hue} ${p.sat}% 42%)` }}
                       >
                         {activeColor && <span className="w-3 h-3 rounded-full bg-white" />}
@@ -405,7 +405,7 @@ export function SettingsControlCenterPage() {
                       placeholder="#059669"
                     />
                   </div>
-                  <div className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-600 mb-1" style={{ backgroundColor: brandHex }} />
+                  <div className="w-12 h-12 rounded-xl border border-ui-border mb-1" style={{ backgroundColor: brandHex }} />
                 </div>
               </div>
             </Card>
@@ -413,24 +413,24 @@ export function SettingsControlCenterPage() {
 
           {current.kind === 'language' && (
             <Card className="p-5">
-              <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-navy-800">
+              <div className="mb-5 flex items-center gap-3 border-b border-ui-border pb-4 dark:border-navy-800">
                 <Languages className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{isAr ? 'اللغة / التوطين' : 'Language / Localization'}</h2>
+                <h2 className="text-lg font-bold text-ui-text dark:text-white">{isAr ? 'اللغة / التوطين' : 'Language / Localization'}</h2>
               </div>
               <div className="flex gap-2 max-w-md">
-                <button onClick={() => { setLang('ar'); void save({ language: 'ar' }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${lang === 'ar' ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{t('arabic')}</button>
-                <button onClick={() => { setLang('en'); void save({ language: 'en' }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${lang === 'en' ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{t('english')}</button>
+                <button onClick={() => { setLang('ar'); void save({ language: 'ar' }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${lang === 'ar' ? 'bg-brand-600 text-white' : 'bg-ui-page-alt text-ui-muted'}`}>{t('arabic')}</button>
+                <button onClick={() => { setLang('en'); void save({ language: 'en' }); }} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${lang === 'en' ? 'bg-brand-600 text-white' : 'bg-ui-page-alt text-ui-muted'}`}>{t('english')}</button>
               </div>
             </Card>
           )}
 
           {current.kind === 'branches' && (
             <Card className="p-5">
-              <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-navy-800">
+              <div className="mb-4 flex items-center gap-3 border-b border-ui-border pb-4 dark:border-navy-800">
                 <Building2 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('branchSettings')}</h2>
-                  <p className="text-xs text-slate-400">{t('useGlobalHint')}</p>
+                  <h2 className="text-lg font-bold text-ui-text dark:text-white">{t('branchSettings')}</h2>
+                  <p className="text-xs text-ui-subtle">{t('useGlobalHint')}</p>
                 </div>
               </div>
 
@@ -466,11 +466,11 @@ export function SettingsControlCenterPage() {
                     )}
                   </div>
 
-                  <div className="border-t border-slate-100 dark:border-slate-700 pt-5">
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">
+                  <div className="border-t border-ui-border pt-5">
+                    <h4 className="font-semibold text-ui-text mb-1 flex items-center gap-2">
                       <FlaskConical className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('demoActions')}
                     </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('demoDataHint')}</p>
+                    <p className="text-xs text-ui-subtle dark:text-ui-subtle mb-4">{t('demoDataHint')}</p>
                     <div className="flex flex-wrap items-center gap-3">
                       <Button variant="outline" onClick={handleSeedDemo} disabled={demoBusy}>
                         <Plus className="w-4 h-4" /> {t('seedDemo')}
@@ -489,35 +489,35 @@ export function SettingsControlCenterPage() {
 
           {current.kind === 'system' && (
             <Card className="p-5">
-              <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-navy-800">
+              <div className="mb-4 flex items-center gap-3 border-b border-ui-border pb-4 dark:border-navy-800">
                 <Settings2 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{isAr ? 'النظام / الصيانة' : 'System / Maintenance'}</h2>
-                  <p className="text-xs text-slate-400">{isAr ? 'أدوات النظام والسجل وحالة الصحة' : 'System tools, audit log and health status'}</p>
+                  <h2 className="text-lg font-bold text-ui-text dark:text-white">{isAr ? 'النظام / الصيانة' : 'System / Maintenance'}</h2>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'أدوات النظام والسجل وحالة الصحة' : 'System tools, audit log and health status'}</p>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Link to="/system-health" className="rounded-2xl border border-slate-200 p-4 transition hover:border-brand-400 dark:border-navy-700">
+                <Link to="/system-health" className="rounded-2xl border border-ui-border p-4 transition hover:border-brand-400 dark:border-navy-700">
                   <Activity className="mb-2 h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{isAr ? 'فحص صحة النظام' : 'System Health'}</p>
-                  <p className="text-xs text-slate-400">{isAr ? 'سلامة قاعدة البيانات وواجهات RPC' : 'Database & RPC integrity'}</p>
+                  <p className="text-sm font-bold text-ui-text">{isAr ? 'فحص صحة النظام' : 'System Health'}</p>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'سلامة قاعدة البيانات وواجهات RPC' : 'Database & RPC integrity'}</p>
                 </Link>
-                <Link to="/audit-log" className="rounded-2xl border border-slate-200 p-4 transition hover:border-brand-400 dark:border-navy-700">
+                <Link to="/audit-log" className="rounded-2xl border border-ui-border p-4 transition hover:border-brand-400 dark:border-navy-700">
                   <SlidersHorizontal className="mb-2 h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{isAr ? 'سجل التدقيق' : 'Audit Log'}</p>
-                  <p className="text-xs text-slate-400">{isAr ? 'كل التغييرات على البيانات' : 'All data changes'}</p>
+                  <p className="text-sm font-bold text-ui-text">{isAr ? 'سجل التدقيق' : 'Audit Log'}</p>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'كل التغييرات على البيانات' : 'All data changes'}</p>
                 </Link>
-                <Link to="/subscriptions/admin" className="rounded-2xl border border-slate-200 p-4 transition hover:border-brand-400 dark:border-navy-700">
+                <Link to="/subscriptions/admin" className="rounded-2xl border border-ui-border p-4 transition hover:border-brand-400 dark:border-navy-700">
                   <Check className="mb-2 h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{isAr ? 'الاشتراكات' : 'Subscriptions'}</p>
-                  <p className="text-xs text-slate-400">{isAr ? 'إدارة اشتراكات الفروع' : 'Manage branch subscriptions'}</p>
+                  <p className="text-sm font-bold text-ui-text">{isAr ? 'الاشتراكات' : 'Subscriptions'}</p>
+                  <p className="text-xs text-ui-subtle">{isAr ? 'إدارة اشتراكات الفروع' : 'Manage branch subscriptions'}</p>
                 </Link>
               </div>
-              <div className="mt-5 border-t border-slate-100 pt-4 dark:border-navy-800">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"><Link2 className="h-4 w-4" />{isAr ? 'روابط الوحدات الحالية' : 'Existing Modules'}</h3>
+              <div className="mt-5 border-t border-ui-border pt-4 dark:border-navy-800">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-ui-text dark:text-white"><Link2 className="h-4 w-4" />{isAr ? 'روابط الوحدات الحالية' : 'Existing Modules'}</h3>
                 <div className="flex flex-wrap gap-2">
                   {[['/branches', isAr ? 'الفروع' : 'Branches'], ['/users', isAr ? 'المستخدمون' : 'Users'], ['/products', isAr ? 'المنتجات' : 'Products'], ['/categories', isAr ? 'الأقسام' : 'Categories'], ['/warehouses', isAr ? 'المستودعات' : 'Warehouses'], ['/recipes', isAr ? 'الوصفات' : 'Recipes'], ['/reports', isAr ? 'التقارير' : 'Reports'], ['/audit-log', isAr ? 'سجل التدقيق' : 'Audit Log']].map(([href, label]) => (
-                    <Link key={href} to={href} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold hover:border-brand-400 dark:border-navy-700">{label}</Link>
+                    <Link key={href} to={href} className="rounded-xl border border-ui-border px-3 py-2 text-sm font-semibold hover:border-brand-400 dark:border-navy-700">{label}</Link>
                   ))}
                 </div>
               </div>
@@ -572,14 +572,14 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
   const { dir } = useLanguage();
   const knobPos = checked ? (dir === 'rtl' ? 'right-0.5' : 'left-0.5') : (dir === 'rtl' ? 'left-0.5' : 'right-0.5');
   return (
-    <div className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+    <div className="flex items-center justify-between gap-4 bg-ui-page-alt rounded-xl px-4 py-3 border border-ui-border">
+      <span className="text-sm font-medium text-ui-muted">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+        className={`relative w-11 h-6 rounded-full transition-colors ${checked ? 'bg-brand-600' : 'bg-ui-page-alt'}`}
       >
-        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${knobPos}`} />
+        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ui-surface shadow transition-all ${knobPos}`} />
       </button>
     </div>
   );

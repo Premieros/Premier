@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -81,12 +81,12 @@ export function StockValuationPage() {
   const columns: Column<StockValuationRow & { id: string }>[] = [
     { key: 'product', header: t('product'), render: (r) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {r.product_name[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{r.product_name}</p>
-          <p className="text-xs text-slate-400">{r.barcode || r.sku || ''}</p>
+          <p className="font-medium text-ui-text">{r.product_name}</p>
+          <p className="text-xs text-ui-subtle">{r.barcode || r.sku || ''}</p>
         </div>
       </div>
     )},
@@ -94,7 +94,7 @@ export function StockValuationPage() {
     { key: 'quantity', header: t('quantity'), render: (r) => formatNumber(Number(r.quantity)) },
     { key: 'unit_cost', header: t('unitCost'), render: (r) => formatNumber(Number(r.unit_cost), 2) },
     { key: 'total_value', header: t('totalValue'), render: (r) => (
-      <span className="font-semibold text-slate-800 dark:text-slate-200">{formatNumber(Number(r.total_value), 2)}</span>
+      <span className="font-semibold text-ui-text">{formatNumber(Number(r.total_value), 2)}</span>
     )},
   ];
 
@@ -107,23 +107,23 @@ export function StockValuationPage() {
       <DesignPanel testId="valuation-summary-panel">
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('grandTotal')}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-200">{formatNumber(grandTotal, 2)}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('grandTotal')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-text">{formatNumber(grandTotal, 2)}</p>
           </div>
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('quantity')}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-200">{formatNumber(grandQty)}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('quantity')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-text">{formatNumber(grandQty)}</p>
           </div>
         </div>
         {summary.length > 0 && (
           <div className="mt-3">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('valuationByBranch')}</p>
+            <p className="text-sm font-medium text-ui-muted mb-2">{t('valuationByBranch')}</p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {summary.map((s) => (
                 <div key={s.branch_id} className="rounded-ui-lg border border-ui-border bg-ui-page-alt p-3">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{s.branch_name || '-'}</p>
-                  <p className="text-xs text-slate-400">{formatNumber(Number(s.total_quantity))} {t('quantity')}</p>
-                  <p className="text-base font-bold text-slate-800 dark:text-slate-200">{formatNumber(Number(s.total_value), 2)}</p>
+                  <p className="text-sm font-medium text-ui-muted">{s.branch_name || '-'}</p>
+                  <p className="text-xs text-ui-subtle">{formatNumber(Number(s.total_quantity))} {t('quantity')}</p>
+                  <p className="text-base font-bold text-ui-text">{formatNumber(Number(s.total_value), 2)}</p>
                 </div>
               ))}
             </div>

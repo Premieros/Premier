@@ -168,26 +168,26 @@ export function PurchasesPage() {
   };
 
   const columns: Column<Purchase>[] = [
-    { key: 'invoice_number', header: t('invoice'), render: (p) => <span className="font-medium text-slate-800 dark:text-slate-200">{p.invoice_number}</span> },
+    { key: 'invoice_number', header: t('invoice'), render: (p) => <span className="font-medium text-ui-text">{p.invoice_number}</span> },
     { key: 'supplier', header: t('supplier'), render: (p) => (p as Purchase & { supplier?: Supplier }).supplier?.name || '-' },
     { key: 'created_at', header: t('date'), render: (p) => formatDate(p.created_at, lang) },
-    { key: 'total', header: t('total'), render: (p) => <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(p.total, currency, lang)}</span> },
-    { key: 'status', header: t('status'), render: (p) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 capitalize">{p.status}</span> },
+    { key: 'total', header: t('total'), render: (p) => <span className="font-semibold text-ui-text">{formatCurrency(p.total, currency, lang)}</span> },
+    { key: 'status', header: t('status'), render: (p) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-ui-success-soft text-ui-success capitalize">{p.status}</span> },
     { key: 'actions', header: t('actions'), render: (p) => (
       <div className="flex items-center gap-1 justify-end">
         {p.status === 'draft' && can('purchases.manage') && (
-          <button title={t('submitOrder')} onClick={() => changeOrderStatus(p, 'submitted')} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Send className="w-4 h-4" /></button>
+          <button title={t('submitOrder')} onClick={() => changeOrderStatus(p, 'submitted')} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Send className="w-4 h-4" /></button>
         )}
         {p.status === 'submitted' && can('purchases.manage') && (
-          <button title={t('approveOrder')} onClick={() => changeOrderStatus(p, 'approved')} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500"><Check className="w-4 h-4" /></button>
+          <button title={t('approveOrder')} onClick={() => changeOrderStatus(p, 'approved')} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success"><Check className="w-4 h-4" /></button>
         )}
         {['draft', 'submitted'].includes(p.status) && can('purchases.manage') && (
-          <button title={t('cancel')} onClick={() => changeOrderStatus(p, 'cancelled')} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button>
+          <button title={t('cancel')} onClick={() => changeOrderStatus(p, 'cancelled')} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle"><X className="w-4 h-4" /></button>
         )}
         {['approved', 'submitted', 'partial'].includes(p.status) && can('purchases.receiving') && (
           <button title={t('receive')} onClick={() => navigate('/purchases/receiving')} className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500"><PackageOpen className="w-4 h-4" /></button>
         )}
-        <button onClick={() => viewPurchase(p)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Eye className="w-4 h-4" /></button>
+        <button onClick={() => viewPurchase(p)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Eye className="w-4 h-4" /></button>
       </div>
     )},
   ];
@@ -236,39 +236,39 @@ export function PurchasesPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('addProduct')}</h3>
+              <h3 className="font-semibold text-ui-muted">{t('addProduct')}</h3>
               <Button size="sm" variant="outline" onClick={addLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
               {lineItems.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                     <option value="product">{t('product')}</option>
                     <option value="raw">{t('rawMaterial')}</option>
                   </select>
                   <div className="col-span-3">
                     {l.line_type === 'product' ? (
-                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     ) : (
-                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
                       </select>
                     )}
                   </div>
-                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <input type="number" placeholder={t('cost')} step="0.01" value={l.unit_cost || ''} onChange={(e) => updateLine(i, 'unit_cost', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <span className="col-span-2 text-sm text-slate-600 dark:text-slate-300 text-end">{formatCurrency(l.quantity * l.unit_cost, currency, lang)}</span>
-                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"><Trash2 className="w-4 h-4" /></button>
+                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <input type="number" placeholder={t('cost')} step="0.01" value={l.unit_cost || ''} onChange={(e) => updateLine(i, 'unit_cost', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <span className="col-span-2 text-sm text-ui-muted text-end">{formatCurrency(l.quantity * l.unit_cost, currency, lang)}</span>
+                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-ui-danger hover:bg-ui-danger-soft rounded-md"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex justify-between items-center pt-2 border-t border-ui-border">
             <span className="text-lg font-bold">{t('total')}: {formatCurrency(subtotal, currency, lang)}</span>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
@@ -283,32 +283,32 @@ export function PurchasesPage() {
         {viewModal && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-slate-500">{t('invoice')}: </span><span className="font-medium">{viewModal.invoice_number}</span></div>
-              <div><span className="text-slate-500">{t('date')}: </span><span className="font-medium">{formatDate(viewModal.created_at, lang)}</span></div>
-              <div><span className="text-slate-500">{t('supplier')}: </span><span className="font-medium">{(viewModal as Purchase & { supplier?: Supplier }).supplier?.name || '-'}</span></div>
-              <div><span className="text-slate-500">{t('paymentMethod')}: </span><span className="font-medium capitalize">{viewModal.payment_method}</span></div>
+              <div><span className="text-ui-subtle">{t('invoice')}: </span><span className="font-medium">{viewModal.invoice_number}</span></div>
+              <div><span className="text-ui-subtle">{t('date')}: </span><span className="font-medium">{formatDate(viewModal.created_at, lang)}</span></div>
+              <div><span className="text-ui-subtle">{t('supplier')}: </span><span className="font-medium">{(viewModal as Purchase & { supplier?: Supplier }).supplier?.name || '-'}</span></div>
+              <div><span className="text-ui-subtle">{t('paymentMethod')}: </span><span className="font-medium capitalize">{viewModal.payment_method}</span></div>
             </div>
-            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+            <div className="border-t border-ui-border pt-3">
               <table className="w-full text-sm">
-                <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-start py-2 font-semibold text-slate-600 dark:text-slate-300">{t('productName')}</th>
-                  <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('quantity')}</th>
-                  <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('cost')}</th>
-                  <th className="text-end py-2 font-semibold text-slate-600 dark:text-slate-300">{t('total')}</th>
+                <thead><tr className="border-b border-ui-border">
+                  <th className="text-start py-2 font-semibold text-ui-muted">{t('productName')}</th>
+                  <th className="text-center py-2 font-semibold text-ui-muted">{t('quantity')}</th>
+                  <th className="text-center py-2 font-semibold text-ui-muted">{t('cost')}</th>
+                  <th className="text-end py-2 font-semibold text-ui-muted">{t('total')}</th>
                 </tr></thead>
                 <tbody>
                   {viewItems.map((i, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="py-2 text-slate-700 dark:text-slate-200">{i.name}</td>
-                      <td className="py-2 text-center text-slate-700 dark:text-slate-200">{i.quantity}</td>
-                      <td className="py-2 text-center text-slate-700 dark:text-slate-200">{formatCurrency(i.unit_cost, currency, lang)}</td>
-                      <td className="py-2 text-end font-medium text-slate-800 dark:text-slate-100">{formatCurrency(i.total, currency, lang)}</td>
+                    <tr key={idx} className="border-b border-ui-border">
+                      <td className="py-2 text-ui-text">{i.name}</td>
+                      <td className="py-2 text-center text-ui-text">{i.quantity}</td>
+                      <td className="py-2 text-center text-ui-text">{formatCurrency(i.unit_cost, currency, lang)}</td>
+                      <td className="py-2 text-end font-medium text-ui-text">{formatCurrency(i.total, currency, lang)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-between text-lg font-bold pt-2 border-t border-ui-border">
               <span>{t('total')}</span>
               <span className="text-brand-600 dark:text-brand-400">{formatCurrency(viewModal.total, currency, lang)}</span>
             </div>

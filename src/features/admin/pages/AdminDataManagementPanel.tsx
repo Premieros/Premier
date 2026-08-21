@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Database, FlaskConical, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { admin } from '@/api';
 import { useBranches } from '@/hooks/useBranches';
@@ -68,13 +68,13 @@ export function AdminDataManagementPanel() {
   };
 
   return (
-    <Card className="mt-5 overflow-hidden border-2 border-amber-200 dark:border-amber-900/60">
-      <div className="border-b border-amber-100 bg-amber-50/70 p-5 dark:border-amber-900/40 dark:bg-amber-950/20">
+    <Card className="mt-5 overflow-hidden border-2 border-ui-warning/20 /60">
+      <div className="border-b border-ui-warning/20 bg-ui-warning-soft/70 p-5 /40 dark:bg-ui-warning-soft/20">
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-amber-100 p-3 dark:bg-amber-900/40"><Database className="h-6 w-6 text-amber-700 dark:text-amber-300" /></div>
+          <div className="rounded-2xl bg-ui-warning-soft p-3"><Database className="h-6 w-6 text-ui-warning" /></div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{ar ? 'إدارة بيانات النظام — Super Admin' : 'System Data Management — Super Admin'}</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{ar ? 'حذف بيانات أي قسم للفرع المحدد أو إنشاء مجموعة بيانات تجريبية مترابطة. هذه العمليات لا تظهر إلا للسوبر أدمن.' : 'Delete branch data by module or generate linked demo data. These controls are available only to Super Admin.'}</p>
+            <h2 className="text-lg font-bold text-ui-text dark:text-white">{ar ? 'إدارة بيانات النظام — Super Admin' : 'System Data Management — Super Admin'}</h2>
+            <p className="mt-1 text-sm text-ui-muted">{ar ? 'حذف بيانات أي قسم للفرع المحدد أو إنشاء مجموعة بيانات تجريبية مترابطة. هذه العمليات لا تظهر إلا للسوبر أدمن.' : 'Delete branch data by module or generate linked demo data. These controls are available only to Super Admin.'}</p>
           </div>
         </div>
       </div>
@@ -87,19 +87,19 @@ export function AdminDataManagementPanel() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <button disabled={!branchId || !!busy} onClick={seedAll} className="rounded-2xl border-2 border-brand-200 bg-brand-50 p-4 text-start transition hover:border-brand-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-900/50 dark:bg-brand-950/20">
-            <div className="flex items-center gap-3"><FlaskConical className="h-5 w-5 text-brand-600" /><div><div className="font-bold">{ar ? 'إضافة بيانات تجريبية لكل الأقسام' : 'Seed demo data for all modules'}</div><div className="mt-1 text-xs text-slate-500">{ar ? 'منتجات، عملاء، موردون، مشتريات، مبيعات، طلبات، تصنيع، مصروفات، ورديات وخزينة.' : 'Products, customers, suppliers, purchasing, sales, orders, manufacturing, expenses, shifts and treasury.'}</div></div></div>
+            <div className="flex items-center gap-3"><FlaskConical className="h-5 w-5 text-brand-600" /><div><div className="font-bold">{ar ? 'إضافة بيانات تجريبية لكل الأقسام' : 'Seed demo data for all modules'}</div><div className="mt-1 text-xs text-ui-subtle">{ar ? 'منتجات، عملاء، موردون، مشتريات، مبيعات، طلبات، تصنيع، مصروفات، ورديات وخزينة.' : 'Products, customers, suppliers, purchasing, sales, orders, manufacturing, expenses, shifts and treasury.'}</div></div></div>
           </button>
-          <button disabled={!branchId || !!busy} onClick={() => setConfirm({ type: 'all' })} className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-start transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/20">
-            <div className="flex items-center gap-3"><Trash2 className="h-5 w-5 text-red-600" /><div><div className="font-bold text-red-700 dark:text-red-300">{ar ? 'حذف جميع بيانات التشغيل للفرع' : 'Delete all operational data for branch'}</div><div className="mt-1 text-xs text-slate-500">{ar ? 'لا يحذف الفرع أو المستخدمين أو الصلاحيات أو الحسابات النظامية.' : 'Does not delete the branch, users, permissions or system accounts.'}</div></div></div>
+          <button disabled={!branchId || !!busy} onClick={() => setConfirm({ type: 'all' })} className="rounded-2xl border-2 border-ui-danger/20 bg-ui-danger-soft p-4 text-start transition hover:border-ui-danger/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-ui-danger/20/50 dark:bg-ui-danger-soft/20">
+            <div className="flex items-center gap-3"><Trash2 className="h-5 w-5 text-ui-danger" /><div><div className="font-bold text-ui-danger dark:text-ui-danger">{ar ? 'حذف جميع بيانات التشغيل للفرع' : 'Delete all operational data for branch'}</div><div className="mt-1 text-xs text-ui-subtle">{ar ? 'لا يحذف الفرع أو المستخدمين أو الصلاحيات أو الحسابات النظامية.' : 'Does not delete the branch, users, permissions or system accounts.'}</div></div></div>
           </button>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300"><AlertTriangle className="h-4 w-4" />{ar ? 'الحذف دائم. لا تستخدمه على بيانات إنتاجية إلا بعد التأكد من الفرع والقسم.' : 'Deletion is permanent. Verify the branch and module before using it on live data.'}</div>
+        <div className="mt-6 flex items-center gap-2 text-xs text-ui-warning"><AlertTriangle className="h-4 w-4" />{ar ? 'الحذف دائم. لا تستخدمه على بيانات إنتاجية إلا بعد التأكد من الفرع والقسم.' : 'Deletion is permanent. Verify the branch and module before using it on live data.'}</div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {SECTIONS.map(([key, arName, enName]) => (
-            <div key={key} className="rounded-2xl border border-slate-200 p-4 dark:border-navy-700">
-              <div className="mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" /><span className="text-sm font-semibold">{ar ? arName : enName}</span></div>
+            <div key={key} className="rounded-2xl border border-ui-border p-4 dark:border-navy-700">
+              <div className="mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-ui-subtle" /><span className="text-sm font-semibold">{ar ? arName : enName}</span></div>
               <Button variant="danger" className="w-full" disabled={!branchId || !!busy} onClick={() => setConfirm({ type: 'section', section: key, label: ar ? arName : enName })}>
                 <Trash2 className="h-4 w-4" /> {ar ? 'حذف بيانات القسم' : 'Delete section data'}
               </Button>

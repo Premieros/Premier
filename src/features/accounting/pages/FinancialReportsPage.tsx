@@ -159,9 +159,9 @@ export function FinancialReportsPage() {
     else if (view === 'party_statement' && partyStmt) exportToExcel(partyStmt.rows.map((r) => ({ Date: r.entry_date, Entry: r.entry_number, Description: r.description || '', Reference: r.reference_number || '', Debit: r.debit, Credit: r.credit, Balance: r.balance })), `party_statement_${to}`);
   };
 
-  const summaryCard = (label: string, value: number, color = 'text-slate-800 dark:text-white') => (
-    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+  const summaryCard = (label: string, value: number, color = 'text-ui-text dark:text-white') => (
+    <div className="bg-ui-page-alt/60 rounded-xl p-4">
+      <p className="text-xs font-medium text-ui-subtle dark:text-ui-subtle">{label}</p>
       <p className={`text-lg font-bold mt-1 ${color}`}>{formatCurrency(value, currency, lang)}</p>
     </div>
   );
@@ -189,7 +189,7 @@ export function FinancialReportsPage() {
           <div className="flex flex-wrap gap-2">
             {views.map((v) => (
               <button key={v.key} data-report-type={v.key} onClick={() => setView(v.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === v.key ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === v.key ? 'bg-brand-600 text-white' : 'bg-ui-page-alt text-ui-muted hover:bg-ui-page-alt dark:hover:bg-ui-page-alt'}`}>
                 {v.icon} {v.label}
               </button>
             ))}
@@ -217,9 +217,9 @@ export function FinancialReportsPage() {
             )}
             {isAdminRole(user?.role) && branches.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('filterByBranch')}</label>
+                <label className="block text-sm font-medium text-ui-muted mb-1">{t('filterByBranch')}</label>
                 <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
                   <option value="">{t('allBranches')}</option>
                   {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
                 </select>
@@ -232,42 +232,42 @@ export function FinancialReportsPage() {
       {loading ? (
         <DesignPanel testId="financial-reports-loading"><div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" /></div></DesignPanel>
       ) : !effectiveBranchFilter ? (
-        <DesignPanel testId="financial-reports-placeholder"><div className="text-center py-12 text-slate-400 text-sm">{t('filterByBranch')}</div></DesignPanel>
+        <DesignPanel testId="financial-reports-placeholder"><div className="text-center py-12 text-ui-subtle text-sm">{t('filterByBranch')}</div></DesignPanel>
       ) : view === 'trial_balance' ? (
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-6">
             {tbSummary?.balanced ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><BadgeCheck className="w-4 h-4" /> {t('balanced')}</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-ui-success-soft text-ui-success  dark:text-ui-success"><BadgeCheck className="w-4 h-4" /> {t('balanced')}</span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"><BadgeAlert className="w-4 h-4" /> {t('notBalanced')}</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-ui-danger-soft text-ui-danger"><BadgeAlert className="w-4 h-4" /> {t('notBalanced')}</span>
             )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountCode')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountName')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountType')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('debit')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('credit')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('balance')}</th>
+                <tr className="border-b border-ui-border">
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountCode')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountName')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountType')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('debit')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('credit')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('balance')}</th>
                 </tr>
               </thead>
               <tbody>
-                {tb.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                {tb.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                 {tb.map((r) => (
-                  <tr key={r.code} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-200">{r.code}</td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{isAr ? r.name : (r.name_en || r.name)}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{r.account_type}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
-                    <td className={`px-4 py-3 text-end font-semibold ${r.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>{formatCurrency(r.balance, currency, lang)}</td>
+                  <tr key={r.code} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                    <td className="px-4 py-3 font-mono text-ui-text">{r.code}</td>
+                    <td className="px-4 py-3 text-ui-text">{isAr ? r.name : (r.name_en || r.name)}</td>
+                    <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{r.account_type}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
+                    <td className={`px-4 py-3 text-end font-semibold ${r.balance < 0 ? 'text-ui-danger' : 'text-ui-text'}`}>{formatCurrency(r.balance, currency, lang)}</td>
                   </tr>
                 ))}
                 {tb.length > 0 && (
-                  <tr className="bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-800 dark:text-slate-200">
+                  <tr className="bg-ui-page-alt/60 font-semibold text-ui-text">
                     <td className="px-4 py-3" colSpan={3}>{t('total')}</td>
                     <td className="px-4 py-3 text-end">{formatCurrency(tbTotals.debit, currency, lang)}</td>
                     <td className="px-4 py-3 text-end">{formatCurrency(tbTotals.credit, currency, lang)}</td>
@@ -283,27 +283,27 @@ export function FinancialReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('date')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('entryNumber')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('description')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('reference')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('debit')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('credit')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('balance')}</th>
+                <tr className="border-b border-ui-border">
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('date')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('entryNumber')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('description')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('reference')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('debit')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('credit')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('balance')}</th>
                 </tr>
               </thead>
               <tbody>
-                {gl.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                {gl.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                 {gl.map((r) => (
-                  <tr key={r.line_id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.entry_date}</td>
-                    <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-200">{r.entry_number}</td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.description || '-'}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{r.reference_number || '-'}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
-                    <td className="px-4 py-3 text-end font-semibold text-slate-700 dark:text-slate-200">{formatCurrency(r.balance, currency, lang)}</td>
+                  <tr key={r.line_id} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                    <td className="px-4 py-3 text-ui-text">{r.entry_date}</td>
+                    <td className="px-4 py-3 font-mono text-ui-text">{r.entry_number}</td>
+                    <td className="px-4 py-3 text-ui-text">{r.description || '-'}</td>
+                    <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{r.reference_number || '-'}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
+                    <td className="px-4 py-3 text-end font-semibold text-ui-text">{formatCurrency(r.balance, currency, lang)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -317,16 +317,16 @@ export function FinancialReportsPage() {
               {summaryCard(t('revenue'), income.revenue)}
               {summaryCard(t('cogs'), income.cogs)}
               {summaryCard(t('grossProfit'), income.gross_profit, 'text-brand-600 dark:text-brand-400')}
-              {summaryCard(t('netIncome'), income.net_income, income.net_income >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}
+              {summaryCard(t('netIncome'), income.net_income, income.net_income >= 0 ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger')}
             </div>
           )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <tbody>
                 {incomeRows.map((r) => (
-                  <tr key={r.label} className={`border-b border-slate-100 dark:border-slate-800 ${r.bold ? 'bg-slate-50 dark:bg-slate-800/60' : ''}`}>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-200 font-medium">{r.label}</td>
-                    <td className={`px-4 py-3 text-end ${r.bold ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}>{formatCurrency(r.value, currency, lang)}</td>
+                  <tr key={r.label} className={`border-b border-ui-border ${r.bold ? 'bg-ui-page-alt/60' : ''}`}>
+                    <td className="px-4 py-3 text-ui-text font-medium">{r.label}</td>
+                    <td className={`px-4 py-3 text-end ${r.bold ? 'font-bold text-ui-text dark:text-white' : 'text-ui-text'}`}>{formatCurrency(r.value, currency, lang)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -339,9 +339,9 @@ export function FinancialReportsPage() {
             <>
               <div className="flex items-center gap-2 mb-6">
                 {sheet.balanced ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><BadgeCheck className="w-4 h-4" /> {t('balanced')}</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-ui-success-soft text-ui-success  dark:text-ui-success"><BadgeCheck className="w-4 h-4" /> {t('balanced')}</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"><BadgeAlert className="w-4 h-4" /> {t('notBalanced')}</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-ui-danger-soft text-ui-danger"><BadgeAlert className="w-4 h-4" /> {t('notBalanced')}</span>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -360,27 +360,27 @@ export function FinancialReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('customer')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('phone')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('openBalance')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days30')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days60')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90Plus')}</th>
+                <tr className="border-b border-ui-border">
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('customer')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('phone')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('openBalance')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days30')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days60')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90Plus')}</th>
                 </tr>
               </thead>
               <tbody>
-                {arAging.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                {arAging.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                 {arAging.map((r) => (
-                  <tr key={r.customer_id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{r.phone || '-'}</td>
-                    <td className="px-4 py-3 text-end font-semibold text-red-600 dark:text-red-400">{formatCurrency(r.open_amount, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_0_30, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_31_60, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_61_90, currency, lang)}</td>
-                    <td className={`px-4 py-3 text-end ${r.bucket_90_plus > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-700 dark:text-slate-200'}`}>{formatCurrency(r.bucket_90_plus, currency, lang)}</td>
+                  <tr key={r.customer_id} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                    <td className="px-4 py-3 font-medium text-ui-text">{r.name}</td>
+                    <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{r.phone || '-'}</td>
+                    <td className="px-4 py-3 text-end font-semibold text-ui-danger">{formatCurrency(r.open_amount, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_0_30, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_31_60, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_61_90, currency, lang)}</td>
+                    <td className={`px-4 py-3 text-end ${r.bucket_90_plus > 0 ? 'text-ui-danger font-semibold' : 'text-ui-text'}`}>{formatCurrency(r.bucket_90_plus, currency, lang)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -392,27 +392,27 @@ export function FinancialReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('supplier')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('phone')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('openBalance')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days30')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days60')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90Plus')}</th>
+                <tr className="border-b border-ui-border">
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('supplier')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('phone')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('openBalance')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days30')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days60')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90Plus')}</th>
                 </tr>
               </thead>
               <tbody>
-                {apAging.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                {apAging.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                 {apAging.map((r) => (
-                  <tr key={r.supplier_id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{r.name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{r.phone || '-'}</td>
-                    <td className="px-4 py-3 text-end font-semibold text-red-600 dark:text-red-400">{formatCurrency(r.open_amount, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_0_30, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_31_60, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(r.bucket_61_90, currency, lang)}</td>
-                    <td className={`px-4 py-3 text-end ${r.bucket_90_plus > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-700 dark:text-slate-200'}`}>{formatCurrency(r.bucket_90_plus, currency, lang)}</td>
+                  <tr key={r.supplier_id} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                    <td className="px-4 py-3 font-medium text-ui-text">{r.name}</td>
+                    <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{r.phone || '-'}</td>
+                    <td className="px-4 py-3 text-end font-semibold text-ui-danger">{formatCurrency(r.open_amount, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_0_30, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_31_60, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(r.bucket_61_90, currency, lang)}</td>
+                    <td className={`px-4 py-3 text-end ${r.bucket_90_plus > 0 ? 'text-ui-danger font-semibold' : 'text-ui-text'}`}>{formatCurrency(r.bucket_90_plus, currency, lang)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -424,38 +424,38 @@ export function FinancialReportsPage() {
           {agingSummary && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {summaryCard(t('arTotal'), agingSummary.ar_open, 'text-blue-600 dark:text-blue-400')}
-                {summaryCard(t('apTotal'), agingSummary.ap_open, 'text-amber-600 dark:text-amber-400')}
+                {summaryCard(t('arTotal'), agingSummary.ar_open, 'text-ui-info')}
+                {summaryCard(t('apTotal'), agingSummary.ap_open, 'text-ui-warning')}
                 {summaryCard(t('openBalance'), agingSummary.ar_open + agingSummary.ap_open)}
-                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('asOf')}</p>
-                  <p className="text-lg font-bold mt-1 text-slate-800 dark:text-white">{formatDate(agingSummary.as_of, lang)}</p>
+                <div className="bg-ui-page-alt/60 rounded-xl p-4">
+                  <p className="text-xs font-medium text-ui-subtle dark:text-ui-subtle">{t('asOf')}</p>
+                  <p className="text-lg font-bold mt-1 text-ui-text dark:text-white">{formatDate(agingSummary.as_of, lang)}</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days30')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days60')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('days90Plus')}</th>
+                    <tr className="border-b border-ui-border">
+                      <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days30')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days60')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('days90Plus')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{t('arTotal')}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ar['0_30'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ar['31_60'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ar['61_90'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ar['90_plus'], currency, lang)}</td>
+                    <tr className="border-b border-ui-border">
+                      <td className="px-4 py-3 font-medium text-ui-text">{t('arTotal')}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ar['0_30'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ar['31_60'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ar['61_90'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ar['90_plus'], currency, lang)}</td>
                     </tr>
-                    <tr className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{t('apTotal')}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ap['0_30'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ap['31_60'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ap['61_90'], currency, lang)}</td>
-                      <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{formatCurrency(agingSummary.ap['90_plus'], currency, lang)}</td>
+                    <tr className="border-b border-ui-border">
+                      <td className="px-4 py-3 font-medium text-ui-text">{t('apTotal')}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ap['0_30'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ap['31_60'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ap['61_90'], currency, lang)}</td>
+                      <td className="px-4 py-3 text-end text-ui-text">{formatCurrency(agingSummary.ap['90_plus'], currency, lang)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -468,23 +468,23 @@ export function FinancialReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountName')}</th>
-                  <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountType')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('inflow')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('outflow')}</th>
-                  <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('netFlow')}</th>
+                <tr className="border-b border-ui-border">
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountName')}</th>
+                  <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountType')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('inflow')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('outflow')}</th>
+                  <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('netFlow')}</th>
                 </tr>
               </thead>
               <tbody>
-                {cashFlow.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                {cashFlow.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                 {cashFlow.map((r) => (
-                  <tr key={r.treasury_account_id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{r.account_name}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{r.account_type === 'cash' ? t('cash') : t('bank')}</td>
-                    <td className="px-4 py-3 text-end text-emerald-600 dark:text-emerald-400">{formatCurrency(r.inflow, currency, lang)}</td>
-                    <td className="px-4 py-3 text-end text-red-600 dark:text-red-400">{formatCurrency(r.outflow, currency, lang)}</td>
-                    <td className={`px-4 py-3 text-end font-semibold ${r.net < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200'}`}>{formatCurrency(r.net, currency, lang)}</td>
+                  <tr key={r.treasury_account_id} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                    <td className="px-4 py-3 font-medium text-ui-text">{r.account_name}</td>
+                    <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{r.account_type === 'cash' ? t('cash') : t('bank')}</td>
+                    <td className="px-4 py-3 text-end text-ui-success dark:text-ui-success">{formatCurrency(r.inflow, currency, lang)}</td>
+                    <td className="px-4 py-3 text-end text-ui-danger">{formatCurrency(r.outflow, currency, lang)}</td>
+                    <td className={`px-4 py-3 text-end font-semibold ${r.net < 0 ? 'text-ui-danger' : 'text-ui-text'}`}>{formatCurrency(r.net, currency, lang)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -498,33 +498,33 @@ export function FinancialReportsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 {summaryCard(t('openingBalance'), partyStmt.opening)}
                 {summaryCard(t('runningBalance'), partyStmt.rows.length ? partyStmt.rows[partyStmt.rows.length - 1].balance : partyStmt.opening)}
-                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('asOf')}</p>
-                  <p className="text-lg font-bold mt-1 text-slate-800 dark:text-white">{formatDate(to, lang)}</p>
+                <div className="bg-ui-page-alt/60 rounded-xl p-4">
+                  <p className="text-xs font-medium text-ui-subtle dark:text-ui-subtle">{t('asOf')}</p>
+                  <p className="text-lg font-bold mt-1 text-ui-text dark:text-white">{formatDate(to, lang)}</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('date')}</th>
-                      <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('entryNumber')}</th>
-                      <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('description')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('debit')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('credit')}</th>
-                      <th className="px-4 py-3 text-end font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('balance')}</th>
+                    <tr className="border-b border-ui-border">
+                      <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('date')}</th>
+                      <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('entryNumber')}</th>
+                      <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('description')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('debit')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('credit')}</th>
+                      <th className="px-4 py-3 text-end font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('balance')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {partyStmt.rows.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">{t('noData')}</td></tr>}
+                    {partyStmt.rows.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-ui-subtle">{t('noData')}</td></tr>}
                     {partyStmt.rows.map((r) => (
-                      <tr key={r.line_id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(r.entry_date, lang)}</td>
-                        <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-200">{r.entry_number}</td>
-                        <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{r.description || '-'}</td>
-                        <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
-                        <td className="px-4 py-3 text-end text-slate-700 dark:text-slate-200">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
-                        <td className="px-4 py-3 text-end font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(r.balance, currency, lang)}</td>
+                      <tr key={r.line_id} className="border-b border-ui-border hover:bg-ui-page-alt/50">
+                        <td className="px-4 py-3 text-ui-muted">{formatDate(r.entry_date, lang)}</td>
+                        <td className="px-4 py-3 font-mono text-ui-text">{r.entry_number}</td>
+                        <td className="px-4 py-3 text-ui-text">{r.description || '-'}</td>
+                        <td className="px-4 py-3 text-end text-ui-text">{r.debit > 0 ? formatCurrency(r.debit, currency, lang) : '-'}</td>
+                        <td className="px-4 py-3 text-end text-ui-text">{r.credit > 0 ? formatCurrency(r.credit, currency, lang) : '-'}</td>
+                        <td className="px-4 py-3 text-end font-semibold text-ui-text">{formatCurrency(r.balance, currency, lang)}</td>
                       </tr>
                     ))}
                   </tbody>

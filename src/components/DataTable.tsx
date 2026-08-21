@@ -24,8 +24,8 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
     return (
       <div data-testid="table-loading" className="flex items-center justify-center py-16">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-3 border-brand-500 border-t-transparent" />
-          <p className="text-sm text-slate-400">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-3 border-ui-primary border-t-transparent" />
+          <p className="text-sm text-ui-subtle">Loading...</p>
         </div>
       </div>
     );
@@ -33,24 +33,24 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
 
   if (error) {
     return (
-      <div data-testid="table-error" className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
-        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-3">
-          <svg className="w-8 h-8 text-red-400 dark:text-red-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div data-testid="table-error" className="flex flex-col items-center justify-center py-16 text-ui-muted">
+        <div className="w-16 h-16 rounded-full bg-ui-danger-soft flex items-center justify-center mb-3">
+          <svg className="w-8 h-8 text-ui-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
         </div>
-        <p className="text-sm font-medium">{error}</p>
+        <p className="text-sm font-medium text-ui-text">{error}</p>
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div data-testid="table-empty" className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
-          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-navy-800 flex items-center justify-center mb-3">
-          <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+      <div data-testid="table-empty" className="flex flex-col items-center justify-center py-16 text-ui-muted">
+        <div className="w-16 h-16 rounded-full bg-ui-page-alt flex items-center justify-center mb-3">
+          <svg className="w-8 h-8 text-ui-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
         </div>
-        <p className="text-sm font-medium">{emptyMessage || 'No data'}</p>
+        <p className="text-sm font-medium text-ui-text">{emptyMessage || 'No data'}</p>
       </div>
     );
   }
@@ -77,24 +77,24 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
     <div data-testid="data-table" className="overflow-x-auto rounded-xl">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-navy-800 bg-slate-50/50 dark:bg-navy-800/40">
+          <tr className="border-b border-ui-border bg-ui-page-alt/50">
             {showCheckbox && (
               <th className="px-4 py-3 w-10">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500" />
+                  className="w-4 h-4 rounded border-ui-border-strong text-ui-primary focus:ring-ui-ring" />
               </th>
             )}
             {columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-4 py-3 text-start font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider ${col.className || ''}`}
+                className={`px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider ${col.className || ''}`}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
+        <tbody className="divide-y divide-ui-border">
           {data.map((row, i) => (
             <tr
               key={row.id || i}
@@ -102,17 +102,17 @@ export function DataTable<T extends { id?: string }>({ columns, data, loading, e
                 if (showCheckbox && (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
                 onRowClick?.(row);
               }}
-              className={`hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
+              className={`hover:bg-ui-page-alt/50 transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''} ${selectedIds?.has(row.id || '') ? 'bg-ui-primary-soft/50' : ''}`}
             >
               {showCheckbox && (
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={!!(row.id && selectedIds?.has(row.id))}
                     onChange={() => row.id && toggleRow(row.id)}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500" />
+                    className="w-4 h-4 rounded border-ui-border-strong text-ui-primary focus:ring-ui-ring" />
                 </td>
               )}
               {columns.map((col) => (
-                <td key={col.key} className={`px-4 py-3 text-slate-700 dark:text-slate-200 ${col.className || ''}`}>
+                <td key={col.key} className={`px-4 py-3 text-ui-text ${col.className || ''}`}>
                   {col.render ? col.render(row) : (row as Record<string, unknown>)[col.key] as ReactNode}
                 </td>
               ))}

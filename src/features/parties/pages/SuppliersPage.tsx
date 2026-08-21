@@ -93,25 +93,25 @@ export function SuppliersPage() {
   };
 
   const columns: Column<Supplier>[] = [
-    { key: 'name', header: t('name'), render: (s) => <span className="font-medium text-slate-800 dark:text-slate-200">{s.name}</span> },
+    { key: 'name', header: t('name'), render: (s) => <span className="font-medium text-ui-text">{s.name}</span> },
     { key: 'phone', header: t('phone'), render: (s) => s.phone || '-' },
     { key: 'email', header: t('emailField'), render: (s) => s.email || '-' },
     { key: 'address', header: t('address'), render: (s) => s.address || '-' },
-    { key: 'balance', header: t('amount'), render: (s) => <span className={s.balance > 0 ? 'text-red-600 dark:text-red-400 font-medium' : ''}>{formatCurrency(s.balance, currency, lang)}</span> },
+    { key: 'balance', header: t('amount'), render: (s) => <span className={s.balance > 0 ? 'text-ui-danger font-medium' : ''}>{formatCurrency(s.balance, currency, lang)}</span> },
     { key: 'actions', header: t('actions'), render: (s) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('suppliers.manage') && (
-          <button onClick={() => openEdit(s)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(s)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
         )}
         {can('suppliers.manage') && (
-          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
         )}
       </div>
     )},
   ];
 
   const evaluationColumns: Column<SupplierEvaluationRow>[] = [
-    { key: 'supplier_name', header: t('supplier'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.supplier_name}</span> },
+    { key: 'supplier_name', header: t('supplier'), render: (r) => <span className="font-medium text-ui-text">{r.supplier_name}</span> },
     { key: 'orders_count', header: t('ordersCount'), render: (r) => r.orders_count },
     { key: 'total_purchased', header: t('totalPurchases'), render: (r) => <span className="font-semibold">{formatCurrency(r.total_purchased, currency, lang)}</span> },
     { key: 'total_returned', header: t('totalReturned'), render: (r) => formatCurrency(r.total_returned, currency, lang) },

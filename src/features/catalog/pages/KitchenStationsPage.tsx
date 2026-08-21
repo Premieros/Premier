@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -93,7 +93,7 @@ export function KitchenStationsPage() {
     { key: 'name_ar', header: ar ? 'الاسم عربي' : 'Name (AR)', render: r => r.name_ar },
     { key: 'name_en', header: ar ? 'الاسم إنجليزي' : 'Name (EN)', render: r => r.name_en },
     { key: 'is_active', header: ar ? 'نشط' : 'Active', render: r => (
-      <button onClick={() => void handleToggle(r)} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${r.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+      <button onClick={() => void handleToggle(r)} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${r.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle'}`}>
         {r.is_active ? (ar ? 'نعم' : 'Yes') : (ar ? 'لا' : 'No')}
       </button>
     )},
@@ -103,8 +103,8 @@ export function KitchenStationsPage() {
     columns.push({
       key: 'actions', header: '', render: (r: KitchenStation) => (
         <div className="flex gap-1">
-          <button onClick={() => openEdit(r)} className="text-blue-600 hover:text-blue-800"><Edit2 className="h-4 w-4" /></button>
-          <button onClick={() => setDeleteTarget(r)} className="text-red-600 hover:text-red-800"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => openEdit(r)} className="text-ui-info hover:text-ui-info"><Edit2 className="h-4 w-4" /></button>
+          <button onClick={() => setDeleteTarget(r)} className="text-ui-danger hover:text-ui-danger"><Trash2 className="h-4 w-4" /></button>
         </div>
       ),
     });

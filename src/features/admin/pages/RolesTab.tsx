@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Save, Trash2, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -99,7 +99,7 @@ export function RolesTab() {
 
   if (loading) {
     return (
-      <Card className="p-10 text-center text-slate-400">
+      <Card className="p-10 text-center text-ui-subtle">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-3" />
         <p className="text-sm">{isAr ? 'جارٍ تحميل الأدوار...' : 'Loading roles...'}</p>
       </Card>
@@ -111,10 +111,10 @@ export function RolesTab() {
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+            <h3 className="font-semibold text-ui-text mb-2 flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-brand-600 dark:text-brand-400" /> {t('rolesTab')}
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-ui-subtle dark:text-ui-subtle">
               {isAr
                 ? 'تُحفظ الصلاحيات في قاعدة البيانات وتُطبَّق فورًا على جميع المستخدمين أصحاب الدور. الأدوار الإدارية (مدير عام / مالك) تملك كل الصلاحيات تلقائيًا.'
                 : 'Permissions are stored in the database and apply immediately to every user with that role. Admin roles (Super Admin / Owner) always have full access.'}
@@ -138,15 +138,15 @@ export function RolesTab() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-semibold text-slate-800 dark:text-slate-200">{roleMeta[role]?.[lang] || role}</h4>
+                  <h4 className="font-semibold text-ui-text">{roleMeta[role]?.[lang] || role}</h4>
                   {def?.scope === 'branch' && (
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-ui-info-soft text-ui-info">
                       {isAr ? 'فرع' : 'Branch'} {branches.find((b) => b.id === def.branch_id)?.name || ''}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {count} / {ALL_PERMISSIONS.length} {isAr ? 'صلاحية' : 'permissions'} · <code className="text-slate-400">{role}</code>
+                <p className="text-xs text-ui-subtle dark:text-ui-subtle mt-0.5">
+                  {count} / {ALL_PERMISSIONS.length} {isAr ? 'صلاحية' : 'permissions'} · <code className="text-ui-subtle">{role}</code>
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -172,15 +172,15 @@ export function RolesTab() {
             </div>
 
             {admin ? (
-              <p className="text-sm text-slate-400">{isAr ? 'لا يمكن تقييد هذا الدور.' : 'This role cannot be restricted.'}</p>
+              <p className="text-sm text-ui-subtle">{isAr ? 'لا يمكن تقييد هذا الدور.' : 'This role cannot be restricted.'}</p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {PERMISSION_GROUPS.map((group) => {
                   const groupAll = group.permissions.every((p) => list.includes(p));
                   const groupSome = group.permissions.some((p) => list.includes(p));
                   return (
-                    <div key={group.key} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800/60">
+                    <div key={group.key} className="border border-ui-border rounded-xl overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-ui-page-alt/60">
                         <label className="flex items-center gap-2.5 cursor-pointer">
                           <input
                             type="checkbox"
@@ -194,9 +194,9 @@ export function RolesTab() {
                                 return { ...prev, [role]: [...base] };
                               });
                             }}
-                            className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            className="w-4 h-4 rounded border-ui-border text-brand-600 focus:ring-brand-500"
                           />
-                          <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{group[lang]}</span>
+                          <span className="font-semibold text-sm text-ui-text">{group[lang]}</span>
                         </label>
                       </div>
                       <div className="px-3 py-2 space-y-1.5">
@@ -206,9 +206,9 @@ export function RolesTab() {
                               type="checkbox"
                               checked={list.includes(perm)}
                               onChange={() => toggle(role, perm)}
-                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                              className="w-4 h-4 rounded border-ui-border text-brand-600 focus:ring-brand-500"
                             />
-                            <span className="text-sm text-slate-600 dark:text-slate-300">{PERMISSION_LABELS[perm]?.[lang] || perm}</span>
+                            <span className="text-sm text-ui-muted">{PERMISSION_LABELS[perm]?.[lang] || perm}</span>
                           </label>
                         ))}
                       </div>
@@ -220,7 +220,7 @@ export function RolesTab() {
           </Card>
         );
       })}
-      <p className="text-xs text-slate-400 px-1">{isAr ? 'الدور المبني من القاعدة: أي تغيير يظهر فورًا، بدون إعادة تسجيل دخول.' : 'DB-backed roles: changes apply immediately, no re-login needed.'}</p>
+      <p className="text-xs text-ui-subtle px-1">{isAr ? 'الدور المبني من القاعدة: أي تغيير يظهر فورًا، بدون إعادة تسجيل دخول.' : 'DB-backed roles: changes apply immediately, no re-login needed.'}</p>
 
       {/* Create role modal */}
       <Modal open={creating} onClose={() => setCreating(false)} title={isAr ? 'دور جديد' : 'New role'}>
@@ -247,7 +247,7 @@ export function RolesTab() {
           <Input label={isAr ? 'الوصف (عربي)' : 'Description (Arabic)'} value={createForm.description_ar} onChange={(e) => setCreateForm({ ...createForm, description_ar: e.target.value })} />
           <Input label={isAr ? 'الوصف (إنجليزي)' : 'Description (English)'} value={createForm.description_en} onChange={(e) => setCreateForm({ ...createForm, description_en: e.target.value })} />
           <div className="flex justify-end gap-2">
-            <button onClick={() => setCreating(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+            <button onClick={() => setCreating(false)} className="px-4 py-2 rounded-lg bg-ui-page-alt text-ui-text text-sm font-medium">{t('cancel')}</button>
             <button onClick={submitCreate} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Coins, Landmark } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -133,25 +133,25 @@ export function AccountsPage() {
   };
 
   const columns: Column<ChartOfAccount>[] = [
-    { key: 'code', header: t('accountCode'), render: (a) => <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{a.code}</span> },
+    { key: 'code', header: t('accountCode'), render: (a) => <span className="font-mono font-semibold text-ui-text">{a.code}</span> },
     { key: 'name', header: t('accountName'), render: (a) => (
       <div className="flex items-center gap-2">
-        <span className="font-medium text-slate-800 dark:text-slate-200">{isAr ? a.name : (a.name_en || a.name)}</span>
+        <span className="font-medium text-ui-text">{isAr ? a.name : (a.name_en || a.name)}</span>
         {a.is_system && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold-500/15 text-gold-600 dark:text-gold-400 font-bold">{t('systemAccount')}</span>}
       </div>
     ) },
     { key: 'account_type', header: t('accountType'), render: (a) => typeLabel(a.account_type) },
     { key: 'balance', header: t('balance'), render: (a) => {
       const b = balances[a.code];
-      return <span className={b !== undefined && b < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}>{b !== undefined ? formatCurrency(Math.abs(b), currency, lang) : '-'}</span>;
+      return <span className={b !== undefined && b < 0 ? 'text-ui-danger' : 'text-ui-text'}>{b !== undefined ? formatCurrency(Math.abs(b), currency, lang) : '-'}</span>;
     } },
-    { key: 'is_active', header: t('status'), render: (a) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${a.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>{a.is_active ? t('active') : t('inactive')}</span> },
+    { key: 'is_active', header: t('status'), render: (a) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${a.is_active ? 'bg-ui-success-soft text-ui-success  dark:text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:bg-ui-page-alt dark:text-ui-subtle'}`}>{a.is_active ? t('active') : t('inactive')}</span> },
     { key: 'actions', header: t('actions'), render: (a) => (
       <div className="flex gap-1">
         {!a.is_system && canManage && (
           <>
-            <button onClick={() => openEdit(a)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-            <button onClick={() => setDeleteId(a.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => openEdit(a)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
+            <button onClick={() => setDeleteId(a.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
           </>
         )}
       </div>
@@ -184,9 +184,9 @@ export function AccountsPage() {
           <DesignSearch value={search} onChange={setSearch} className="flex-1 w-full" label={t('search')} placeholder={t('search')} testId="accounts-search" />
           {isAdminRole(user?.role) && branches.length > 0 && (
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
+              <label className="text-sm font-medium text-ui-muted">{t('filterByBranch')}</label>
               <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
                 <option value="">{t('allBranches')}</option>
                 {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
               </select>

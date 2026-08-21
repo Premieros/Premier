@@ -54,4 +54,5 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { id: 'subscriptions-admin', route: APP_ROUTES.subscriptions, icon: 'subscriptionsAdmin', labelKey: 'subscriptionsAdmin', group: 'admin', superAdminOnly: true },
   { id: 'audit-log', route: APP_ROUTES.auditLog, icon: 'auditLog', labelKey: 'auditLog', permission: 'audit.view', group: 'admin' },
   { id: 'settings', route: APP_ROUTES.settings, icon: 'settings', labelKey: 'settings', permission: 'settings.manage', group: 'admin' },
+  { id: 'super-admin', route: APP_ROUTES.superAdmin, icon: 'settings', labelKey: 'superAdmin', permission: 'settings.manage', group: 'admin', superAdminOnly: true },
 ];

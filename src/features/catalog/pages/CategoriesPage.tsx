@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -81,16 +81,16 @@ export function CategoriesPage() {
   };
 
   const columns: Column<Category>[] = [
-    { key: 'name', header: t('name'), render: (c) => <span className="font-medium text-slate-800 dark:text-slate-200">{c.name}</span> },
+    { key: 'name', header: t('name'), render: (c) => <span className="font-medium text-ui-text">{c.name}</span> },
     { key: 'name_en', header: t('nameEn'), render: (c) => c.name_en || '-' },
     { key: 'description', header: t('description'), render: (c) => c.description || '-' },
     { key: 'actions', header: t('actions'), render: (c) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('categories.manage') && (
-          <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
         )}
         {can('categories.manage') && (
-          <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
         )}
       </div>
     )},

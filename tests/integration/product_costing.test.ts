@@ -57,7 +57,9 @@ describe.skipIf(skip)('product costing RPCs (074)', () => {
 
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
 
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, $2), ($3, $4)`, [branchA, 'Cost A', branchB, 'Cost B']);
+    const orgId = randomUUID();
+    await client.query(`INSERT INTO public.organizations (id, name, slug) VALUES ($1, $2, $3)`, [orgId, 'PC Org', `pc-${randomUUID().slice(0, 8)}`]);
+    await client.query(`INSERT INTO public.branches (id, name, organization_id) VALUES ($1, $2, $3), ($4, $5, $6)`, [branchA, 'Cost A', orgId, branchB, 'Cost B', orgId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, $2, $3, true)`, [whId, 'Cost WH', branchA]);
     await client.query(`INSERT INTO public.products (id, name, branch_id, sale_price, cost_price, is_active) VALUES ($1, $2, $3, 100, 30, true), ($4, $5, $6, 80, 20, true)`, [prodId, 'Cost Product', branchA, prodNoRecipe, 'Cost NoRecipe', branchA]);
     await client.query(`INSERT INTO public.raw_materials (id, code, name, branch_id, default_cost, is_active) VALUES ($1, $2, $3, $4, 15, true)`, [rmId, `RM-${rmId.slice(0, 8)}`, 'Cost Raw', branchA]);
@@ -76,6 +78,7 @@ describe.skipIf(skip)('product costing RPCs (074)', () => {
     await mkUser(adminId, 'super_admin', null);
     await mkUser(managerId, 'branch_manager', branchA);
     await mkUser(managerBId, 'branch_manager', branchB);
+    await client.query(`INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES ($1, $2, 'owner', true), ($1, $3, 'member', true), ($1, $4, 'member', true)`, [orgId, adminId, managerId, managerBId]);
   });
 
   afterAll(async () => {

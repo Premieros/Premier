@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowDown, ArrowUp, ArrowUpRight, BarChart3, ChevronDown, Clock3,
@@ -111,7 +111,7 @@ function Metric({ testId, icon: Icon, title, value, previous, href, ar }: {
         {change === null ? (
           <span className="text-ui-subtle">—</span>
         ) : (
-          <span className={`inline-flex items-center gap-0.5 font-bold ${positive ? 'text-emerald-500' : 'text-rose-500'}`}>{positive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{Math.abs(change).toFixed(0)}%</span>
+          <span className={`inline-flex items-center gap-0.5 font-bold ${positive ? 'text-ui-success' : 'text-ui-danger'}`}>{positive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{Math.abs(change).toFixed(0)}%</span>
         )}
         <span className="text-ui-subtle">{ar ? 'مقارنة بالفترة السابقة' : 'vs previous period'}</span>
       </div>
@@ -280,31 +280,52 @@ export function VisualDashboardPage() {
   const recent = filteredSales.slice(0, 4);
   const lowStock = useMemo(() => inventory.filter((r) => Number(r.quantity || 0) < Number(r.product?.[0]?.low_stock_threshold ?? settings?.low_stock_threshold ?? 5)).slice(0, 5), [inventory, settings?.low_stock_threshold]);
 
-  return <div dir={ar ? 'rtl' : 'ltr'} className="min-h-[calc(100vh-76px)] bg-ui-page px-4 py-5 sm:px-7 sm:py-7" data-testid="dashboard-surface">
+  return <div dir={ar ? 'rtl' : 'ltr'} className="min-h-[calc(100vh-64px)] bg-ui-page px-4 py-5 sm:px-7 sm:py-7" data-testid="dashboard-surface">
     <div className="mx-auto max-w-[1560px] space-y-6">
+
+      {/* Greeting + Quick Actions */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-ui-text">{ar ? `مرحباً، ${user?.full_name || 'مدير النظام'}` : `Welcome back, ${user?.full_name || 'Admin'}`}</h1>
+          <p className="mt-1 text-sm text-ui-muted">{ar ? 'نظرة سريعة على أداء عملك' : 'Quick overview of your business performance'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/pos" className="inline-flex items-center gap-2 rounded-xl bg-ui-primary px-4 py-2 text-sm font-bold text-ui-primary-fg shadow-ui-sm transition hover:bg-ui-primary-hover hover:shadow-ui-md">
+            <ShoppingBag className="h-4 w-4" />{ar ? 'إنشاء بيع' : 'New Sale'}
+          </Link>
+          <Link to="/purchases" className="inline-flex items-center gap-2 rounded-xl border border-ui-border bg-ui-surface px-4 py-2 text-sm font-bold text-ui-text shadow-ui-sm transition hover:bg-ui-page-alt">
+            {ar ? 'شراء' : 'Purchase'}
+          </Link>
+          <Link to="/production" className="inline-flex items-center gap-2 rounded-xl border border-ui-border bg-ui-surface px-4 py-2 text-sm font-bold text-ui-text shadow-ui-sm transition hover:bg-ui-page-alt">
+            {ar ? 'إنتاج' : 'Production'}
+          </Link>
+        </div>
+      </section>
+
+      {/* Hero header with controls */}
       <section className="rounded-[32px] bg-gradient-to-br from-[#24114f] via-[#4b20a9] to-[#6d35df] p-6 text-white shadow-[0_20px_55px_rgba(75,32,169,0.25)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-violet-200"><BarChart3 className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.18em]">Premier Control</span></div>
+            <div className="mb-3 flex items-center gap-2 text-ui-primary"><BarChart3 className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.18em]">Premier Control</span></div>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{ar ? 'نظرة عامة على أعمالك' : 'Your business at a glance'}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-violet-100/80">{ar ? 'مؤشرات واضحة وسريعة تساعدك على معرفة ما يحدث الآن.' : 'A focused command view for the numbers that matter now.'}</p>
+            <p className="mt-2 max-w-2xl text-sm text-ui-primary/80">{ar ? 'مؤشرات واضحة وسريعة تساعدك على معرفة ما يحدث الآن.' : 'A focused command view for the numbers that matter now.'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/10 p-1 backdrop-blur">
             {(Object.keys(ranges) as Range[]).map((r) => (
-              <button key={r} onClick={() => setRange(r)} className={`rounded-xl px-4 py-2 text-sm font-bold ${range === r ? 'bg-white text-violet-700' : 'text-white/80 hover:bg-white/10'}`}>{ranges[r][ar ? 0 : 1]}</button>
+              <button key={r} onClick={() => setRange(r)} className={`rounded-xl px-4 py-2 text-sm font-bold ${range === r ? 'bg-ui-surface text-ui-primary' : 'text-white/80 hover:bg-white/10'}`}>{ranges[r][ar ? 0 : 1]}</button>
             ))}
             <button onClick={() => void load()} className="rounded-xl p-2 text-white/80 hover:bg-white/10" aria-label={ar ? 'تحديث' : 'Refresh'}><RefreshCw className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /></button>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {isAdmin && branches.length > 0 && (
-            <select data-testid="dashboard-branch-filter" value={activeBranchId || ''} onChange={(e) => setActiveBranchId(e.target.value || null)} className="h-10 rounded-xl border border-white/25 bg-white/10 px-3 text-sm font-semibold text-white [&>option]:text-slate-800">
+            <select data-testid="dashboard-branch-filter" value={activeBranchId || ''} onChange={(e) => setActiveBranchId(e.target.value || null)} className="h-10 rounded-xl border border-white/25 bg-white/10 px-3 text-sm font-semibold text-white [&>option]:text-ui-text">
               <option value="">{ar ? 'كل الفروع' : 'All branches'}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{ar ? b.name : b.name_en || b.name}</option>)}
             </select>
           )}
-          <button data-testid="dashboard-compare-toggle" onClick={() => setCompareEnabled((v) => !v)} aria-pressed={compareEnabled} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold ${compareEnabled ? 'border-white bg-white text-violet-700' : 'border-white/25 text-white/85 hover:bg-white/10'}`}>
-            <span className={`h-5 w-9 rounded-full p-0.5 ${compareEnabled ? 'bg-violet-500' : 'bg-white/30'}`}><span className={`block h-4 w-4 rounded-full bg-white shadow transition ${compareEnabled ? 'translate-x-4' : ''}`} /></span>
+          <button data-testid="dashboard-compare-toggle" onClick={() => setCompareEnabled((v) => !v)} aria-pressed={compareEnabled} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold ${compareEnabled ? 'border-white bg-ui-surface text-ui-primary' : 'border-white/25 text-white/85 hover:bg-white/10'}`}>
+            <span className={`h-5 w-9 rounded-full p-0.5 ${compareEnabled ? 'bg-ui-primary' : 'bg-white/30'}`}><span className={`block h-4 w-4 rounded-full bg-ui-surface shadow transition ${compareEnabled ? 'translate-x-4' : ''}`} /></span>
             {ar ? 'مقارنة' : 'Compare'}
           </button>
           <div className="relative">
@@ -341,14 +362,14 @@ export function VisualDashboardPage() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                    <span className="h-3 w-3 rounded-full bg-ui-success" />
                     <span className="text-xs font-semibold text-ui-subtle">{ar ? 'مبيعات الشهر' : 'Sales this month'}</span>
                   </div>
                   <p className="text-xl font-black text-ui-text">{money(quickStats.sales)}</p>
                 </div>
                 <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="h-3 w-3 rounded-full bg-red-500" />
+                    <span className="h-3 w-3 rounded-full bg-ui-danger" />
                     <span className="text-xs font-semibold text-ui-subtle">{ar ? 'مصروفات الشهر' : 'Expenses this month'}</span>
                   </div>
                   <p className="text-xl font-black text-ui-text">{money(quickStats.expenses)}</p>
@@ -362,7 +383,7 @@ export function VisualDashboardPage() {
                 </div>
                 <div className="rounded-2xl border border-ui-border bg-ui-page-alt p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="h-3 w-3 rounded-full bg-amber-500" />
+                    <span className="h-3 w-3 rounded-full bg-ui-warning" />
                     <span className="text-xs font-semibold text-ui-subtle">{ar ? 'تنبيهات المخزون' : 'Low stock alerts'}</span>
                   </div>
                   <p className="text-xl font-black text-ui-text">{formatNumber(quickStats.lowStockCount, 0)}</p>
@@ -475,20 +496,20 @@ export function VisualDashboardPage() {
             const totalWasteCost = wasteRows.reduce((s, r) => s + Number(r.total_cost || 0), 0);
             const totalWasteEntries = wasteRows.reduce((s, r) => s + Number(r.entry_count || 0), 0);
             return (
-              <Card className="border-red-200 bg-red-50/60 p-5">
+              <Card className="border-ui-danger/20 bg-ui-danger-soft p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 font-bold text-red-800"><Trash2 className="h-5 w-5" />{ar ? ' الهالك — آخر 30 يوم' : ' Waste — Last 30 Days'}</div>
-                  <Link to="/waste-center" className="text-xs font-bold text-red-600">{ar ? 'عرض الكل' : 'View all'}</Link>
+                  <div className="flex items-center gap-2 font-bold text-ui-danger"><Trash2 className="h-5 w-5" />{ar ? ' الهالك — آخر 30 يوم' : ' Waste — Last 30 Days'}</div>
+                  <Link to="/waste-center" className="text-xs font-bold text-ui-danger">{ar ? 'عرض الكل' : 'View all'}</Link>
                 </div>
                 <div className="flex items-center gap-6 mb-3 text-sm">
-                  <span className="text-red-700 font-semibold">{ar ? 'الإجمالي:' : 'Total:'} {money(totalWasteCost)}</span>
-                  <span className="text-red-600">{totalWasteEntries} {ar ? 'سجل' : 'entries'}</span>
+                  <span className="text-ui-danger font-semibold">{ar ? 'الإجمالي:' : 'Total:'} {money(totalWasteCost)}</span>
+                  <span className="text-ui-danger/70">{totalWasteEntries} {ar ? 'سجل' : 'entries'}</span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {wasteRows.slice(0, 6).map((r, i) => (
-                    <div key={i} className="rounded-xl bg-white p-2.5 shadow-sm text-sm">
-                      <p className="font-semibold truncate">{r.waste_category}</p>
-                      <p className="text-red-600 text-xs mt-0.5">{Number(r.total_quantity).toLocaleString()} — {money(Number(r.total_cost))}</p>
+                    <div key={i} className="rounded-xl bg-ui-surface p-2.5 shadow-ui-sm text-sm">
+                      <p className="font-semibold truncate text-ui-text">{r.waste_category}</p>
+                      <p className="text-ui-danger text-xs mt-0.5">{Number(r.total_quantity).toLocaleString()} — {money(Number(r.total_cost))}</p>
                     </div>
                   ))}
                 </div>
@@ -497,10 +518,10 @@ export function VisualDashboardPage() {
           })()}
 
           {lowStock.length > 0 && (
-            <Card className="border-amber-200 bg-amber-50/60 p-5">
-              <div className="flex items-center gap-2 font-bold text-amber-800"><AlertTriangle className="h-5 w-5" />{ar ? 'تنبيه المخزون المنخفض' : 'Low stock alert'}</div>
+            <Card className="border-ui-warning/20 bg-ui-warning-soft p-5">
+              <div className="flex items-center gap-2 font-bold text-ui-warning"><AlertTriangle className="h-5 w-5" />{ar ? 'تنبيه المخزون المنخفض' : 'Low stock alert'}</div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {lowStock.map((r, i) => <Link key={i} to="/inventory" className="rounded-xl bg-white p-3 shadow-sm"><p className="truncate text-sm font-semibold">{r.product?.[0]?.name || '—'}</p><p className="mt-1 text-xs text-amber-700">{formatNumber(Number(r.quantity || 0), 2)} {ar ? 'متبقي' : 'remaining'}</p></Link>)}
+                {lowStock.map((r, i) => <Link key={i} to="/inventory" className="rounded-xl bg-ui-surface p-3 shadow-ui-sm"><p className="truncate text-sm font-semibold text-ui-text">{r.product?.[0]?.name || '—'}</p><p className="mt-1 text-xs text-ui-warning">{formatNumber(Number(r.quantity || 0), 2)} {ar ? 'متبقي' : 'remaining'}</p></Link>)}
               </div>
             </Card>
           )}

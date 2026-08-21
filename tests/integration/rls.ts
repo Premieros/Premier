@@ -78,8 +78,12 @@ async function ins(client: pg.Client, sql: string): Promise<string> {
 export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
   const ids: RlsIds = {} as RlsIds;
 
-  ids.branchA = await ins(client, `INSERT INTO public.branches (name) VALUES ('RLS A')`);
-  ids.branchB = await ins(client, `INSERT INTO public.branches (name) VALUES ('RLS B')`);
+  // Create two organizations for proper tenant isolation
+  const orgA = await ins(client, `INSERT INTO public.organizations (name, slug) VALUES ('Org A', 'org-a')`);
+  const orgB = await ins(client, `INSERT INTO public.organizations (name, slug) VALUES ('Org B', 'org-b')`);
+
+  ids.branchA = await ins(client, `INSERT INTO public.branches (name, organization_id) VALUES ('RLS A', '${orgA}')`);
+  ids.branchB = await ins(client, `INSERT INTO public.branches (name, organization_id) VALUES ('RLS B', '${orgB}')`);
 
   // Chart of accounts + mappings + treasury accounts are seeded per branch by
   // their canonical functions (SECURITY DEFINER).
@@ -151,6 +155,28 @@ export async function seedRlsFixture(client: pg.Client): Promise<RlsIds> {
   };
 
   await client.query('ALTER TABLE public.users ENABLE TRIGGER trg_users_role_guard');
+
+  // Add organization memberships so user_organization_ids() returns non-empty
+  // for non-super_admin users. This enables user_may_access_branch() to work.
+  await client.query(
+    `INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES
+     ($1, $2, 'owner', true),
+     ($1, $3, 'member', true),
+     ($1, $4, 'member', true),
+     ($1, $5, 'member', true),
+     ($1, $6, 'member', true),
+      ($1, $7, 'member', true),
+     ($8, $9, 'member', true),
+     ($1, $10, 'member', true),
+     ($8, $10, 'member', true),
+     ($8, $2, 'member', true)`,
+    [
+      orgA, ids.users.owner, ids.users.branch_manager, ids.users.cashier,
+      ids.users.warehouse_manager, ids.users.accountant, ids.users.production_manager,
+      orgB, ids.users.cashier_b,
+      ids.users.super_admin,
+    ],
+  );
 
   // branch_manager holds the accounts.manage permission so PERM-mode tables
   // can be exercised for a non-admin role (rolled back with the transaction).
@@ -313,6 +339,22 @@ export async function runAs(client: pg.Client, userId: string, sql: string, para
     await client.query('RESET ROLE').catch(() => {});
     await client.query('RESET app.user_id').catch(() => {});
     await client.query('RELEASE SAVEPOINT rls_run').catch(() => {});
+  }
+}
+
+// Like runAs but WITHOUT the savepoint rollback: DML (e.g. SECURITY DEFINER
+// RPCs) persists within the outer transaction. Cleanup still resets role/GUC.
+export async function runAsPersist(client: pg.Client, userId: string, sql: string, params: unknown[] = []): Promise<RunResult> {
+  await client.query('SELECT set_config($1, $2, true)', ['app.user_id', userId]);
+  await client.query('SET LOCAL ROLE authenticated');
+  try {
+    const res = await client.query(sql, params);
+    return { rows: res.rows as Array<Record<string, unknown>>, rowCount: res.rowCount ?? 0 };
+  } catch (e: unknown) {
+    return { rows: [], rowCount: 0, error: (e as Error).message };
+  } finally {
+    await client.query('RESET ROLE').catch(() => {});
+    await client.query('RESET app.user_id').catch(() => {});
   }
 }
 

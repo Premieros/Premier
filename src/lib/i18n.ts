@@ -38,6 +38,7 @@ export const translations = {
     users: 'المستخدمون',
     permissions: 'الصلاحيات',
     settings: 'الإعدادات',
+    superAdmin: 'لوحة المدير العام',
     auditLog: 'سجل التدقيق',
     // Common
     add: 'إضافة',
@@ -933,6 +934,7 @@ export const translations = {
     users: 'Users',
     permissions: 'Permissions',
     settings: 'Settings',
+    superAdmin: 'Super Admin Console',
     auditLog: 'Audit Log',
     add: 'Add',
     edit: 'Edit',

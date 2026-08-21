@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -61,29 +61,29 @@ export function LoginPage() {
           <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
             <div className="mb-6"><Logo variant="vertical" size={72} tone="white" tagline={isAr ? 'منصة إدارة الأعمال' : 'Business Management Platform'} /></div>
             <h1 className="text-3xl font-bold text-white text-center mb-3">{t('appName')}</h1>
-            <p className="text-slate-300/80 text-center text-lg max-w-sm">{isAr ? 'منصة إدارة الأعمال المتكاملة لإدارة متجرك وفروعه بكفاءة' : 'The complete business management platform for your store and branches'}</p>
+            <p className="text-ui-muted/80 text-center text-lg max-w-sm">{isAr ? 'منصة إدارة الأعمال المتكاملة لإدارة متجرك وفروعه بكفاءة' : 'The complete business management platform for your store and branches'}</p>
             <div className="grid grid-cols-3 gap-4 mt-10 w-full max-w-md">
               {[
                 { label: isAr ? 'فواتير يومية' : 'Daily Invoices', value: '100+' },
                 { label: isAr ? 'منتجات' : 'Products', value: '500+' },
                 { label: isAr ? 'تقارير' : 'Reports', value: '15+' },
-              ].map((stat) => <div key={stat.label} className="text-center bg-white/[0.06] backdrop-blur-sm rounded-xl px-4 py-3 border border-gold-500/20"><p className="text-2xl font-bold text-white">{stat.value}</p><p className="text-xs text-slate-300/70 mt-0.5">{stat.label}</p></div>)}
+              ].map((stat) => <div key={stat.label} className="text-center bg-white/[0.06] backdrop-blur-sm rounded-xl px-4 py-3 border border-gold-500/20"><p className="text-2xl font-bold text-white">{stat.value}</p><p className="text-xs text-ui-muted/70 mt-0.5">{stat.label}</p></div>)}
             </div>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-navy-950 relative">
+        <div className="flex-1 flex items-center justify-center p-6 bg-ui-page-alt dark:bg-navy-950 relative">
           <div className="absolute top-4 end-4 z-10">
-            <button data-testid="login-language-toggle" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="px-4 py-2 rounded-xl bg-white dark:bg-navy-900 text-slate-600 dark:text-slate-300 text-sm font-medium shadow-sm border border-slate-200 dark:border-navy-800 hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors">{lang === 'ar' ? 'English' : 'العربية'}</button>
+            <button data-testid="login-language-toggle" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="px-4 py-2 rounded-xl bg-ui-surface dark:bg-navy-900 text-ui-muted text-sm font-medium shadow-sm border border-ui-border dark:border-navy-800 hover:bg-ui-page-alt dark:hover:bg-navy-800 transition-colors">{lang === 'ar' ? 'English' : 'العربية'}</button>
           </div>
 
           <div data-testid="login-panel" className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden mb-8 flex justify-center"><Logo variant="horizontal" size={40} tone="navy" tagline={isAr ? 'منصة إدارة الأعمال' : 'Business Management Platform'} /></div>
-            <div className="bg-white dark:bg-navy-900 rounded-3xl shadow-xl border border-slate-100 dark:border-navy-800 p-8">
-              <div className="mb-6"><h2 className="text-2xl font-bold text-slate-900 dark:text-white">{isAr ? 'مرحباً بك' : 'Welcome back'}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{isAr ? 'سجّل دخولك للوصول إلى منصة Premier' : 'Sign in to access Premier'}</p></div>
-              <div data-testid="login-mode-toggle" className="flex rounded-xl bg-slate-100 dark:bg-navy-800 p-1 mb-5">
-                <button type="button" onClick={() => setMode('pin')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'pin' ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('loginWithPin')}</button>
-                <button type="button" onClick={() => setMode('password')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'password' ? 'bg-white dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('loginWithEmail')}</button>
+            <div className="bg-ui-surface dark:bg-navy-900 rounded-3xl shadow-xl border border-ui-border dark:border-navy-800 p-8">
+              <div className="mb-6"><h2 className="text-2xl font-bold text-ui-text dark:text-white">{isAr ? 'مرحباً بك' : 'Welcome back'}</h2><p className="text-sm text-ui-subtle dark:text-ui-subtle mt-1">{isAr ? 'سجّل دخولك للوصول إلى منصة Premier' : 'Sign in to access Premier'}</p></div>
+              <div data-testid="login-mode-toggle" className="flex rounded-xl bg-ui-page-alt dark:bg-navy-800 p-1 mb-5">
+                <button type="button" onClick={() => setMode('pin')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'pin' ? 'bg-ui-surface dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-ui-subtle dark:text-ui-subtle hover:text-ui-text dark:hover:text-ui-text'}`}>{t('loginWithPin')}</button>
+                <button type="button" onClick={() => setMode('password')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'password' ? 'bg-ui-surface dark:bg-navy-700 text-brand-700 dark:text-gold-400 shadow-sm' : 'text-ui-subtle dark:text-ui-subtle hover:text-ui-text dark:hover:text-ui-text'}`}>{t('loginWithEmail')}</button>
               </div>
               <form data-testid="login-form" onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'pin' ? <>
@@ -95,7 +95,7 @@ export function LoginPage() {
                 </>}
                 <Button data-testid="login-submit" type="submit" size="lg" className="w-full" disabled={loading}>{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{t('signIn')}<ArrowRight className="w-4 h-4" /></>}</Button>
               </form>
-              <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">{t('noAccount')}{' '}<Link to="/register" className="font-semibold text-brand-600 hover:underline dark:text-gold-400">{t('signUp')}</Link></p>
+              <p className="mt-5 text-center text-sm text-ui-subtle dark:text-ui-subtle">{t('noAccount')}{' '}<Link to="/register" className="font-semibold text-brand-600 hover:underline dark:text-gold-400">{t('signUp')}</Link></p>
             </div>
           </div>
         </div>

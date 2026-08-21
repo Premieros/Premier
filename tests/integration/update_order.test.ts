@@ -83,19 +83,22 @@ describe.skipIf(skip)('update_order + occupancy guards (046 C2/H2/M4)', () => {
     return r.rows[0].c;
   }
 
+  const orgId = randomUUID();
   beforeAll(async () => {
     client = openDb(dbUrl!);
     await client.connect();
     await client.query('BEGIN');
 
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, $2)`, [branchId, '046 C2 Branch']);
+    await client.query(`INSERT INTO public.organizations (id, name, slug) VALUES ($1, $2, $3)`, [orgId, '046 Org', `046-${randomUUID().slice(0, 8)}`]);
+    await client.query(`INSERT INTO public.branches (id, name, organization_id) VALUES ($1, $2, $3)`, [branchId, '046 C2 Branch', orgId]);
     await client.query(`INSERT INTO public.warehouses (id, name, branch_id, is_active) VALUES ($1, $2, $3, true)`, [whId, '046 WH', branchId]);
     await client.query(`INSERT INTO public.products (id, name, branch_id, sale_price, cost_price, is_active) VALUES ($1, $2, $3, 100, 50, true)`, [prodId, '046 Product', branchId]);
     await client.query(`INSERT INTO public.inventory_batches (product_id, warehouse_id, branch_id, quantity, unit_cost, source_type) VALUES ($1, $2, $3, 10, 50, 'opening')`, [prodId, whId, branchId]);
     await client.query(`INSERT INTO public.dining_tables (id, name, branch_id, capacity, status) VALUES ($1, $2, $3, 4, 'vacant')`, [tableA, 'T-A', branchId]);
     await client.query(`INSERT INTO public.dining_tables (id, name, branch_id, capacity, status) VALUES ($1, $2, $3, 4, 'vacant')`, [tableB, 'T-B', branchId]);
     await client.query(`INSERT INTO public.users (id, email, full_name, role, branch_id, is_active) VALUES ($1, $2, $3, 'cashier', $4, true)`, [cashierId, `c2-${randomUUID()}@test.local`, 'Cashier', branchId]);
+    await client.query(`INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES ($1, $2, 'member', true)`, [orgId, cashierId]);
     await client.query(`INSERT INTO public.shifts (branch_id, cashier_id, opening_amount, status) VALUES ($1, $2, 0, 'open')`, [branchId, cashierId]);
     await client.query(`SELECT public.ensure_chart_of_accounts($1)`, [branchId]);
     await client.query(`SELECT public.seed_account_mappings($1)`, [branchId]);

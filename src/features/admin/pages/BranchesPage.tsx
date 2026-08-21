@@ -1,6 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
-import { supabase } from '@/api';
+import { supabase, branches as branchesApi } from '@/api';
+import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { DesignSurface, DesignPageHeader } from '@/components/design/DesignSurface';
@@ -18,6 +19,7 @@ import type { Branch } from '@/lib/types';
 export function BranchesPage() {
   const { t } = useLanguage();
   const { show } = useToast();
+  const { user } = useAuth();
   const { rows: items, loading, total, hasMore, loadMore, loadingMore, refresh: reloadBranches } = usePaginatedRows<Branch>({
     table: 'branches',
     select: '*',
@@ -27,50 +29,76 @@ export function BranchesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', name_en: '', address: '', phone: '', is_active: true });
 
   const openAdd = () => { setEditing(null); setForm({ name: '', name_en: '', address: '', phone: '', is_active: true }); setModalOpen(true); };
   const openEdit = (b: Branch) => { setEditing(b); setForm({ name: b.name, name_en: b.name_en || '', address: b.address || '', phone: b.phone || '', is_active: b.is_active }); setModalOpen(true); };
 
+  const resolveOrgId = async (): Promise<string | null> => {
+    if (!user?.branch_id) return null;
+    const { data } = await supabase.from('branches').select('organization_id').eq('id', user.branch_id).maybeSingle();
+    return (data as { organization_id: string | null } | null)?.organization_id ?? null;
+  };
+
   const save = async () => {
     if (!form.name) { show(t('required'), 'error'); return; }
-    if (editing) {
-      const { error } = await supabase.from('branches').update(form).eq('id', editing.id);
-      if (error) { show(error.message, 'error'); return; }
-      await logAudit('update', 'branches', editing.id);
-    } else {
-      const { error } = await supabase.from('branches').insert(form);
-      if (error) { show(error.message, 'error'); return; }
-      await logAudit('create', 'branches');
+    setSaving(true);
+    try {
+      if (editing) {
+        const { data, error } = await branchesApi.update({
+          p_branch_id: editing.id,
+          p_name: form.name,
+          p_name_en: form.name_en || null,
+          p_address: form.address || null,
+          p_phone: form.phone || null,
+        });
+        if (error || !data?.success) { show(error?.message || data?.error || 'Error', 'error'); return; }
+        await logAudit('update', 'branches', editing.id);
+      } else {
+        const orgId = await resolveOrgId();
+        if (!orgId) { show(t('required'), 'error'); return; }
+        const { data, error } = await branchesApi.create({
+          p_organization_id: orgId,
+          p_name: form.name,
+          p_name_en: form.name_en || null,
+          p_address: form.address || null,
+          p_phone: form.phone || null,
+        });
+        if (error || !data?.success) { show(error?.message || data?.error || 'Error', 'error'); return; }
+        await logAudit('create', 'branches');
+      }
+      show(t('saveSuccess'), 'success');
+      setModalOpen(false);
+      reloadBranches();
+    } finally {
+      setSaving(false);
     }
-    show(t('saveSuccess'), 'success');
-    setModalOpen(false);
-    reloadBranches();
   };
 
   const remove = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from('branches').delete().eq('id', deleteId);
-    if (error) show(error.message, 'error');
+    const { data, error } = await branchesApi.deactivate({ p_branch_id: deleteId });
+    if (error || !data?.success) show(error?.message || data?.error || 'Error', 'error');
     else { show(t('deleteSuccess'), 'success'); await logAudit('delete', 'branches', deleteId); }
     setDeleteId(null);
     reloadBranches();
   };
 
   const columns: Column<Branch>[] = [
-    { key: 'name', header: t('name'), render: (b) => <span className="font-medium text-slate-800 dark:text-slate-200">{b.name}</span> },
+    { key: 'name', header: t('name'), render: (b) => <span className="font-medium text-ui-text">{b.name}</span> },
     { key: 'name_en', header: t('nameEn'), render: (b) => b.name_en || '-' },
     { key: 'address', header: t('address'), render: (b) => b.address || '-' },
     { key: 'phone', header: t('phone'), render: (b) => b.phone || '-' },
     { key: 'is_active', header: t('status'), render: (b) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {b.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (b) => (
       <div className="flex gap-1">
-        <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
       </div>
     )},
   ];
@@ -94,7 +122,7 @@ export function BranchesPage() {
           </Select>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
-            <Button onClick={save}>{t('save')}</Button>
+            <Button onClick={save} disabled={saving}>{t('save')}</Button>
           </div>
         </div>
       </Modal>

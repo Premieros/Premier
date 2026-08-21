@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, ChefHat } from 'lucide-react';
 import { supabase } from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -163,27 +163,27 @@ export function RecipesPage() {
           <ChefHat className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{rc.product?.name || '-'}</p>
-          {rc.name && <p className="text-xs text-slate-400">{rc.name}</p>}
+          <p className="font-medium text-ui-text">{rc.product?.name || '-'}</p>
+          {rc.name && <p className="text-xs text-ui-subtle">{rc.name}</p>}
         </div>
       </div>
     )},
     { key: 'branch', header: t('branch'), render: (rc) => rc.branch?.name || '-' },
     { key: 'yield', header: t('yieldQuantity'), render: (rc) => formatNumber(Number(rc.yield_quantity)) },
     { key: 'is_active', header: t('status'), render: (rc) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${rc.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${rc.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {rc.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (rc) => (
       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
         {can('recipes.manage') && (
-          <button onClick={() => openEdit(rc)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}>
+          <button onClick={() => openEdit(rc)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('edit')}>
             <Edit2 className="w-4 h-4" />
           </button>
         )}
         {can('recipes.manage') && (
-          <button onClick={() => setDeleteId(rc.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('delete')}>
+          <button onClick={() => setDeleteId(rc.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('delete')}>
             <Trash2 className="w-4 h-4" />
           </button>
         )}
@@ -225,7 +225,7 @@ export function RecipesPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('recipeItems')}</p>
+              <p className="text-sm font-bold text-ui-muted">{t('recipeItems')}</p>
               <Button variant="outline" size="sm" onClick={addLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
@@ -237,7 +237,7 @@ export function RecipesPage() {
                   </Select>
                   <Input type="number" step="0.0001" value={it.quantity} onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value) || 0)} placeholder={t('requiredQty')} />
                   <Input type="number" step="0.01" value={it.wastage_percent} onChange={(e) => updateLine(idx, 'wastage_percent', parseFloat(e.target.value) || 0)} placeholder={t('wastagePercent')} />
-                  <button onClick={() => removeLine(idx)} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('delete')}>
+                  <button onClick={() => removeLine(idx)} className="p-2 rounded-lg text-ui-danger hover:bg-ui-danger-soft" title={t('delete')}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -245,9 +245,9 @@ export function RecipesPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-ui-muted">
             <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-              className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500" />
+              className="w-4 h-4 rounded border-ui-border text-brand-600 focus:ring-brand-500" />
             {t('active')}
           </label>
 

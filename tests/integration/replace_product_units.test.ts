@@ -65,7 +65,9 @@ describe.skipIf(skip)('replace_product_units (077)', () => {
 
     await client.query(`ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard`);
 
-    await client.query(`INSERT INTO public.branches (id, name) VALUES ($1, $2)`, [branchA, 'Branch A']);
+    const orgId = randomUUID();
+    await client.query(`INSERT INTO public.organizations (id, name, slug) VALUES ($1, $2, $3)`, [orgId, 'RPU Org', `rpu-${randomUUID().slice(0, 8)}`]);
+    await client.query(`INSERT INTO public.branches (id, name, organization_id) VALUES ($1, $2, $3)`, [branchA, 'Branch A', orgId]);
     await client.query(
       `INSERT INTO public.products (id, name, branch_id, sale_price, cost_price, is_active) VALUES ($1, $2, $3, 100, 50, true)`,
       [prodA, 'Product A', branchA],
@@ -80,6 +82,7 @@ describe.skipIf(skip)('replace_product_units (077)', () => {
        VALUES ($1, $2, $3, 'cashier', $4, true)`,
       [cashierId, `cashier-${randomUUID()}@test.local`, 'Cashier A', branchA],
     );
+    await client.query(`INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active) VALUES ($1, $2, 'owner', true), ($1, $3, 'member', true)`, [orgId, ownerId, cashierId]);
   });
 
   afterAll(async () => {
