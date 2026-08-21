@@ -12,7 +12,7 @@
 
 CREATE TABLE IF NOT EXISTS public.user_branch_access (
   id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id    uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   branch_id  uuid NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
   created_at timestamptz DEFAULT now(),
   UNIQUE(user_id, branch_id)
@@ -107,6 +107,14 @@ AS $$
         AND om.user_id = auth.uid()
         AND om.membership_role IN ('owner', 'admin')
         AND om.is_active = true
+    )
+    -- Legacy fallback: users.branch_id grants access to that branch.
+    -- This keeps existing integration tests working while we migrate to
+    -- the explicit user_branch_access model.
+    OR EXISTS (
+      SELECT 1 FROM public.users u
+      WHERE u.id = auth.uid()
+        AND u.branch_id = p_branch_id
     )
     -- Legacy fallback: NULL branch for platform admin only (already covered above)
     OR (p_branch_id IS NULL AND public.is_platform_admin());
@@ -455,14 +463,9 @@ SET search_path = public
 AS $$
 BEGIN
   IF NEW.branch_id IS NOT NULL THEN
-    -- Guard: only grant if the user exists in auth.users (FK target).
-    -- Integration tests insert into public.users with random UUIDs that
-    -- are not in auth.users; the guard silently skips those rows.
-    IF EXISTS (SELECT 1 FROM auth.users WHERE id = NEW.id) THEN
-      INSERT INTO public.user_branch_access (user_id, branch_id)
-      VALUES (NEW.id, NEW.branch_id)
-      ON CONFLICT (user_id, branch_id) DO NOTHING;
-    END IF;
+    INSERT INTO public.user_branch_access (user_id, branch_id)
+    VALUES (NEW.id, NEW.branch_id)
+    ON CONFLICT (user_id, branch_id) DO NOTHING;
   END IF;
   RETURN NEW;
 END;
