@@ -39,81 +39,64 @@ export interface CommandItem {
   icon: typeof Package;
 }
 
+const LABEL_MAP: Record<string, { ar: string; en: string }> = {
+  dashboard: { ar: 'لوحة التحكم', en: 'Dashboard' },
+  pos: { ar: 'نقطة البيع', en: 'POS' },
+  products: { ar: 'المنتجات', en: 'Products' },
+  categories: { ar: 'الأصناف', en: 'Categories' },
+  components: { ar: 'المكونات', en: 'Components' },
+  inventoryUnits: { ar: 'وحدات المخزون', en: 'Inventory Units' },
+  inventory: { ar: 'المخزون', en: 'Inventory' },
+  warehouses: { ar: 'المستودعات', en: 'Warehouses' },
+  branches: { ar: 'الفروع', en: 'Branches' },
+  customers: { ar: 'العملاء', en: 'Customers' },
+  suppliers: { ar: 'الموردون', en: 'Suppliers' },
+  purchases: { ar: 'المشتريات', en: 'Purchases' },
+  expenses: { ar: 'المصروفات', en: 'Expenses' },
+  chartOfAccounts: { ar: 'شجرة الحسابات', en: 'Chart of Accounts' },
+  receivePayment: { ar: 'المدفوعات', en: 'Payments' },
+  journalEntries: { ar: 'القيود اليومية', en: 'Journal Entries' },
+  treasury: { ar: 'الخزينة', en: 'Treasury' },
+  bankReconciliation: { ar: 'التسوية البنكية', en: 'Bank Reconciliation' },
+  financialReports: { ar: 'التقارير المالية', en: 'Financial Reports' },
+  salesInvoices: { ar: 'فواتير البيع', en: 'Sales Invoices' },
+  shifts: { ar: 'الشيفتات', en: 'Shifts' },
+  reports: { ar: 'التقارير', en: 'Reports' },
+  users: { ar: 'المستخدمون', en: 'Users' },
+  auditLog: { ar: 'سجل التدقيق', en: 'Audit Log' },
+  settings: { ar: 'الإعدادات', en: 'Settings' },
+  mySubscription: { ar: 'اشتراكي', en: 'My Subscription' },
+  subscriptionsAdmin: { ar: 'إدارة الاشتراكات', en: 'Subscriptions' },
+  orders: { ar: 'الطلبات', en: 'Orders' },
+  kitchenDisplay: { ar: 'شاشة المطبخ', en: 'Kitchen Display' },
+  kitchenStations: { ar: 'محطات المطبخ', en: 'Kitchen Stations' },
+  wasteCenter: { ar: 'مركز الهالك', en: 'Waste Center' },
+  costingCenter: { ar: 'مركز التكلفة', en: 'Costing Center' },
+};
+
+const GROUP_LABELS: Record<string, { ar: string; en: string }> = {
+  main: { ar: 'الرئيسية', en: 'Main' },
+  catalog: { ar: 'الكتالوج', en: 'Catalog' },
+  operations: { ar: 'العمليات', en: 'Operations' },
+  centers: { ar: 'مراكز الإدارة', en: 'Centers' },
+  people: { ar: 'الأطراف', en: 'People' },
+  finance: { ar: 'المالية', en: 'Finance' },
+  admin: { ar: 'الإدارة', en: 'Admin' },
+};
+
 function buildCommandItems(): CommandItem[] {
   const items: CommandItem[] = [];
 
   for (const mi of MENU_ITEMS) {
+    const labels = LABEL_MAP[mi.labelKey] ?? { ar: mi.labelKey, en: mi.labelKey };
+    const groupLabels = GROUP_LABELS[mi.group] ?? { ar: mi.group, en: mi.group };
     items.push({
       id: mi.id,
       route: mi.route,
-      labelAr: mi.labelKey === 'dashboard' ? 'لوحة التحكم'
-        : mi.labelKey === 'pos' ? 'نقطة البيع'
-        : mi.labelKey === 'products' ? 'المنتجات'
-        : mi.labelKey === 'categories' ? 'الأصناف'
-        : mi.labelKey === 'components' ? 'المكونات'
-        : mi.labelKey === 'inventoryUnits' ? 'وحدات المخزون'
-        : mi.labelKey === 'inventory' ? 'المخزون'
-        : mi.labelKey === 'warehouses' ? 'المستودعات'
-        : mi.labelKey === 'branches' ? 'الفروع'
-        : mi.labelKey === 'customers' ? 'العملاء'
-        : mi.labelKey === 'suppliers' ? 'الموردون'
-        : mi.labelKey === 'purchases' ? 'المشتريات'
-        : mi.labelKey === 'expenses' ? 'المصروفات'
-        : mi.labelKey === 'accounts' ? 'شجرة الحسابات'
-        : mi.labelKey === 'payments' ? 'المدفوعات'
-        : mi.labelKey === 'journal' ? 'القيود اليومية'
-        : mi.labelKey === 'treasury' ? 'الخزينة'
-        : mi.labelKey === 'reconciliation' ? 'التسوية البنكية'
-        : mi.labelKey === 'financialReports' ? 'التقارير المالية'
-        : mi.labelKey === 'sales' ? 'فواتير البيع'
-        : mi.labelKey === 'shifts' ? 'الشيفتات'
-        : mi.labelKey === 'reports' ? 'التقارير'
-        : mi.labelKey === 'users' ? 'المستخدمون'
-        : mi.labelKey === 'auditLog' ? 'سجل التدقيق'
-        : mi.labelKey === 'settings' ? 'الإعدادات'
-        : mi.labelKey === 'mySubscription' ? 'اشتراكي'
-        : mi.labelKey === 'subscriptionsAdmin' ? 'إدارة الاشتراكات'
-        : mi.labelKey === 'orders' ? 'الطلبات'
-        : mi.labelKey === 'kitchenDisplay' ? 'شاشة المطبخ'
-        : mi.labelKey === 'kitchenStations' ? 'محطات المطبخ'
-        : mi.labelKey === 'wasteCenter' ? 'مركز الهالك'
-        : mi.labelKey === 'costingCenter' ? 'مركز التكلفة'
-        : mi.labelKey,
-      labelEn: mi.labelKey === 'dashboard' ? 'Dashboard'
-        : mi.labelKey === 'pos' ? 'POS'
-        : mi.labelKey === 'products' ? 'Products'
-        : mi.labelKey === 'categories' ? 'Categories'
-        : mi.labelKey === 'components' ? 'Components'
-        : mi.labelKey === 'inventoryUnits' ? 'Inventory Units'
-        : mi.labelKey === 'inventory' ? 'Inventory'
-        : mi.labelKey === 'warehouses' ? 'Warehouses'
-        : mi.labelKey === 'branches' ? 'Branches'
-        : mi.labelKey === 'customers' ? 'Customers'
-        : mi.labelKey === 'suppliers' ? 'Suppliers'
-        : mi.labelKey === 'purchases' ? 'Purchases'
-        : mi.labelKey === 'expenses' ? 'Expenses'
-        : mi.labelKey === 'accounts' ? 'Chart of Accounts'
-        : mi.labelKey === 'payments' ? 'Payments'
-        : mi.labelKey === 'journal' ? 'Journal Entries'
-        : mi.labelKey === 'treasury' ? 'Treasury'
-        : mi.labelKey === 'reconciliation' ? 'Bank Reconciliation'
-        : mi.labelKey === 'financialReports' ? 'Financial Reports'
-        : mi.labelKey === 'sales' ? 'Sales Invoices'
-        : mi.labelKey === 'shifts' ? 'Shifts'
-        : mi.labelKey === 'reports' ? 'Reports'
-        : mi.labelKey === 'users' ? 'Users'
-        : mi.labelKey === 'auditLog' ? 'Audit Log'
-        : mi.labelKey === 'settings' ? 'Settings'
-        : mi.labelKey === 'mySubscription' ? 'My Subscription'
-        : mi.labelKey === 'subscriptionsAdmin' ? 'Subscriptions'
-        : mi.labelKey === 'orders' ? 'Orders'
-        : mi.labelKey === 'kitchenDisplay' ? 'Kitchen Display'
-        : mi.labelKey === 'kitchenStations' ? 'Kitchen Stations'
-        : mi.labelKey === 'wasteCenter' ? 'Waste Center'
-        : mi.labelKey === 'costingCenter' ? 'Costing Center'
-        : mi.labelKey,
-      section: mi.group === 'main' ? 'Main' : mi.group === 'catalog' ? 'Catalog' : mi.group === 'operations' ? 'Operations' : mi.group === 'centers' ? 'Centers' : mi.group === 'people' ? 'People' : mi.group === 'finance' ? 'Finance' : 'Admin',
-      sectionAr: mi.group === 'main' ? 'الرئيسية' : mi.group === 'catalog' ? 'الكتالوج' : mi.group === 'operations' ? 'العمليات' : mi.group === 'centers' ? 'مراكز الإدارة' : mi.group === 'people' ? 'الأطراف' : mi.group === 'finance' ? 'المالية' : 'الإدارة',
+      labelAr: labels.ar,
+      labelEn: labels.en,
+      section: groupLabels.en,
+      sectionAr: groupLabels.ar,
       descriptionAr: '',
       descriptionEn: '',
       permission: mi.permission,
