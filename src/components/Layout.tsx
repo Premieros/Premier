@@ -132,7 +132,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen bg-ui-page text-ui-text overflow-x-hidden" data-testid="app-shell">
 
       {/* ── Header: fixed, full-width, z-[60] ── */}
-      <header data-testid="app-header" className={`fixed top-0 start-0 end-0 ${ar ? 'lg:end-[260px]' : 'lg:start-[260px]'} z-[60] flex h-[64px] items-center justify-between gap-3 border-b border-ui-border bg-ui-surface/80 backdrop-blur-md px-4 shadow-ui-sm sm:px-6`}>
+      <header data-testid="app-header" className={`fixed top-0 start-0 end-0 ${ar ? 'lg:start-[260px]' : 'lg:end-[260px]'} z-[60] flex h-[64px] items-center justify-between gap-3 border-b border-ui-border bg-ui-surface/80 backdrop-blur-md px-4 shadow-ui-sm sm:px-6`}>
         {/* Left side: hamburger + command + tabs */}
         <div className="flex min-w-0 items-center gap-3">
           <button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ui-muted hover:bg-ui-page-alt lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}>
@@ -237,7 +237,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
 
       {/* ── Sidebar: fixed, z-50, below header ── */}
-      <aside data-testid="app-sidebar" className={`fixed top-[64px] bottom-0 ${ar ? 'end-0' : 'start-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside data-testid="app-sidebar" className={`fixed top-[64px] bottom-0 ${ar ? 'start-0' : 'end-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? '-translate-x-full' : 'translate-x-full'} lg:translate-x-0`}>
         {/* Sidebar header */}
         <div className="flex h-14 items-center justify-between border-b border-ui-border px-5">
           <Logo variant="horizontal" size={28} tone="mono" showTagline={false} className="text-ui-primary" />
@@ -304,7 +304,7 @@ export function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* ── Main content: offset for header (pt) + sidebar (ms/me) ── */}
-      <div className={`pt-[64px] ${ar ? 'lg:me-[260px]' : 'lg:ms-[260px]'} min-h-screen`}>
+      <div className={`pt-[64px] ${ar ? 'lg:ms-[260px]' : 'lg:me-[260px]'} min-h-screen`}>
         <main data-testid="app-main" className="min-h-[calc(100vh-64px)] bg-ui-page p-4 sm:p-6 lg:p-7">
           <div data-testid="design-content-surface" className="mx-auto min-h-[calc(100vh-64px)] w-full max-w-[1600px] space-y-5">
             {children}
