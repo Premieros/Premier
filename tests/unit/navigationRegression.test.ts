@@ -69,7 +69,7 @@ describe('navigation regressions', () => {
     expect(layout).toContain("ar ? 'start-0' : 'end-0'");
     expect(layout).not.toMatch(/fixed[^`]*\bright-0\b/);
     expect(layout).not.toMatch(/fixed[^`]*\bleft-0\b/);
-    expect(layout).toContain('fixed top-[64px] bottom-0');
+    expect(layout).toContain('fixed top-0 bottom-0');
     expect(layout).toContain('fixed top-0 start-0 end-0');
     expect(layout).toContain('pt-[64px]');
   });

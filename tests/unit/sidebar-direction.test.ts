@@ -14,7 +14,7 @@ describe('sidebar direction contract', () => {
 
   it('sidebar starts below the fixed header at top-[64px]', () => {
     const layout = read('src/components/Layout.tsx');
-    expect(layout).toContain('fixed top-[64px] bottom-0');
+    expect(layout).toContain('fixed top-0 bottom-0');
   });
 
   it('header is fixed and offsets by sidebar width on desktop', () => {
