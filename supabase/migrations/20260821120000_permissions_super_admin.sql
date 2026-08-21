@@ -455,9 +455,14 @@ SET search_path = public
 AS $$
 BEGIN
   IF NEW.branch_id IS NOT NULL THEN
-    INSERT INTO public.user_branch_access (user_id, branch_id)
-    VALUES (NEW.id, NEW.branch_id)
-    ON CONFLICT (user_id, branch_id) DO NOTHING;
+    -- Guard: only grant if the user exists in auth.users (FK target).
+    -- Integration tests insert into public.users with random UUIDs that
+    -- are not in auth.users; the guard silently skips those rows.
+    IF EXISTS (SELECT 1 FROM auth.users WHERE id = NEW.id) THEN
+      INSERT INTO public.user_branch_access (user_id, branch_id)
+      VALUES (NEW.id, NEW.branch_id)
+      ON CONFLICT (user_id, branch_id) DO NOTHING;
+    END IF;
   END IF;
   RETURN NEW;
 END;

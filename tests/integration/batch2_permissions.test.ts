@@ -29,9 +29,9 @@ let canRun = false;
 beforeAll(async () => {
   client = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL });
   await client.connect();
+  await client.query('BEGIN');
   canRun = await canImpersonate(client);
   if (canRun) {
-    await client.query('BEGIN');
     ids = await seedRlsFixture(client);
   }
 }, 30_000);
