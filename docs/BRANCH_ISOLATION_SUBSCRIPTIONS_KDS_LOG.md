@@ -12,9 +12,10 @@
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
 - **Current gate:** NOT READY TO MERGE
-- **Latest code fix:** `751a074fc950489089011ccad838a10b5c0c7de5`
+- **Latest code fix:** `3cc0936ab5b0f4109199ede0f5b6a147987d029a`
 - **Latest verified CI:** `3cd1b28a306d3a52a9a5ef634371048769de15ec` passed lint, typecheck, unit, build, schema verification, integration/security/RLS, and browser smoke.
-- **Latest failed CI:** run #371 failed only at lint because `SubscriptionsAdminPage.tsx` called `useMemo` after a conditional return. This has been corrected in `751a074...`; a fresh PR workflow must complete.
+- **Latest CI issue fixed:** run #371 failed at lint because `SubscriptionsAdminPage.tsx` called `useMemo` after a conditional return; fixed in `751a074...`.
+- **Current verification required:** fresh CI for the latest route-gating commit.
 
 ## Non-Negotiable Rules
 
@@ -49,8 +50,8 @@
 - [x] Super Admin plan price editing RPC.
 - [x] Canonical module feature flags.
 - [x] Canonical Super Admin subscription UI with plan pricing and per-branch module toggles.
-- [ ] Enforce disabled modules on direct routes.
-- [ ] Enforce feature state consistently in navigation and backend/service calls.
+- [x] Enforce disabled modules on direct routes using the branch subscription's effective feature state.
+- [ ] Enforce feature state consistently in all navigation and backend/service calls.
 - [ ] Add regression tests for enabled/disabled feature access.
 
 ### Phase C — Super Admin Settings Control Center
@@ -98,7 +99,7 @@
 - [ ] Browser smoke/e2e for KDS, Raw Materials, subscriptions, Settings, branch isolation.
 - [ ] Two-branch access matrix.
 - [ ] Super Admin global access vs branch-manager isolation.
-- [ ] Disabled feature route blocking.
+- [x] Disabled feature route blocking implemented; test still required.
 - [ ] No duplicate UI actions.
 - [ ] Only after all gates are green: merge PR #18 into `main` and verify deployment.
 
@@ -122,7 +123,15 @@
 - Cause: `activePlans = useMemo(...)` was declared after the Super Admin conditional return.
 - Fix: moved `useMemo` and `field` declarations before the conditional return, preserving hook order for every render.
 - Fix commit: `751a074fc950489089011ccad838a10b5c0c7de5`.
-- **Required next action:** verify the fresh PR workflow and continue only after it is green.
+
+### 2026-08-22 — Direct route feature gates implemented
+- Added canonical feature-key mapping to `ProtectedRoute` based on the existing permission namespace.
+- `/kitchen` is explicitly mapped to the `kitchen` feature instead of inheriting the POS feature.
+- A branch user with an explicitly disabled effective subscription feature is redirected to the subscription page even when navigating directly to the route URL.
+- Super Admin bypasses subscription feature gates as intended.
+- Existing permission/RBAC checks remain in place; subscription gating is an additional layer.
+- Commit: `3cc0936ab5b0f4109199ede0f5b6a147987d029a`.
+- **Required next action:** fresh CI and regression tests for enabled/disabled feature routing.
 
 ## Merge Checklist
 - [ ] All Phase A–F required items complete.
