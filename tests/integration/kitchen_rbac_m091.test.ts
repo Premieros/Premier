@@ -25,6 +25,21 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
     }
   }
 
+  async function expectDbError(fn: () => Promise<unknown>, pattern: RegExp): Promise<void> {
+    const savepoint = `kitchen_expected_${randomUUID().replace(/-/g, '')}`;
+    await client.query(`SAVEPOINT ${savepoint}`);
+    let error: unknown;
+    try {
+      await fn();
+    } catch (caught) {
+      error = caught;
+    }
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+    expect(error).toBeDefined();
+    expect(String(error)).toMatch(pattern);
+  }
+
   beforeAll(async () => {
     client = openDb(dbUrl!);
     await client.connect();
@@ -60,15 +75,20 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
     expect(ownRows.map(r => r.order_id)).toContain(orderA);
     expect(ownRows.map(r => r.order_id)).not.toContain(orderB);
 
-    await expect(asUser(productionUser, async () => {
-      await client.query(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]);
-    })).rejects.toThrow(/BRANCH_ACCESS_DENIED/);
+    await asUser(productionUser, async () => {
+      await expectDbError(
+        () => client.query(`SELECT order_id FROM public.get_kitchen_queue(NULL, $1)`, [branchB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
+    });
   });
 
   it('branch user cannot route another branch order', async () => {
     await asUser(productionUser, async () => {
-      await expect(client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]))
-        .rejects.toThrow(/BRANCH_ACCESS_DENIED/);
+      await expectDbError(
+        () => client.query(`SELECT public.route_to_station($1, 'grill')`, [orderB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
       const own = await client.query(`SELECT public.route_to_station($1, 'grill')`, [orderA]);
       expect(own.rowCount).toBe(1);
     });
@@ -76,8 +96,10 @@ describe.skipIf(skip)('Kitchen branch isolation', () => {
 
   it('cashier cannot query another branch through the SECURITY DEFINER RPC', async () => {
     await asUser(cashierUser, async () => {
-      await expect(client.query(`SELECT * FROM public.get_kitchen_queue(NULL, $1)`, [branchB]))
-        .rejects.toThrow(/BRANCH_ACCESS_DENIED/);
+      await expectDbError(
+        () => client.query(`SELECT * FROM public.get_kitchen_queue(NULL, $1)`, [branchB]),
+        /BRANCH_ACCESS_DENIED/,
+      );
     });
   });
 
