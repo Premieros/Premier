@@ -54,7 +54,7 @@ export function Logo({
       ? 'text-white'
       : tone === 'mono'
         ? 'text-current'
-        : 'text-slate-900 dark:text-white';
+        : 'text-ui-text';
 
   const mark = <Mark stem={stem} bowl={bowl} arrow={arrow} size={size} />;
 
@@ -68,7 +68,7 @@ export function Logo({
       </span>
       {showTagline && (
         <span
-          className="uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500 mt-1 leading-none"
+          className="uppercase tracking-[0.16em] text-ui-subtle mt-1 leading-none"
           style={{ fontSize: Math.max(8, Math.round(size * 0.125)) }}
         >
           {tagline}

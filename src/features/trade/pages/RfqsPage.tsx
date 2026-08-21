@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Trash2, Eye, Send, X, BadgeCheck, Scale, Check } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -40,11 +40,11 @@ interface QuotationFormItem {
 const EMPTY_QUOTE_LINE: QuotationFormItem = { line_type: 'product', product_id: '', raw_material_id: '', quantity: 1, unit_cost: 0 };
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  received: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  awarded: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  cancelled: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  draft: 'bg-ui-page-alt text-ui-muted',
+  sent: 'bg-ui-info-soft text-ui-info',
+  received: 'bg-ui-warning-soft text-ui-warning',
+  awarded: 'bg-ui-success-soft text-ui-success',
+  cancelled: 'bg-ui-page-alt text-ui-muted',
 };
 
 export function RfqsPage() {
@@ -212,29 +212,29 @@ export function RfqsPage() {
   };
 
   const columns: Column<RfqRow>[] = [
-    { key: 'rfq_number', header: t('rfqNumber'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.rfq_number}</span> },
+    { key: 'rfq_number', header: t('rfqNumber'), render: (r) => <span className="font-medium text-ui-text">{r.rfq_number}</span> },
     { key: 'due_date', header: t('dueDate'), render: (r) => (r.due_date ? formatDate(r.due_date, lang) : '-') },
     { key: 'created_at', header: t('date'), render: (r) => formatDate(r.created_at, lang) },
     { key: 'status', header: t('status'), render: (r) => <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] || ''}`}>{t(r.status as keyof typeof import('@/lib/i18n').translations.ar)}</span> },
     { key: 'actions', header: t('actions'), render: (r) => (
       <div className="flex items-center gap-1 justify-end">
         {r.status === 'draft' && can('purchases.manage') && (
-          <button title={t('submitRequest')} onClick={() => changeStatus(r.id, 'sent')} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Send className="w-4 h-4" /></button>
+          <button title={t('submitRequest')} onClick={() => changeStatus(r.id, 'sent')} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Send className="w-4 h-4" /></button>
         )}
         {['draft', 'sent', 'received'].includes(r.status) && can('purchases.manage') && (
-          <button title={t('recordQuotation')} onClick={() => openQuote(r)} className="p-1.5 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500"><Plus className="w-4 h-4" /></button>
+          <button title={t('recordQuotation')} onClick={() => openQuote(r)} className="p-1.5 rounded-md hover:bg-ui-warning-soft text-ui-warning"><Plus className="w-4 h-4" /></button>
         )}
         {['sent', 'received'].includes(r.status) && can('purchases.manage') && (
           <button title={t('comparison')} onClick={() => openComparison(r)} className="p-1.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500"><Scale className="w-4 h-4" /></button>
         )}
         {r.status === 'received' && can('purchases.manage') && (
-          <button title={t('createPurchaseOrder')} onClick={() => openComparison(r)} className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500"><BadgeCheck className="w-4 h-4" /></button>
+          <button title={t('createPurchaseOrder')} onClick={() => openComparison(r)} className="p-1.5 rounded-md hover:bg-ui-success-soft text-ui-success"><BadgeCheck className="w-4 h-4" /></button>
         )}
         {!['awarded', 'cancelled'].includes(r.status) && can('purchases.manage') && (
-          <button title={t('cancel')} onClick={() => changeStatus(r.id, 'cancelled')} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button>
+          <button title={t('cancel')} onClick={() => changeStatus(r.id, 'cancelled')} className="p-1.5 rounded-md hover:bg-ui-page-alt dark:hover:bg-ui-page-alt text-ui-subtle"><X className="w-4 h-4" /></button>
         )}
         {r.status === 'received' && can('purchases.manage') && (
-          <button onClick={() => openComparison(r)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Eye className="w-4 h-4" /></button>
+          <button onClick={() => openComparison(r)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Eye className="w-4 h-4" /></button>
         )}
       </div>
     )},
@@ -264,46 +264,46 @@ export function RfqsPage() {
               {requests.map((r) => <option key={r.id} value={r.id}>{r.request_number}</option>)}
             </Select>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{t('dueDate')}</label>
-              <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
+              <label className="block text-xs font-medium text-ui-muted mb-1">{t('dueDate')}</label>
+              <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
             </div>
-            <input type="text" placeholder={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
+            <input type="text" placeholder={t('notes')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('addItem')}</h3>
+              <h3 className="font-semibold text-ui-muted">{t('addItem')}</h3>
               <Button size="sm" variant="outline" onClick={addLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
             </div>
             <div className="space-y-2">
               {lineItems.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                  <select value={l.line_type} onChange={(e) => updateLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                     <option value="product">{t('product')}</option>
                     <option value="raw">{t('rawMaterial')}</option>
                   </select>
                   <div className="col-span-4">
                     {l.line_type === 'product' ? (
-                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.product_id} onChange={(e) => updateLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     ) : (
-                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                      <select value={l.raw_material_id} onChange={(e) => updateLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                         <option value="">--</option>
                         {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
                       </select>
                     )}
                   </div>
-                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <input type="text" placeholder={t('notes')} value={l.notes} onChange={(e) => updateLine(i, 'notes', e.target.value)} className="col-span-3 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"><Trash2 className="w-4 h-4" /></button>
+                  <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder={t('notes')} value={l.notes} onChange={(e) => updateLine(i, 'notes', e.target.value)} className="col-span-3 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                  <button onClick={() => removeLine(i)} className="col-span-1 p-1.5 text-ui-danger hover:bg-ui-danger-soft rounded-md"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex justify-end gap-2 pt-2 border-t border-ui-border">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('cancel')}</Button>
             <Button onClick={save} disabled={saving}>{saving ? t('loading') : t('save')}</Button>
           </div>
@@ -319,45 +319,45 @@ export function RfqsPage() {
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </Select>
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{t('validUntil')}</label>
-                <input type="date" value={quoteForm.valid_until} onChange={(e) => setQuoteForm({ ...quoteForm, valid_until: e.target.value })} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
+                <label className="block text-xs font-medium text-ui-muted mb-1">{t('validUntil')}</label>
+                <input type="date" value={quoteForm.valid_until} onChange={(e) => setQuoteForm({ ...quoteForm, valid_until: e.target.value })} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
               </div>
-              <input type="number" placeholder={t('deliveryDays')} value={quoteForm.delivery_days} onChange={(e) => setQuoteForm({ ...quoteForm, delivery_days: e.target.value })} className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-              <input type="text" placeholder={t('notes')} value={quoteForm.notes} onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })} className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
+              <input type="number" placeholder={t('deliveryDays')} value={quoteForm.delivery_days} onChange={(e) => setQuoteForm({ ...quoteForm, delivery_days: e.target.value })} className="rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+              <input type="text" placeholder={t('notes')} value={quoteForm.notes} onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })} className="rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t('addItem')}</h3>
+                <h3 className="font-semibold text-ui-muted">{t('addItem')}</h3>
                 <Button size="sm" variant="outline" onClick={addQuoteLine}><Plus className="w-4 h-4" /> {t('add')}</Button>
               </div>
               <div className="space-y-2">
                 {quoteItems.map((l, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                    <select value={l.line_type} onChange={(e) => updateQuoteLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                    <select value={l.line_type} onChange={(e) => updateQuoteLine(i, 'line_type', e.target.value)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                       <option value="product">{t('product')}</option>
                       <option value="raw">{t('rawMaterial')}</option>
                     </select>
                     <div className="col-span-4">
                       {l.line_type === 'product' ? (
-                        <select value={l.product_id} onChange={(e) => updateQuoteLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                        <select value={l.product_id} onChange={(e) => updateQuoteLine(i, 'product_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                           <option value="">--</option>
                           {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       ) : (
-                        <select value={l.raw_material_id} onChange={(e) => updateQuoteLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm">
+                        <select value={l.raw_material_id} onChange={(e) => updateQuoteLine(i, 'raw_material_id', e.target.value)} className="w-full rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm">
                           <option value="">--</option>
                           {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
                         </select>
                       )}
                     </div>
-                    <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateQuoteLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                    <input type="number" placeholder={t('unitCost')} step="0.01" value={l.unit_cost || ''} onChange={(e) => updateQuoteLine(i, 'unit_cost', parseFloat(e.target.value) || 0)} className="col-span-3 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-sm" />
-                    <button onClick={() => removeQuoteLine(i)} className="col-span-1 p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"><Trash2 className="w-4 h-4" /></button>
+                    <input type="number" placeholder={t('quantity')} value={l.quantity || ''} onChange={(e) => updateQuoteLine(i, 'quantity', parseFloat(e.target.value) || 0)} className="col-span-2 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                    <input type="number" placeholder={t('unitCost')} step="0.01" value={l.unit_cost || ''} onChange={(e) => updateQuoteLine(i, 'unit_cost', parseFloat(e.target.value) || 0)} className="col-span-3 rounded-md border border-ui-border bg-ui-surface px-2 py-1.5 text-sm" />
+                    <button onClick={() => removeQuoteLine(i)} className="col-span-1 p-1.5 text-ui-danger hover:bg-ui-danger-soft rounded-md"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end gap-2 pt-2 border-t border-ui-border">
               <Button variant="secondary" onClick={() => setQuoteModal(null)}>{t('cancel')}</Button>
               <Button onClick={saveQuotation} disabled={saving}>{saving ? t('loading') : t('save')}</Button>
             </div>
@@ -369,33 +369,33 @@ export function RfqsPage() {
         {compareModal && (
           <div className="space-y-4 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                <th className="text-start py-2 font-semibold text-slate-600 dark:text-slate-300">{t('item')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('quantity')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('bestPrice')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('averagePrice')}</th>
-                <th className="text-center py-2 font-semibold text-slate-600 dark:text-slate-300">{t('quotationCount')}</th>
-                <th className="text-end py-2 font-semibold text-slate-600 dark:text-slate-300">{t('actions')}</th>
+              <thead><tr className="border-b border-ui-border">
+                <th className="text-start py-2 font-semibold text-ui-muted">{t('item')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('quantity')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('bestPrice')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('averagePrice')}</th>
+                <th className="text-center py-2 font-semibold text-ui-muted">{t('quotationCount')}</th>
+                <th className="text-end py-2 font-semibold text-ui-muted">{t('actions')}</th>
               </tr></thead>
               <tbody>
-                {comparison.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-slate-500">{t('noItemsYet')}</td></tr>}
+                {comparison.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-ui-subtle">{t('noItemsYet')}</td></tr>}
                 {comparison.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                    <td className="py-2 text-slate-700 dark:text-slate-200">{row.item_name}</td>
-                    <td className="py-2 text-center text-slate-700 dark:text-slate-200">{row.requested_quantity}</td>
-                    <td className="py-2 text-center font-semibold text-green-600 dark:text-green-400">{row.best_supplier_name ? `${row.best_supplier_name} (${formatCurrency(row.best_unit_cost ?? 0, currency, lang)})` : '-'}</td>
-                    <td className="py-2 text-center text-slate-700 dark:text-slate-200">{row.avg_unit_cost != null ? formatCurrency(row.avg_unit_cost, currency, lang) : '-'}</td>
-                    <td className="py-2 text-center text-slate-700 dark:text-slate-200">{row.quotation_count}</td>
+                  <tr key={idx} className="border-b border-ui-border">
+                    <td className="py-2 text-ui-text">{row.item_name}</td>
+                    <td className="py-2 text-center text-ui-text">{row.requested_quantity}</td>
+                    <td className="py-2 text-center font-semibold text-ui-success">{row.best_supplier_name ? `${row.best_supplier_name} (${formatCurrency(row.best_unit_cost ?? 0, currency, lang)})` : '-'}</td>
+                    <td className="py-2 text-center text-ui-text">{row.avg_unit_cost != null ? formatCurrency(row.avg_unit_cost, currency, lang) : '-'}</td>
+                    <td className="py-2 text-center text-ui-text">{row.quotation_count}</td>
                     <td className="py-2 text-end">
                       {row.quotations.map((q) => (
                         <div key={q.quotation_id} className="flex items-center justify-end gap-2 mb-1">
-                          <span className="text-xs text-slate-500">{q.supplier_name} · {formatCurrency(q.unit_cost, currency, lang)}</span>
+                          <span className="text-xs text-ui-subtle">{q.supplier_name} · {formatCurrency(q.unit_cost, currency, lang)}</span>
                           {can('purchases.manage') && compareModal.status === 'received' && q.status === 'received' && (
-                            <button onClick={() => selectQuotation(q.quotation_id)} className="p-1 rounded-md hover:bg-green-50 dark:hover:bg-green-900/20 text-green-500" title={t('selectQuotation')}>
+                            <button onClick={() => selectQuotation(q.quotation_id)} className="p-1 rounded-md hover:bg-ui-success-soft text-ui-success" title={t('selectQuotation')}>
                               <Check className="w-4 h-4" />
                             </button>
                           )}
-                          {q.status === 'selected' && <BadgeCheck className="w-4 h-4 text-green-500" />}
+                          {q.status === 'selected' && <BadgeCheck className="w-4 h-4 text-ui-success" />}
                         </div>
                       ))}
                     </td>

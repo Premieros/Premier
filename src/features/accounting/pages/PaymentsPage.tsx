@@ -169,24 +169,24 @@ export function PaymentsPage() {
   };
 
   const columns: Column<ArAgingRow>[] = [
-    { key: 'name', header: t('customer'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.name}</span> },
+    { key: 'name', header: t('customer'), render: (r) => <span className="font-medium text-ui-text">{r.name}</span> },
     { key: 'phone', header: t('phone'), render: (r) => r.phone || '-' },
-    { key: 'open_amount', header: t('openBalance'), render: (r) => <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(r.open_amount, currency, lang)}</span> },
+    { key: 'open_amount', header: t('openBalance'), render: (r) => <span className="font-semibold text-ui-danger">{formatCurrency(r.open_amount, currency, lang)}</span> },
     { key: 'bucket_0_30', header: t('days30'), render: (r) => formatCurrency(r.bucket_0_30, currency, lang) },
     { key: 'bucket_31_60', header: t('days60'), render: (r) => formatCurrency(r.bucket_31_60, currency, lang) },
     { key: 'bucket_61_90', header: t('days90'), render: (r) => formatCurrency(r.bucket_61_90, currency, lang) },
-    { key: 'bucket_90_plus', header: t('days90Plus'), render: (r) => <span className={r.bucket_90_plus > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>{formatCurrency(r.bucket_90_plus, currency, lang)}</span> },
+    { key: 'bucket_90_plus', header: t('days90Plus'), render: (r) => <span className={r.bucket_90_plus > 0 ? 'text-ui-danger font-semibold' : ''}>{formatCurrency(r.bucket_90_plus, currency, lang)}</span> },
     { key: 'actions', header: t('actions'), render: (r) => <Button size="sm" onClick={() => openCollect(r)}><HandCoins className="w-4 h-4" /> {t('collect')}</Button> },
   ];
 
   const apColumns: Column<ApAgingRow>[] = [
-    { key: 'name', header: t('supplier'), render: (r) => <span className="font-medium text-slate-800 dark:text-slate-200">{r.name}</span> },
+    { key: 'name', header: t('supplier'), render: (r) => <span className="font-medium text-ui-text">{r.name}</span> },
     { key: 'phone', header: t('phone'), render: (r) => r.phone || '-' },
-    { key: 'open_amount', header: t('openBalance'), render: (r) => <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(r.open_amount, currency, lang)}</span> },
+    { key: 'open_amount', header: t('openBalance'), render: (r) => <span className="font-semibold text-ui-danger">{formatCurrency(r.open_amount, currency, lang)}</span> },
     { key: 'bucket_0_30', header: t('days30'), render: (r) => formatCurrency(r.bucket_0_30, currency, lang) },
     { key: 'bucket_31_60', header: t('days60'), render: (r) => formatCurrency(r.bucket_31_60, currency, lang) },
     { key: 'bucket_61_90', header: t('days90'), render: (r) => formatCurrency(r.bucket_61_90, currency, lang) },
-    { key: 'bucket_90_plus', header: t('days90Plus'), render: (r) => <span className={r.bucket_90_plus > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>{formatCurrency(r.bucket_90_plus, currency, lang)}</span> },
+    { key: 'bucket_90_plus', header: t('days90Plus'), render: (r) => <span className={r.bucket_90_plus > 0 ? 'text-ui-danger font-semibold' : ''}>{formatCurrency(r.bucket_90_plus, currency, lang)}</span> },
     { key: 'actions', header: t('actions'), render: (r) => <Button size="sm" onClick={() => openPay(r)}><HandCoins className="w-4 h-4" /> {t('paySupplier')}</Button> },
   ];
 
@@ -195,7 +195,7 @@ export function PaymentsPage() {
     { key: 'customer', header: t('customer'), render: (p) => p.customer?.name || '-' },
     { key: 'reference_number', header: t('entryNumber'), render: (p) => <span className="font-mono text-xs">{p.reference_number}</span> },
     { key: 'payment_method', header: t('paymentMethod'), render: (p) => ({ cash: t('cash'), card: t('card'), transfer: t('transfer'), credit: t('credit') })[p.payment_method] || p.payment_method },
-    { key: 'amount', header: t('amount'), render: (p) => <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount, currency, lang)}</span> },
+    { key: 'amount', header: t('amount'), render: (p) => <span className="font-semibold text-ui-success dark:text-ui-success">{formatCurrency(p.amount, currency, lang)}</span> },
   ];
 
   const supplierPaymentColumns: Column<SupplierPayment>[] = [
@@ -203,7 +203,7 @@ export function PaymentsPage() {
     { key: 'supplier', header: t('supplier'), render: (p) => p.supplier?.name || '-' },
     { key: 'reference_number', header: t('entryNumber'), render: (p) => <span className="font-mono text-xs">{p.reference_number}</span> },
     { key: 'payment_method', header: t('paymentMethod'), render: (p) => ({ cash: t('cash'), card: t('card'), transfer: t('transfer'), credit: t('credit') })[p.payment_method] || p.payment_method },
-    { key: 'amount', header: t('amount'), render: (p) => <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount, currency, lang)}</span> },
+    { key: 'amount', header: t('amount'), render: (p) => <span className="font-semibold text-ui-success dark:text-ui-success">{formatCurrency(p.amount, currency, lang)}</span> },
   ];
 
   return (
@@ -212,11 +212,11 @@ export function PaymentsPage() {
 
       <div className="flex gap-2 mb-6">
         <button onClick={() => setTab('ar')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'ar' ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'ar' ? 'bg-brand-600 text-white' : 'bg-ui-page-alt text-ui-muted hover:bg-ui-page-alt dark:hover:bg-ui-page-alt'}`}>
           <User className="w-4 h-4" /> {t('customerPayments')}
         </button>
         <button onClick={() => setTab('ap')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'ap' ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'ap' ? 'bg-brand-600 text-white' : 'bg-ui-page-alt text-ui-muted hover:bg-ui-page-alt dark:hover:bg-ui-page-alt'}`}>
           <Building2 className="w-4 h-4" /> {t('supplierPayments')}
         </button>
       </div>
@@ -244,9 +244,9 @@ export function PaymentsPage() {
           <DesignSearch value={search} onChange={setSearch} className="flex-1 w-full" label={t('search')} placeholder={t('search')} testId="payments-search" />
           {isAdminRole(user?.role) && branches.length > 0 && (
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
+              <label className="text-sm font-medium text-ui-muted">{t('filterByBranch')}</label>
               <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
                 <option value="">{t('allBranches')}</option>
                 {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
               </select>
@@ -282,15 +282,15 @@ export function PaymentsPage() {
       <Modal open={!!collecting} onClose={() => setCollecting(null)} title={collecting ? `${t('collect')} - ${collecting.name}` : ''}>
         {collecting && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-navy-800/60">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-ui-page-alt dark:bg-navy-800/60">
               <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center"><User className="w-5 h-5" /></div>
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">{collecting.name}</p>
-                <p className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {collecting.phone || '-'}</p>
+                <p className="font-semibold text-ui-text">{collecting.name}</p>
+                <p className="text-xs text-ui-subtle flex items-center gap-1"><Phone className="w-3 h-3" /> {collecting.phone || '-'}</p>
               </div>
               <div className="ms-auto text-end">
-                <p className="text-xs text-slate-500">{t('openBalance')}</p>
-                <p className="font-bold text-red-600 dark:text-red-400">{formatCurrency(collecting.open_amount, currency, lang)}</p>
+                <p className="text-xs text-ui-subtle">{t('openBalance')}</p>
+                <p className="font-bold text-ui-danger">{formatCurrency(collecting.open_amount, currency, lang)}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -319,15 +319,15 @@ export function PaymentsPage() {
       <Modal open={!!paying} onClose={() => setPaying(null)} title={paying ? `${t('paySupplier')} - ${paying.name}` : ''}>
         {paying && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-navy-800/60">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-ui-page-alt dark:bg-navy-800/60">
               <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center"><Building2 className="w-5 h-5" /></div>
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">{paying.name}</p>
-                <p className="text-xs text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {paying.phone || '-'}</p>
+                <p className="font-semibold text-ui-text">{paying.name}</p>
+                <p className="text-xs text-ui-subtle flex items-center gap-1"><Phone className="w-3 h-3" /> {paying.phone || '-'}</p>
               </div>
               <div className="ms-auto text-end">
-                <p className="text-xs text-slate-500">{t('openBalance')}</p>
-                <p className="font-bold text-red-600 dark:text-red-400">{formatCurrency(paying.open_amount, currency, lang)}</p>
+                <p className="text-xs text-ui-subtle">{t('openBalance')}</p>
+                <p className="font-bold text-ui-danger">{formatCurrency(paying.open_amount, currency, lang)}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

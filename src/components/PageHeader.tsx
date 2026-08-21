@@ -88,9 +88,9 @@ export function StatCard({ title, value, icon, color = 'navy', trend }: StatCard
     <Card className="p-5 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2 tracking-tight">{value}</p>
-          {trend && <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">{trend}</p>}
+          <p className="text-sm font-medium text-ui-subtle">{title}</p>
+          <p className="text-2xl font-bold text-ui-text mt-2 tracking-tight">{value}</p>
+          {trend && <p className="text-xs text-ui-subtle mt-2">{trend}</p>}
         </div>
         <div className={clsx('w-12 h-12 rounded-2xl flex items-center justify-center border', c.bg, c.icon, c.border)}>
           {icon}

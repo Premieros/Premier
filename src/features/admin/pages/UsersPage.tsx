@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Edit2, Plus, Shield, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
 import * as api from '@/api';
@@ -166,8 +166,8 @@ export function UsersPage() {
   })();
 
   const columns: Column<AppUser>[] = [
-    { key: 'username', header: t('username'), render: (u) => <span className="font-medium text-slate-800 dark:text-slate-200">{u.username || '-'}</span> },
-    { key: 'email', header: t('email'), render: (u) => <span className="text-slate-600 dark:text-slate-300">{u.email}</span> },
+    { key: 'username', header: t('username'), render: (u) => <span className="font-medium text-ui-text">{u.username || '-'}</span> },
+    { key: 'email', header: t('email'), render: (u) => <span className="text-ui-muted">{u.email}</span> },
     { key: 'full_name', header: t('fullName'), render: (u) => u.full_name || '-' },
     { key: 'role', header: t('role'), render: (u) => (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 capitalize">
@@ -176,15 +176,15 @@ export function UsersPage() {
     )},
     { key: 'branch', header: t('branch'), render: (u) => branches.find((b) => b.id === u.branch_id)?.name || '-' },
     { key: 'is_active', header: t('status'), render: (u) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {u.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'created_at', header: t('date'), render: (u) => formatDate(u.created_at) },
     { key: 'actions', header: t('actions'), render: (u) => (
       <div className="flex gap-1">
-        <button onClick={() => openEdit(u)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(u.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('deleteUser')}><Trash2 className="w-4 h-4" /></button>
+        <button onClick={() => openEdit(u)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info" title={t('edit')}><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(u.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('deleteUser')}><Trash2 className="w-4 h-4" /></button>
       </div>
     )},
   ];
@@ -206,9 +206,9 @@ export function UsersPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('edit')}>
         {editing && (
           <div className="space-y-4">
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
-              <p className="text-sm text-slate-500">{t('email')}</p>
-              <p className="font-medium text-slate-800 dark:text-slate-200">{editing.email}</p>
+            <div className="bg-ui-page-alt rounded-lg p-3">
+              <p className="text-sm text-ui-subtle">{t('email')}</p>
+              <p className="font-medium text-ui-text">{editing.email}</p>
             </div>
             <Input label={t('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             <Input label={t('username')} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="off" />
@@ -221,9 +221,9 @@ export function UsersPage() {
             </Select>
             {isAdmin && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{isAr ? 'صلاحيات الفروع' : 'Branch Access'}</p>
-                <p className="text-xs text-slate-400">{isAr ? 'حدد الفروع التي يمكن للمستخدم الوصول إليها' : 'Select branches this user can access'}</p>
-                <div className="max-h-40 overflow-y-auto space-y-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
+                <p className="text-sm font-medium text-ui-muted">{isAr ? 'صلاحيات الفروع' : 'Branch Access'}</p>
+                <p className="text-xs text-ui-subtle">{isAr ? 'حدد الفروع التي يمكن للمستخدم الوصول إليها' : 'Select branches this user can access'}</p>
+                <div className="max-h-40 overflow-y-auto space-y-1 border border-ui-border rounded-lg p-2">
                   {branches.map((b) => (
                     <label key={b.id} className="flex items-center gap-2 cursor-pointer text-sm py-1">
                       <input type="checkbox" checked={branchAccessIds.includes(b.id)} onChange={(e) => {
@@ -241,7 +241,7 @@ export function UsersPage() {
             </Select>
             <Input label={t('pinChangeHint')} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('leaveBlankToKeepPassword')} inputMode="numeric" maxLength={4} />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg bg-ui-page-alt text-ui-text text-sm font-medium">{t('cancel')}</button>
               <button onClick={save} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
             </div>
           </div>
@@ -267,7 +267,7 @@ export function UsersPage() {
             <option value="0">{t('inactive')}</option>
           </Select>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setAddModal(false)} className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium">{t('cancel')}</button>
+            <button onClick={() => setAddModal(false)} className="px-4 py-2 rounded-lg bg-ui-page-alt text-ui-text text-sm font-medium">{t('cancel')}</button>
             <button onClick={createNewUser} className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">{t('save')}</button>
           </div>
         </div>

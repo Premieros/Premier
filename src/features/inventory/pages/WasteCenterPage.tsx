@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Plus, Check, X, BarChart3 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -110,7 +110,7 @@ export function WasteCenterPage() {
   };
 
   const typeLabel = (v: string) => WASTE_TYPES.find(w => w.value === v)?.[ar ? 'ar' : 'en'] ?? v;
-  const statusColor = (s: string) => s === 'approved' ? 'text-green-600' : s === 'rejected' ? 'text-red-600' : 'text-amber-600';
+  const statusColor = (s: string) => s === 'approved' ? 'text-ui-success' : s === 'rejected' ? 'text-ui-danger' : 'text-ui-warning';
 
   const baseColumns: Column<WasteEntry>[] = [
     { key: 'created_at', header: ar ? 'التاريخ' : 'Date', render: r => new Date(r.created_at).toLocaleDateString() },
@@ -129,8 +129,8 @@ export function WasteCenterPage() {
         header: ar ? 'إجراءات' : 'Actions',
         render: (r: WasteEntry) => r.status === 'pending' ? (
           <div className="flex gap-1">
-            <button onClick={() => void handleApprove(r.id, true)} className="text-green-600 hover:text-green-800" title={ar ? 'اعتماد' : 'Approve'}><Check className="h-4 w-4" /></button>
-            <button onClick={() => void handleApprove(r.id, false)} className="text-red-600 hover:text-red-800" title={ar ? 'رفض' : 'Reject'}><X className="h-4 w-4" /></button>
+            <button onClick={() => void handleApprove(r.id, true)} className="text-ui-success hover:text-ui-success" title={ar ? 'اعتماد' : 'Approve'}><Check className="h-4 w-4" /></button>
+            <button onClick={() => void handleApprove(r.id, false)} className="text-ui-danger hover:text-ui-danger" title={ar ? 'رفض' : 'Reject'}><X className="h-4 w-4" /></button>
           </div>
         ) : null,
       }]

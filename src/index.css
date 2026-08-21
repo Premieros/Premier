@@ -64,12 +64,20 @@
   /* === Semantic === */
   --ui-success: 22 163 74;
   --ui-success-soft: 220 252 231;
+  --ui-success-hover: 21 128 61;
+  --ui-success-active: 22 101 52;
   --ui-warning: 245 158 11;
   --ui-warning-soft: 254 243 199;
+  --ui-warning-hover: 217 119 6;
+  --ui-warning-active: 180 83 9;
   --ui-danger: 225 29 72;
   --ui-danger-soft: 254 226 226;
+  --ui-danger-hover: 190 18 60;
+  --ui-danger-active: 159 18 57;
   --ui-info: 37 99 235;
   --ui-info-soft: 219 234 254;
+  --ui-info-hover: 29 78 216;
+  --ui-info-active: 30 64 175;
 
   /* === Radius === */
   --ui-radius-sm: 10px;

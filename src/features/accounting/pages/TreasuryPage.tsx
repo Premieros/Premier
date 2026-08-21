@@ -123,24 +123,24 @@ export function TreasuryPage() {
   const totalBank = balances.filter((b) => b.account_type === 'bank').reduce((s, b) => s + Number(b.balance), 0);
 
   const balanceColumns: Column<TreasuryBalance>[] = [
-    { key: 'account_name', header: t('accountName'), render: (b) => <span className="font-medium text-slate-800 dark:text-slate-200">{b.account_name}</span> },
-    { key: 'account_type', header: t('accountType'), render: (b) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${b.account_type === 'cash' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>{b.account_type === 'cash' ? t('cash') : t('bank')}</span> },
+    { key: 'account_name', header: t('accountName'), render: (b) => <span className="font-medium text-ui-text">{b.account_name}</span> },
+    { key: 'account_type', header: t('accountType'), render: (b) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${b.account_type === 'cash' ? 'bg-ui-warning-soft text-ui-warning  text-ui-warning' : 'bg-ui-info-soft text-ui-info dark:text-ui-info'}`}>{b.account_type === 'cash' ? t('cash') : t('bank')}</span> },
     { key: 'account_number', header: t('accountCode'), render: (b) => <span className="font-mono text-xs">{b.code || '-'}</span> },
     { key: 'opening_balance', header: t('openingBalance'), render: (b) => formatCurrency(b.opening_balance, currency, lang) },
-    { key: 'balance', header: t('balance'), render: (b) => <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(b.balance, currency, lang)}</span> },
+    { key: 'balance', header: t('balance'), render: (b) => <span className="font-semibold text-ui-success dark:text-ui-success">{formatCurrency(b.balance, currency, lang)}</span> },
   ];
 
   const txColumns: Column<TreasuryTransaction>[] = [
     { key: 'created_at', header: t('date'), render: (tx) => formatDateTime(tx.created_at, lang) },
     { key: 'transaction_type', header: t('referenceType'), render: (tx) => (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tx.transaction_type === 'deposit' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : tx.transaction_type === 'withdrawal' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tx.transaction_type === 'deposit' ? 'bg-ui-success-soft text-ui-success  dark:text-ui-success' : tx.transaction_type === 'withdrawal' ? 'bg-ui-danger-soft text-ui-danger  dark:text-ui-danger' : 'bg-ui-info-soft text-ui-info dark:text-ui-info'}`}>
         {{ transfer: t('transfer'), deposit: t('deposit'), withdrawal: t('withdrawal') }[tx.transaction_type]}
       </span>
     ) },
     { key: 'reference_number', header: t('entryNumber'), render: (tx) => <span className="font-mono text-xs">{tx.reference_number || '-'}</span> },
     { key: 'from', header: t('fromAccount'), render: (tx) => tx.from_account?.account_name || '-' },
     { key: 'to', header: t('toAccount'), render: (tx) => tx.to_account?.account_name || '-' },
-    { key: 'amount', header: t('amount'), render: (tx) => <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(tx.amount, currency, lang)}</span> },
+    { key: 'amount', header: t('amount'), render: (tx) => <span className="font-semibold text-ui-text">{formatCurrency(tx.amount, currency, lang)}</span> },
   ];
 
   return (
@@ -167,9 +167,9 @@ export function TreasuryPage() {
       {isAdminRole(user?.role) && branches.length > 0 && (
         <DesignPanel testId="treasury-branch-panel">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('filterByBranch')}</label>
+            <label className="text-sm font-medium text-ui-muted">{t('filterByBranch')}</label>
             <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+              className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
               <option value="">{t('allBranches')}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
             </select>

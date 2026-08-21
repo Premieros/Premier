@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase, branches as branchesApi } from '@/api';
 import { useAuth } from '@/context/AuthContext';
@@ -86,19 +86,19 @@ export function BranchesPage() {
   };
 
   const columns: Column<Branch>[] = [
-    { key: 'name', header: t('name'), render: (b) => <span className="font-medium text-slate-800 dark:text-slate-200">{b.name}</span> },
+    { key: 'name', header: t('name'), render: (b) => <span className="font-medium text-ui-text">{b.name}</span> },
     { key: 'name_en', header: t('nameEn'), render: (b) => b.name_en || '-' },
     { key: 'address', header: t('address'), render: (b) => b.address || '-' },
     { key: 'phone', header: t('phone'), render: (b) => b.phone || '-' },
     { key: 'is_active', header: t('status'), render: (b) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle dark:text-ui-subtle'}`}>
         {b.is_active ? t('active') : t('inactive')}
       </span>
     )},
     { key: 'actions', header: t('actions'), render: (b) => (
       <div className="flex gap-1">
-        <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
-        <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+        <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
+        <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
       </div>
     )},
   ];

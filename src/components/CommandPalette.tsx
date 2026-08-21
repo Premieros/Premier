@@ -212,7 +212,7 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" data-testid="command-palette">
-      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div className="fixed inset-0 bg-ui-text/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
       <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-ui-border bg-ui-surface shadow-2xl">
         <div className="flex items-center gap-3 border-b border-ui-border px-4">
           <SlidersHorizontal className="h-4 w-4 shrink-0 text-ui-subtle" />

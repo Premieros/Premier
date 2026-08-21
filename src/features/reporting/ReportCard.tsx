@@ -1,4 +1,4 @@
-import { TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, Layers, TrendingDown, AlertTriangle, BookOpen, Award, Factory, Clock, Wallet, Landmark, Star } from 'lucide-react';
+﻿import { TrendingUp, ShoppingCart, Receipt, Package, BarChart3, CreditCard, Users, FileText, Layers, TrendingDown, AlertTriangle, BookOpen, Award, Factory, Clock, Wallet, Landmark, Star } from 'lucide-react';
 import type { ReportDefinition } from './reportRegistry';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -45,7 +45,7 @@ export function ReportCard({ report, isActive, isFavorite, lang, onSelect, onTog
           className="flex-shrink-0 p-1 rounded hover:bg-ui-page-alt opacity-0 group-hover:opacity-100 transition-opacity"
           title={isFavorite ? (lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from favorites') : (lang === 'ar' ? 'إضافة للمفضلة' : 'Add to favorites')}
         >
-          <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400 text-amber-400' : 'text-ui-subtle'}`} />
+          <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400 text-ui-warning' : 'text-ui-subtle'}`} />
         </button>
       </div>
       {isActive && (

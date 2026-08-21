@@ -116,7 +116,7 @@ export function JournalPage() {
   };
 
   const columns: Column<JournalDto>[] = [
-    { key: 'entry_number', header: t('entryNumber'), render: (e) => <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{e.entry_number}</span> },
+    { key: 'entry_number', header: t('entryNumber'), render: (e) => <span className="font-mono font-semibold text-ui-text">{e.entry_number}</span> },
     { key: 'entry_date', header: t('date'), render: (e) => formatDateTime(e.entry_date, lang) },
     { key: 'reference_type', header: t('referenceType'), render: (e) => (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{refLabel(e.reference_type)}</span>
@@ -125,7 +125,7 @@ export function JournalPage() {
     { key: 'description', header: t('description'), render: (e) => e.description || '-' },
     { key: 'balance', header: t('balance'), render: (e) => {
       const ok = Math.abs(Number(e.debit_total) - Number(e.credit_total)) < 0.01;
-      return ok ? <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-semibold"><Scale className="w-3.5 h-3.5" />{formatCurrency(Number(e.debit_total), currency, lang)}</span> : <span className="text-red-500 text-xs font-semibold">{t('notBalanced')}</span>;
+      return ok ? <span className="inline-flex items-center gap-1 text-ui-success dark:text-ui-success text-xs font-semibold"><Scale className="w-3.5 h-3.5" />{formatCurrency(Number(e.debit_total), currency, lang)}</span> : <span className="text-ui-danger text-xs font-semibold">{t('notBalanced')}</span>;
     } },
     { key: 'actions', header: t('actions'), render: (e) => <Button size="sm" variant="outline" onClick={() => setViewing(e)}><Eye className="w-4 h-4" /> {t('view')}</Button> },
   ];
@@ -200,9 +200,9 @@ export function JournalPage() {
             <Input label={t('to')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             {isAdminRole(user?.role) && branches.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('filterByBranch')}</label>
+                <label className="block text-sm font-medium text-ui-muted mb-1">{t('filterByBranch')}</label>
                 <select value={adminBranchFilter} onChange={(e) => setAdminBranchFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  className="px-3 py-2 rounded-lg text-sm border border-ui-border bg-ui-surface text-ui-text">
                   <option value="">{t('allBranches')}</option>
                   {branches.map((b) => <option key={b.id} value={b.id}>{isAr ? b.name : (b.name_en || b.name)}</option>)}
                 </select>
@@ -220,31 +220,31 @@ export function JournalPage() {
         {viewing && (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-4 text-sm">
-              <div><span className="text-slate-500">{t('date')}: </span><span className="font-medium text-slate-800 dark:text-slate-200">{formatDateTime(viewing.entry_date, lang)}</span></div>
-              <div><span className="text-slate-500">{t('referenceType')}: </span><span className="font-medium text-slate-800 dark:text-slate-200">{refLabel(viewing.reference_type)} {viewing.reference_number || ''}</span></div>
+              <div><span className="text-ui-subtle">{t('date')}: </span><span className="font-medium text-ui-text">{formatDateTime(viewing.entry_date, lang)}</span></div>
+              <div><span className="text-ui-subtle">{t('referenceType')}: </span><span className="font-medium text-ui-text">{refLabel(viewing.reference_type)} {viewing.reference_number || ''}</span></div>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-ui-border">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountCode')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('accountName')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('debit')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('credit')}</th>
-                    <th className="px-4 py-3 text-start font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{t('notes')}</th>
+                  <tr className="border-b border-ui-border bg-ui-page-alt/60">
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountCode')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('accountName')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('debit')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('credit')}</th>
+                    <th className="px-4 py-3 text-start font-semibold text-ui-muted text-xs uppercase tracking-wider">{t('notes')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(viewing.lines || []).map((l) => (
-                    <tr key={l.id} className="border-b border-slate-100 dark:border-slate-800">
-                      <td className="px-4 py-3 font-mono text-slate-700 dark:text-slate-200">{l.code}</td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{l.account_name}</td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{l.debit > 0 ? formatCurrency(l.debit, currency, lang) : '-'}</td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{l.credit > 0 ? formatCurrency(l.credit, currency, lang) : '-'}</td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{l.note || '-'}</td>
+                    <tr key={l.id} className="border-b border-ui-border">
+                      <td className="px-4 py-3 font-mono text-ui-text">{l.code}</td>
+                      <td className="px-4 py-3 text-ui-text">{l.account_name}</td>
+                      <td className="px-4 py-3 text-ui-text">{l.debit > 0 ? formatCurrency(l.debit, currency, lang) : '-'}</td>
+                      <td className="px-4 py-3 text-ui-text">{l.credit > 0 ? formatCurrency(l.credit, currency, lang) : '-'}</td>
+                      <td className="px-4 py-3 text-ui-subtle dark:text-ui-subtle">{l.note || '-'}</td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-800 dark:text-slate-200">
+                  <tr className="bg-ui-page-alt/60 font-semibold text-ui-text">
                     <td className="px-4 py-3" colSpan={2}>{t('total')}</td>
                     <td className="px-4 py-3">{formatCurrency((viewing.lines || []).reduce((s, l) => s + Number(l.debit), 0), currency, lang)}</td>
                     <td className="px-4 py-3">{formatCurrency((viewing.lines || []).reduce((s, l) => s + Number(l.credit), 0), currency, lang)}</td>
@@ -265,7 +265,7 @@ export function JournalPage() {
           <Input label={t('description')} value={manualDesc} onChange={(e) => setManualDesc(e.target.value)} placeholder={t('description')} />
           <div className="space-y-3">
             {manualLines.map((l, i) => (
-              <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-3 rounded-xl bg-slate-50 dark:bg-navy-800/60">
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-3 rounded-xl bg-ui-page-alt dark:bg-navy-800/60">
                 <div className="sm:col-span-5">
                   <Select label={t('accountName')} value={l.account_id} onChange={(e) => setManualLines((ls) => ls.map((x, j) => j === i ? { ...x, account_id: e.target.value } : x))}>
                     <option value="">{t('selectAccount')}</option>
@@ -290,11 +290,11 @@ export function JournalPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" size="sm" onClick={addManualLine}><Plus className="w-4 h-4" /> {t('addLine')}</Button>
             <div className="text-sm">
-              <span className="text-slate-500">{t('totalDebit')}: </span>
-              <span className={`font-bold ${manualBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(manualTotals.debit, currency, lang)}</span>
-              <span className="mx-2 text-slate-300">|</span>
-              <span className="text-slate-500">{t('totalCredit')}: </span>
-              <span className={`font-bold ${manualBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(manualTotals.credit, currency, lang)}</span>
+              <span className="text-ui-subtle">{t('totalDebit')}: </span>
+              <span className={`font-bold ${manualBalanced ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger'}`}>{formatCurrency(manualTotals.debit, currency, lang)}</span>
+              <span className="mx-2 text-ui-muted">|</span>
+              <span className="text-ui-subtle">{t('totalCredit')}: </span>
+              <span className={`font-bold ${manualBalanced ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger'}`}>{formatCurrency(manualTotals.credit, currency, lang)}</span>
             </div>
           </div>
           <div className="flex justify-end gap-2">

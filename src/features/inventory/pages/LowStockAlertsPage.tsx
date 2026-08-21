@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/api';
@@ -200,9 +200,9 @@ export function LowStockAlertsPage() {
 
   const statusPill = (status: string) => {
     const map: Record<string, { label: string; cls: string }> = {
-      out: { label: t('statusOut'), cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-      low: { label: t('statusLow'), cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-      ok: { label: t('statusOk'), cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+      out: { label: t('statusOut'), cls: 'bg-ui-danger-soft text-ui-danger' },
+      low: { label: t('statusLow'), cls: 'bg-ui-warning-soft text-ui-warning' },
+      ok: { label: t('statusOk'), cls: 'bg-ui-success-soft text-ui-success  dark:text-ui-success' },
     };
     const s = map[status] || map.ok;
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
@@ -211,24 +211,24 @@ export function LowStockAlertsPage() {
   const columns: Column<LowStockAlertRow & { id: string }>[] = [
     { key: 'product', header: t('product'), render: (r) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {r.product_name[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{r.product_name}</p>
-          <p className="text-xs text-slate-400">{r.barcode || r.sku || ''}</p>
+          <p className="font-medium text-ui-text">{r.product_name}</p>
+          <p className="text-xs text-ui-subtle">{r.barcode || r.sku || ''}</p>
         </div>
       </div>
     )},
     { key: 'warehouse', header: t('warehouse'), render: (r) => r.warehouse_name || '-' },
     { key: 'quantity', header: t('quantity'), render: (r) => (
-      <span className={`font-semibold ${r.status === 'out' ? 'text-red-600 dark:text-red-400' : r.status === 'low' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}`}>
+      <span className={`font-semibold ${r.status === 'out' ? 'text-ui-danger' : r.status === 'low' ? 'text-ui-warning' : 'text-ui-text'}`}>
         {formatNumber(Number(r.quantity))}
       </span>
     )},
     { key: 'reorder', header: t('reorderPoint'), render: (r) => formatNumber(Number(r.reorder_point || r.low_stock_threshold)) },
     { key: 'shortage', header: t('shortageQty'), render: (r) => (
-      <span className="font-semibold text-red-600 dark:text-red-400">{formatNumber(Number(r.shortage_qty))}</span>
+      <span className="font-semibold text-ui-danger">{formatNumber(Number(r.shortage_qty))}</span>
     )},
     { key: 'status', header: t('status'), render: (r) => statusPill(r.status) },
   ];
@@ -247,16 +247,16 @@ export function LowStockAlertsPage() {
       <DesignPanel testId="alerts-summary-panel">
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('statusOut')}</p>
-            <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{summary.out_count ?? 0}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('statusOut')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-danger">{summary.out_count ?? 0}</p>
           </div>
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('statusLow')}</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{summary.low_count ?? 0}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('statusLow')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-warning">{summary.low_count ?? 0}</p>
           </div>
           <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('statusOk')}</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{summary.ok_count ?? 0}</p>
+            <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('statusOk')}</p>
+            <p className="mt-1 text-2xl font-bold text-ui-success dark:text-ui-success">{summary.ok_count ?? 0}</p>
           </div>
         </div>
       </DesignPanel>
@@ -307,7 +307,7 @@ export function LowStockAlertsPage() {
           <div className="rounded-xl border border-ui-border overflow-hidden">
             <div className="max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-ui-page-alt text-xs text-slate-500 dark:text-slate-400">
+                <thead className="bg-ui-page-alt text-xs text-ui-subtle dark:text-ui-subtle">
                   <tr>
                     <th className="px-3 py-2 text-start font-medium">{t('type')}</th>
                     <th className="px-3 py-2 text-start font-medium">{t('name')}</th>
@@ -320,10 +320,10 @@ export function LowStockAlertsPage() {
                 </thead>
                 <tbody>
                   {loadingReorder && (
-                    <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t('loading')}</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-ui-subtle">{t('loading')}</td></tr>
                   )}
                   {!loadingReorder && reorderItems.length === 0 && (
-                    <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t('noData')}</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-ui-subtle">{t('noData')}</td></tr>
                   )}
                   {!loadingReorder && reorderItems.map((l) => (
                     <tr key={l.key} className="border-t border-ui-border">
@@ -332,15 +332,15 @@ export function LowStockAlertsPage() {
                           {l.item_type === 'raw' ? t('rawMaterial') : t('product')}
                         </span>
                       </td>
-                      <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{l.name}</td>
-                      <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{formatNumber(l.on_hand)}</td>
-                      <td className="px-3 py-2 text-slate-500">{formatNumber(l.min_stock)}{l.max_stock > 0 ? ` / ${formatNumber(l.max_stock)}` : ''}</td>
-                      <td className="px-3 py-2 text-slate-500">{formatNumber(l.suggested_qty)}</td>
+                      <td className="px-3 py-2 font-medium text-ui-text">{l.name}</td>
+                      <td className="px-3 py-2 text-ui-muted">{formatNumber(l.on_hand)}</td>
+                      <td className="px-3 py-2 text-ui-subtle">{formatNumber(l.min_stock)}{l.max_stock > 0 ? ` / ${formatNumber(l.max_stock)}` : ''}</td>
+                      <td className="px-3 py-2 text-ui-subtle">{formatNumber(l.suggested_qty)}</td>
                       <td className="px-3 py-2">
                         <Input type="number" step="0.0001" value={qtyOverride[l.key] ?? ''} onChange={(e) => updateQty(l.key, parseFloat(e.target.value) || 0)} className="w-28" />
                       </td>
                       <td className="px-3 py-2 text-end">
-                        <button onClick={() => removeReorderLine(l.key)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('remove')}><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => removeReorderLine(l.key)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger" title={t('remove')}><Trash2 className="w-4 h-4" /></button>
                       </td>
                     </tr>
                   ))}

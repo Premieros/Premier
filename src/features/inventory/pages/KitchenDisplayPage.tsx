@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, ChefHat, CheckCircle2, UtensilsCrossed, Volume2, VolumeX } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBranchFilter } from '@/lib/useBranchFilter';
@@ -10,9 +10,9 @@ import { subscribePosRealtime } from '@/features/pos/services/posRealtime';
 import type { KitchenQueueItem, KitchenStation } from '@/lib/types';
 
 function elapsedColor(seconds: number): string {
-  if (seconds > 600) return 'text-red-600 font-bold';
-  if (seconds > 300) return 'text-amber-600 font-semibold';
-  return 'text-green-600';
+  if (seconds > 600) return 'text-ui-danger font-bold';
+  if (seconds > 300) return 'text-ui-warning font-semibold';
+  return 'text-ui-success';
 }
 
 function formatElapsed(seconds: number): string {
@@ -22,9 +22,9 @@ function formatElapsed(seconds: number): string {
 }
 
 function statusBadge(s: string, ar: boolean) {
-  if (s === 'cooking') return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">{ar ? 'جاري التحضير' : 'Cooking'}</span>;
-  if (s === 'ready') return <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">{ar ? 'جاهز' : 'Ready'}</span>;
-  return <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">{ar ? 'جديد' : 'New'}</span>;
+  if (s === 'cooking') return <span className="rounded-full bg-ui-warning-soft px-2 py-0.5 text-xs font-bold text-ui-warning">{ar ? 'جاري التحضير' : 'Cooking'}</span>;
+  if (s === 'ready') return <span className="rounded-full bg-ui-success-soft px-2 py-0.5 text-xs font-bold text-ui-success">{ar ? 'جاهز' : 'Ready'}</span>;
+  return <span className="rounded-full bg-ui-info-soft px-2 py-0.5 text-xs font-bold text-ui-info">{ar ? 'جديد' : 'New'}</span>;
 }
 
 export function KitchenDisplayPage() {
@@ -123,7 +123,7 @@ export function KitchenDisplayPage() {
             {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
           </button>
           <span className="text-sm text-ui-muted">
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse" />
+            <span className="inline-block w-2 h-2 rounded-full bg-ui-success mr-1 animate-pulse" />
             {items.length} {ar ? 'طلب' : 'orders'}
           </span>
         </div>
@@ -133,8 +133,8 @@ export function KitchenDisplayPage() {
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map(item => (
             <div key={item.order_id} className={`rounded-2xl border bg-ui-surface p-4 shadow-ui-sm transition-all ${
-              item.kitchen_status === 'cooking' ? 'border-amber-300 ring-1 ring-amber-200' :
-              item.kitchen_status === 'ready' ? 'border-green-300 ring-1 ring-green-200' :
+              item.kitchen_status === 'cooking' ? 'border-ui-warning/40 ring-1 ring-ui-warning' :
+              item.kitchen_status === 'ready' ? 'border-ui-success/40 ring-1 ring-ui-success' :
               'border-ui-border'
             }`}>
               <div className="flex items-center justify-between mb-2">
@@ -165,19 +165,19 @@ export function KitchenDisplayPage() {
               <div className="flex gap-2 border-t border-ui-border pt-3">
                 {item.kitchen_status === 'sent' && (
                   <button onClick={() => void handleKitchenStatus(item.order_id, 'cooking')}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white py-3 px-4 text-sm font-bold hover:bg-amber-600 active:scale-95 transition-all min-h-[48px]">
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-ui-warning-soft0 text-white py-3 px-4 text-sm font-bold hover:bg-ui-warning active:scale-95 transition-all min-h-[48px]">
                     <ChefHat className="h-5 w-5" /> {ar ? 'بدء التحضير' : 'Start Cooking'}
                   </button>
                 )}
                 {item.kitchen_status === 'cooking' && (
                   <button onClick={() => void handleKitchenStatus(item.order_id, 'ready')}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-500 text-white py-3 px-4 text-sm font-bold hover:bg-green-600 active:scale-95 transition-all min-h-[48px]">
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-ui-success text-white py-3 px-4 text-sm font-bold hover:bg-ui-success active:scale-95 transition-all min-h-[48px]">
                     <CheckCircle2 className="h-5 w-5" /> {ar ? 'جاهز للتقديم' : 'Mark Ready'}
                   </button>
                 )}
                 {item.kitchen_status === 'ready' && (
                   <button onClick={() => void handleKitchenStatus(item.order_id, 'served')}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-500 text-white py-3 px-4 text-sm font-bold hover:bg-blue-600 active:scale-95 transition-all min-h-[48px]">
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-ui-info text-white py-3 px-4 text-sm font-bold hover:bg-ui-info active:scale-95 transition-all min-h-[48px]">
                     <UtensilsCrossed className="h-5 w-5" /> {ar ? 'تم التقديم' : 'Served'}
                   </button>
                 )}

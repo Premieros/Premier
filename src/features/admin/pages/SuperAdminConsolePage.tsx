@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import {
   Building2, CheckCircle2, ChevronDown, ChevronRight, Loader2,
   RefreshCw, Users, XCircle,
@@ -181,10 +181,10 @@ export function SuperAdminConsolePage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-ui-subtle">{t.branch_count} {ar ? 'فرع' : 'branches'} &middot; {t.user_count} {ar ? 'عضو' : 'members'}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-danger-soft text-ui-danger'}`}>
                         {t.is_active ? (ar ? 'نشط' : 'Active') : (ar ? 'معطل' : 'Disabled')}
                       </span>
-                      {t.has_active_subscription ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-amber-500" />}
+                      {t.has_active_subscription ? <CheckCircle2 className="w-4 h-4 text-ui-success" /> : <XCircle className="w-4 h-4 text-ui-warning" />}
                       <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); void toggleOrgStatus(t.organization_id, t.is_active); }}>
                         {t.is_active ? (ar ? 'تعطيل' : 'Disable') : (ar ? 'تفعيل' : 'Enable')}
                       </Button>
@@ -240,7 +240,7 @@ export function SuperAdminConsolePage() {
                       <td className="p-2 text-ui-subtle">{u.org_name || '-'}</td>
                       <td className="p-2 text-ui-subtle">{u.branch_name || '-'}</td>
                       <td className="p-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-ui-success-soft text-ui-success' : 'bg-ui-page-alt text-ui-subtle'}`}>
                           {u.is_active ? (ar ? 'نشط' : 'Active') : (ar ? 'معطل' : 'Inactive')}
                         </span>
                       </td>
@@ -263,7 +263,7 @@ export function SuperAdminConsolePage() {
           <div className="space-y-2">
             {healthResults.map((h) => (
               <Card key={h.key} className="flex items-center gap-3 p-3">
-                {h.status === 'ok' ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" /> : h.status === 'error' ? <XCircle className="w-5 h-5 text-red-500 shrink-0" /> : <Loader2 className="w-5 h-5 animate-spin text-brand-500 shrink-0" />}
+                {h.status === 'ok' ? <CheckCircle2 className="w-5 h-5 text-ui-success shrink-0" /> : h.status === 'error' ? <XCircle className="w-5 h-5 text-ui-danger shrink-0" /> : <Loader2 className="w-5 h-5 animate-spin text-brand-500 shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{h.label}</p>
                   <p className="text-xs text-ui-subtle truncate">{h.detail}</p>

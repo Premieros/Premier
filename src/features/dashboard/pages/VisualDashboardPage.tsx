@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowDown, ArrowUp, ArrowUpRight, BarChart3, ChevronDown, Clock3,
@@ -306,26 +306,26 @@ export function VisualDashboardPage() {
       <section className="rounded-[32px] bg-gradient-to-br from-[#24114f] via-[#4b20a9] to-[#6d35df] p-6 text-white shadow-[0_20px_55px_rgba(75,32,169,0.25)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-violet-200"><BarChart3 className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.18em]">Premier Control</span></div>
+            <div className="mb-3 flex items-center gap-2 text-ui-primary"><BarChart3 className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.18em]">Premier Control</span></div>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{ar ? 'نظرة عامة على أعمالك' : 'Your business at a glance'}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-violet-100/80">{ar ? 'مؤشرات واضحة وسريعة تساعدك على معرفة ما يحدث الآن.' : 'A focused command view for the numbers that matter now.'}</p>
+            <p className="mt-2 max-w-2xl text-sm text-ui-primary/80">{ar ? 'مؤشرات واضحة وسريعة تساعدك على معرفة ما يحدث الآن.' : 'A focused command view for the numbers that matter now.'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/10 p-1 backdrop-blur">
             {(Object.keys(ranges) as Range[]).map((r) => (
-              <button key={r} onClick={() => setRange(r)} className={`rounded-xl px-4 py-2 text-sm font-bold ${range === r ? 'bg-white text-violet-700' : 'text-white/80 hover:bg-white/10'}`}>{ranges[r][ar ? 0 : 1]}</button>
+              <button key={r} onClick={() => setRange(r)} className={`rounded-xl px-4 py-2 text-sm font-bold ${range === r ? 'bg-ui-surface text-ui-primary' : 'text-white/80 hover:bg-white/10'}`}>{ranges[r][ar ? 0 : 1]}</button>
             ))}
             <button onClick={() => void load()} className="rounded-xl p-2 text-white/80 hover:bg-white/10" aria-label={ar ? 'تحديث' : 'Refresh'}><RefreshCw className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /></button>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {isAdmin && branches.length > 0 && (
-            <select data-testid="dashboard-branch-filter" value={activeBranchId || ''} onChange={(e) => setActiveBranchId(e.target.value || null)} className="h-10 rounded-xl border border-white/25 bg-white/10 px-3 text-sm font-semibold text-white [&>option]:text-slate-800">
+            <select data-testid="dashboard-branch-filter" value={activeBranchId || ''} onChange={(e) => setActiveBranchId(e.target.value || null)} className="h-10 rounded-xl border border-white/25 bg-white/10 px-3 text-sm font-semibold text-white [&>option]:text-ui-text">
               <option value="">{ar ? 'كل الفروع' : 'All branches'}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{ar ? b.name : b.name_en || b.name}</option>)}
             </select>
           )}
-          <button data-testid="dashboard-compare-toggle" onClick={() => setCompareEnabled((v) => !v)} aria-pressed={compareEnabled} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold ${compareEnabled ? 'border-white bg-white text-violet-700' : 'border-white/25 text-white/85 hover:bg-white/10'}`}>
-            <span className={`h-5 w-9 rounded-full p-0.5 ${compareEnabled ? 'bg-violet-500' : 'bg-white/30'}`}><span className={`block h-4 w-4 rounded-full bg-white shadow transition ${compareEnabled ? 'translate-x-4' : ''}`} /></span>
+          <button data-testid="dashboard-compare-toggle" onClick={() => setCompareEnabled((v) => !v)} aria-pressed={compareEnabled} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold ${compareEnabled ? 'border-white bg-ui-surface text-ui-primary' : 'border-white/25 text-white/85 hover:bg-white/10'}`}>
+            <span className={`h-5 w-9 rounded-full p-0.5 ${compareEnabled ? 'bg-ui-primary' : 'bg-white/30'}`}><span className={`block h-4 w-4 rounded-full bg-ui-surface shadow transition ${compareEnabled ? 'translate-x-4' : ''}`} /></span>
             {ar ? 'مقارنة' : 'Compare'}
           </button>
           <div className="relative">

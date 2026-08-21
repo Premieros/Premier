@@ -735,7 +735,7 @@ export function ReportsPage({ controlledReportType, onReportTypeChange }: Report
         ) : (
           <div className="overflow-x-auto">
             {data.length >= 5000 && (
-              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+              <div className="text-xs text-ui-warning bg-ui-warning-soft border border-ui-warning/20 rounded-lg px-3 py-2 mb-3">
                 {lang === 'ar' ? 'تم عرض أول 5,000 سجل. استخدم الفلاتر لتضييق النتائج.' : 'Showing first 5,000 records. Use filters to narrow results.'}
               </div>
             )}

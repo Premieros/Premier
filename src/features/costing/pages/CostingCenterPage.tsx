@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api';
 import * as api from '@/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -141,20 +141,20 @@ export function CostingCenterPage() {
   );
 
   const marginPill = (v: number) => {
-    if (v >= 40) return pill(`${formatNumber(v, 1)}%`, 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400');
-    if (v >= 20) return pill(`${formatNumber(v, 1)}%`, 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400');
-    return pill(`${formatNumber(v, 1)}%`, 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400');
+    if (v >= 40) return pill(`${formatNumber(v, 1)}%`, 'bg-ui-success-soft text-ui-success  dark:text-ui-success');
+    if (v >= 20) return pill(`${formatNumber(v, 1)}%`, 'bg-ui-warning-soft text-ui-warning');
+    return pill(`${formatNumber(v, 1)}%`, 'bg-ui-danger-soft text-ui-danger');
   };
 
   const overviewColumns: Column<CostingOverviewRow & { id: string }>[] = [
     { key: 'product', header: t('product'), render: (r) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+        <div className="w-8 h-8 rounded-lg bg-ui-page-alt flex items-center justify-center text-xs font-bold text-ui-subtle">
           {r.product_name[0]}
         </div>
         <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{r.product_name}</p>
-          <p className="text-xs text-slate-400">{r.barcode || r.sku || r.category_name || ''}</p>
+          <p className="font-medium text-ui-text">{r.product_name}</p>
+          <p className="text-xs text-ui-subtle">{r.barcode || r.sku || r.category_name || ''}</p>
         </div>
       </div>
     )},
@@ -179,7 +179,7 @@ export function CostingCenterPage() {
     { key: 'discount', header: t('discountAmount'), render: (r) => money(r.discount_amount) },
     { key: 'cogs', header: t('unitCost'), render: (r) => money(r.cogs) },
     { key: 'margin', header: t('grossMargin'), render: (r) => (
-      <span className={`font-semibold ${r.gross_margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+      <span className={`font-semibold ${r.gross_margin >= 0 ? 'text-ui-success dark:text-ui-success' : 'text-ui-danger'}`}>
         {money(r.gross_margin)}
       </span>
     )},
@@ -189,15 +189,15 @@ export function CostingCenterPage() {
   const supplierColumns: Column<SupplierPriceImpactRow & { id: string }>[] = [
     { key: 'item', header: t('item'), render: (r) => (
       <div>
-        <p className="font-medium text-slate-800 dark:text-slate-200">{r.item_name}</p>
-        <p className="text-xs text-slate-400">{r.item_type === 'product' ? t('product') : t('rawMaterial')}</p>
+        <p className="font-medium text-ui-text">{r.item_name}</p>
+        <p className="text-xs text-ui-subtle">{r.item_type === 'product' ? t('product') : t('rawMaterial')}</p>
       </div>
     )},
     { key: 'first', header: t('firstCost'), render: (r) => money(r.first_cost) },
     { key: 'last', header: t('lastCost'), render: (r) => money(r.last_cost) },
     { key: 'avg', header: t('avgCost'), render: (r) => money(r.avg_cost) },
     { key: 'change', header: t('changePct'), render: (r) => (
-      <span className={`font-semibold ${r.change_pct > 0 ? 'text-red-600 dark:text-red-400' : r.change_pct < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600'}`}>
+      <span className={`font-semibold ${r.change_pct > 0 ? 'text-ui-danger' : r.change_pct < 0 ? 'text-ui-success dark:text-ui-success' : 'text-ui-muted'}`}>
         {r.change_pct > 0 ? '+' : ''}{formatNumber(r.change_pct, 1)}%
       </span>
     )},
@@ -262,16 +262,16 @@ export function CostingCenterPage() {
           <DesignPanel testId="costing-summary-panel">
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('product')}</p>
+                <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('product')}</p>
                 <p className="mt-1 text-2xl font-bold text-navy-600 dark:text-navy-300">{stats.count}</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t('foodCostPct')}</p>
-                <p className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-200">{formatNumber(stats.avg, 1)}%</p>
+                <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{t('foodCostPct')}</p>
+                <p className="mt-1 text-2xl font-bold text-ui-text">{formatNumber(stats.avg, 1)}%</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-4">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{isAr ? 'أعلى تكلفة نسبة' : 'Highest cost ratio'}</p>
-                <p className="mt-1 truncate font-semibold text-slate-800 dark:text-slate-200">{stats.worst ? stats.worst.product_name : '-'}</p>
+                <p className="text-xs font-medium text-ui-subtle uppercase tracking-wide">{isAr ? 'أعلى تكلفة نسبة' : 'Highest cost ratio'}</p>
+                <p className="mt-1 truncate font-semibold text-ui-text">{stats.worst ? stats.worst.product_name : '-'}</p>
               </div>
             </div>
           </DesignPanel>
@@ -353,30 +353,30 @@ export function CostingCenterPage() {
           <div className="space-y-5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('salePrice')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{money(detail.sale_price)}</p>
+                <p className="text-xs text-ui-subtle">{t('salePrice')}</p>
+                <p className="text-lg font-bold text-ui-text">{money(detail.sale_price)}</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('unitCost')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{money(detail.unit_cost)}</p>
+                <p className="text-xs text-ui-subtle">{t('unitCost')}</p>
+                <p className="text-lg font-bold text-ui-text">{money(detail.unit_cost)}</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('theoreticalCost')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{money(detail.theoretical_cost)}</p>
+                <p className="text-xs text-ui-subtle">{t('theoreticalCost')}</p>
+                <p className="text-lg font-bold text-ui-text">{money(detail.theoretical_cost)}</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('actualCost')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{money(detail.actual_cost)}</p>
+                <p className="text-xs text-ui-subtle">{t('actualCost')}</p>
+                <p className="text-lg font-bold text-ui-text">{money(detail.actual_cost)}</p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('foodCostPct')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                <p className="text-xs text-ui-subtle">{t('foodCostPct')}</p>
+                <p className="text-lg font-bold text-ui-text">
                   {formatNumber(foodCostPct(detail.actual_cost || detail.theoretical_cost || detail.unit_cost || 0, detail.sale_price || 0), 1)}%
                 </p>
               </div>
               <div className="rounded-ui-lg border border-ui-border bg-ui-page p-3">
-                <p className="text-xs text-slate-400">{t('marginPct')}</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                <p className="text-xs text-ui-subtle">{t('marginPct')}</p>
+                <p className="text-lg font-bold text-ui-text">
                   {formatNumber(marginPct(detail.actual_cost || detail.theoretical_cost || detail.unit_cost || 0, detail.sale_price || 0), 1)}%
                 </p>
               </div>
@@ -384,11 +384,11 @@ export function CostingCenterPage() {
 
             {(detail.components?.length || 0) > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{t('components')}</h3>
+                <h3 className="text-sm font-bold text-ui-text mb-2">{t('components')}</h3>
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-slate-500">
+                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('item')}</th>
                         <th className="px-3 py-2">{t('quantity')}</th>
                         <th className="px-3 py-2">{t('unitCost')}</th>
@@ -412,11 +412,11 @@ export function CostingCenterPage() {
 
             {(detail.recipe_items?.length || 0) > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{t('recipeItems')}</h3>
+                <h3 className="text-sm font-bold text-ui-text mb-2">{t('recipeItems')}</h3>
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-slate-500">
+                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('item')}</th>
                         <th className="px-3 py-2">{t('quantity')}</th>
                         <th className="px-3 py-2">{t('wastagePercent')}</th>
@@ -442,11 +442,11 @@ export function CostingCenterPage() {
 
             {(detail.history?.length || 0) > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{t('costHistory')}</h3>
+                <h3 className="text-sm font-bold text-ui-text mb-2">{t('costHistory')}</h3>
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-slate-500">
+                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('date')}</th>
                         <th className="px-3 py-2">{t('oldCost')}</th>
                         <th className="px-3 py-2">{t('newCost')}</th>

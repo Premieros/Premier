@@ -79,15 +79,15 @@ export function ExpensesPage() {
     { key: 'expense_date', header: t('date'), render: (e) => formatDate(e.expense_date, lang) },
     { key: 'category', header: t('expenseCategory'), render: (e) => <span className="capitalize">{e.category || '-'}</span> },
     { key: 'description', header: t('description'), render: (e) => e.description || '-' },
-    { key: 'amount', header: t('amount'), render: (e) => <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(e.amount, currency, lang)}</span> },
+    { key: 'amount', header: t('amount'), render: (e) => <span className="font-semibold text-ui-danger">{formatCurrency(e.amount, currency, lang)}</span> },
     { key: 'payment_method', header: t('paymentMethod'), render: (e) => <span className="capitalize">{e.payment_method}</span> },
     { key: 'actions', header: t('actions'), render: (e) => (
       <div className="flex gap-1">
         {can('expenses.manage') && (
-          <button onClick={() => openEdit(e)} className="p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(e)} className="p-1.5 rounded-md hover:bg-ui-info-soft text-ui-info"><Edit2 className="w-4 h-4" /></button>
         )}
         {can('expenses.manage') && (
-          <button onClick={() => setDeleteId(e.id)} className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => setDeleteId(e.id)} className="p-1.5 rounded-md hover:bg-ui-danger-soft text-ui-danger"><Trash2 className="w-4 h-4" /></button>
         )}
       </div>
     )},
