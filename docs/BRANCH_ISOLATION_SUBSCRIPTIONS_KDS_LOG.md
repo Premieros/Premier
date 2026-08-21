@@ -12,10 +12,10 @@
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
 - **Current gate:** NOT READY TO MERGE
-- **Latest code fix:** `c40d4bd94094dabc8cca547c2978b72d9ba11e12`
-- **Latest verified CI:** `3cd1b28a306d3a52a9a5ef634371048769de15ec` passed lint, typecheck, unit, build, schema verification, integration/security/RLS, and browser smoke.
-- **Latest CI issue found:** Run #377 failed unit navigation-contract tests because the test still required the intentionally removed duplicate `inventory-units` sidebar entry.
-- **Current verification required:** fresh CI for `c40d4bd...` and subsequent functional/security tests.
+- **Latest implementation:** `3d7e592d9bdb2ad6832673e063b9074cf4ef8c7e`
+- **Previous CI-verified head:** `22eb20872fb96da34e167d9ffa1b5166f82cd289`
+- **Latest verified CI:** Run #379 passed lint, typecheck, unit, build, schema, integration/security/RLS, and browser smoke on `22eb208...`.
+- **Latest security finding:** Kitchen `SECURITY DEFINER` RPCs trusted caller-supplied branch/order identifiers and the queue excluded `ready` orders. Both were hardened in the latest implementation and require a fresh CI/security run.
 
 ## Non-Negotiable Rules
 
@@ -39,8 +39,9 @@
 - [ ] Audit `raw_materials`, `product_components`, recipes, stock movements, purchases, reports, users, suppliers, customers, orders, kitchen, and RPCs.
 - [ ] Add/verify cross-branch negative tests for SELECT/INSERT/UPDATE/DELETE across all sensitive modules.
 - [ ] Verify branch_id cannot be forged through client payloads.
-- [ ] Verify SECURITY DEFINER functions cannot bypass branch isolation.
-- [x] Run current full security/RLS integration suite — green on verified commit.
+- [x] Harden kitchen SECURITY DEFINER RPCs against caller-supplied cross-branch identifiers.
+- [x] Include `ready` in the active kitchen queue.
+- [x] Run current full security/RLS integration suite — Run #379 green before latest kitchen hardening.
 - [ ] Re-run after newest changes.
 
 ### Phase B — Subscription & Feature Entitlements
@@ -66,12 +67,13 @@
 ### Phase D — Kitchen Display System
 - [x] Locate existing KDS.
 - [x] Fix `/kitchen` to open real KDS instead of POS.
-- [ ] Show only active/relevant kitchen orders.
+- [x] Queue RPC now returns `sent`, `cooking`, and `ready` active kitchen orders.
+- [x] Queue/route RPCs enforce branch ownership for non-admin users.
 - [ ] Preserve item-level kitchen state and newly-added unsent items.
 - [ ] Ensure realtime updates.
-- [ ] Enforce branch isolation in KDS queries/subscriptions.
 - [ ] Remove duplicate Active Orders/Kitchen navigation.
-- [ ] Add KDS regression/smoke tests.
+- [x] Add KDS branch-isolation regression coverage.
+- [ ] Add explicit newly-added-unsent-item regression coverage.
 
 ### Phase E — Raw Materials
 - [x] Confirm existing Raw Materials page and route.
@@ -92,12 +94,11 @@
 - [ ] Add/extend duplicate-action contract tests.
 
 ### Phase G — Full Verification & Release Gate
-- [ ] Lint.
-- [ ] Typecheck.
-- [ ] Unit tests.
-- [ ] Build.
-- [ ] Database migrations/schema verification.
-- [ ] Full RLS/security integration tests after latest changes.
+- [x] Previous CI lint/typecheck/unit/build green on Run #379.
+- [x] Previous database migrations/schema verification green on Run #379.
+- [x] Previous RLS/security integration tests green on Run #379.
+- [x] Previous browser smoke green on Run #379.
+- [ ] Re-run all gates after latest kitchen security migration.
 - [ ] Browser smoke/e2e for KDS, Raw Materials, subscriptions, Settings, branch isolation.
 - [ ] Two-branch access matrix.
 - [ ] Super Admin global access vs branch-manager isolation.
@@ -107,10 +108,21 @@
 
 ## Latest Findings / Updates
 
-### 2026-08-22 — RLS regression resolved
-- CI initially found two cashier INSERT permission gaps for `warehouses` and `inventory`.
-- Policies were corrected to require the corresponding manage permission plus branch ownership.
-- Verified commit `3cd1b28...` passed the full verify/db/browser-smoke workflow.
+### 2026-08-22 — Kitchen RPC security finding and fix
+- Reviewed the existing `get_kitchen_queue` and `route_to_station` SECURITY DEFINER functions.
+- Found that `get_kitchen_queue(p_branch_id)` trusted a caller-supplied branch UUID, allowing a branch user to request another branch's kitchen queue through the RPC even if the UI was branch-filtered.
+- Found that `route_to_station(p_order_id, ...)` updated an order without checking that the order belonged to the caller's branch.
+- Found that `get_kitchen_queue` excluded `ready` orders even though the KDS UI provides a `ready -> served` action; this caused ready orders to disappear from the KDS.
+- Added `supabase/migrations/20260822010000_kitchen_branch_security.sql`.
+- Non-admin callers are now forced to their `get_branch_id()` branch; enterprise admins may explicitly select a branch.
+- `get_kitchen_queue` now includes `sent`, `cooking`, and `ready`.
+- Added/updated integration tests to require cross-branch rejection and verify ready orders remain visible.
+- Latest implementation commit: `3d7e592d9bdb2ad6832673e063b9074cf4ef8c7e`.
+- **Required next action:** fresh CI/security run and then continue the remaining branch-isolation audit.
+
+### 2026-08-22 — Previous CI verification
+- Run #379 on `22eb208...` was fully successful: verify, db, and browser-smoke jobs all passed.
+- This is a valid baseline only; the new kitchen security migration must be verified independently.
 
 ### 2026-08-22 — Subscription control implementation
 - Added Super Admin-only `subscription_plan_update(...)` RPC for monthly/yearly pricing, feature flags, and activation state.
@@ -119,35 +131,22 @@
 - Normalized existing plans into explicit module flags.
 - Rebuilt canonical subscription admin screen to control plan pricing, plan modules, branch plan/status, per-branch module overrides, global subscription settings, and pending-payment approval.
 
-### 2026-08-22 — CI failure found and fixed
-- PR workflow run #371 failed at `npm run lint`.
-- Exact error: `React Hook "useMemo" is called conditionally` in `src/features/admin/pages/SubscriptionsAdminPage.tsx`.
-- Cause: `activePlans = useMemo(...)` was declared after the Super Admin conditional return.
-- Fix: moved `useMemo` and `field` declarations before the conditional return, preserving hook order for every render.
-- Fix commit: `751a074fc950489089011ccad838a10b5c0c7de5`.
-
 ### 2026-08-22 — Direct route feature gates implemented
 - Added canonical feature-key mapping to `ProtectedRoute` based on the existing permission namespace.
 - `/kitchen` is explicitly mapped to the `kitchen` feature instead of inheriting the POS feature.
 - A branch user with an explicitly disabled effective subscription feature is redirected to the subscription page even when navigating directly to the route URL.
 - Super Admin bypasses subscription feature gates as intended.
 - Existing permission/RBAC checks remain in place; subscription gating is an additional layer.
-- Commit: `3cc0936ab5b0f4109199ede0f5b6a147987d029a`.
 
 ### 2026-08-22 — Raw Materials canonical navigation
 - Confirmed `APP_ROUTES.rawMaterials` already exists.
 - Added a single canonical Sidebar/menu entry using the existing `raw_materials.view` permission and `rawMaterials` icon.
 - Removed the old duplicate `inventory-units` Sidebar entry instead of keeping two entries for the same material-management destination.
-- Commit: `cf619b2aac05e1b9cd195372bb0c229017b67099`.
 
 ### 2026-08-22 — Navigation contract failure found and corrected
 - Run #377 failed `npm run test:unit` with 2 failures in `tests/unit/navigation-contract.test.ts`.
 - The failures were stale assertions requiring `inventory-units` to remain in the Sidebar and requiring `/inventory-units` to be discoverable.
-- This contradicted the approved no-duplicate navigation rule and the implemented canonical Raw Materials entry.
 - Updated the regression contract to require `raw-materials` as the canonical Sidebar entry and explicitly require `inventory-units` to be absent from `MENU_ITEMS`.
-- Removed `APP_ROUTES.inventoryUnits` from the list of routes that must be discoverable through primary navigation/centers; the route remains a legacy/deep-link route and is not presented as a duplicate navigation destination.
-- Fix commit: `c40d4bd94094dabc8cca547c2978b72d9ba11e12`.
-- **Required next action:** fresh CI for the fix; do not weaken/remove the feature itself to satisfy tests.
 
 ## Merge Checklist
 - [ ] All Phase A–F required items complete.
