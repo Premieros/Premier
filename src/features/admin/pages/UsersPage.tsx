@@ -47,13 +47,20 @@ export function UsersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ full_name: '', username: '', email: '', password: '', role: 'cashier', branch_id: '', is_active: true });
+  const [branchAccessIds, setBranchAccessIds] = useState<string[]>([]);
 
   const filtered = items.filter((u) => !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.username?.toLowerCase().includes(search.toLowerCase()) || u.full_name?.toLowerCase().includes(search.toLowerCase()));
 
-  const openEdit = (u: AppUser) => {
+  const openEdit = async (u: AppUser) => {
     setEditing(u);
     setForm({ full_name: u.full_name || '', username: u.username || '', role: u.role, branch_id: u.branch_id || '', is_active: u.is_active });
     setNewPassword('');
+    if (isAdmin) {
+      const { data } = await supabase.rpc('get_user_branch_access', { p_user_id: u.id });
+      setBranchAccessIds(((data as { branch_id: string }[]) ?? []).map((r) => r.branch_id));
+    } else {
+      setBranchAccessIds(u.branch_id ? [u.branch_id] : []);
+    }
     setModalOpen(true);
   };
 
@@ -123,6 +130,9 @@ export function UsersPage() {
       }
     }
     await logAudit('update', 'users', editing.id, { ...payload, password_changed: !!newPassword });
+    if (isAdmin && editing.id) {
+      await supabase.rpc('set_user_branch_access', { p_user_id: editing.id, p_branch_ids: branchAccessIds.length > 0 ? branchAccessIds : [editing.branch_id].filter(Boolean) });
+    }
     show(t('saveSuccess'), 'success');
     setModalOpen(false);
     setNewPassword('');
@@ -209,6 +219,22 @@ export function UsersPage() {
               <option value="">--</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
+            {isAdmin && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{isAr ? 'صلاحيات الفروع' : 'Branch Access'}</p>
+                <p className="text-xs text-slate-400">{isAr ? 'حدد الفروع التي يمكن للمستخدم الوصول إليها' : 'Select branches this user can access'}</p>
+                <div className="max-h-40 overflow-y-auto space-y-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
+                  {branches.map((b) => (
+                    <label key={b.id} className="flex items-center gap-2 cursor-pointer text-sm py-1">
+                      <input type="checkbox" checked={branchAccessIds.includes(b.id)} onChange={(e) => {
+                        setBranchAccessIds(e.target.checked ? [...branchAccessIds, b.id] : branchAccessIds.filter((id) => id !== b.id));
+                      }} className="rounded" />
+                      <span>{b.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <Select label={t('status')} value={form.is_active ? '1' : '0'} onChange={(e) => setForm({ ...form, is_active: e.target.value === '1' })}>
               <option value="1">{t('active')}</option>
               <option value="0">{t('inactive')}</option>

@@ -65,6 +65,7 @@ const LABEL_MAP: Record<string, { ar: string; en: string }> = {
   users: { ar: 'المستخدمون', en: 'Users' },
   auditLog: { ar: 'سجل التدقيق', en: 'Audit Log' },
   settings: { ar: 'الإعدادات', en: 'Settings' },
+  superAdmin: { ar: 'لوحة المدير العام', en: 'Super Admin Console' },
   mySubscription: { ar: 'اشتراكي', en: 'My Subscription' },
   subscriptionsAdmin: { ar: 'إدارة الاشتراكات', en: 'Subscriptions' },
   orders: { ar: 'الطلبات', en: 'Orders' },
