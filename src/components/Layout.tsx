@@ -18,6 +18,7 @@ import { useActiveOrders } from '../features/pos/hooks/useActiveOrders';
 import { Logo } from './Logo';
 import { APP_ROUTES } from '@/core/navigation/routes';
 import { MENU_GROUPS, MENU_ITEMS, type MenuIcon, type MenuGroup } from '@/core/navigation/menu.config';
+import { CommandPalette, CommandPaletteTrigger } from './CommandPalette';
 
 const ICONS: Record<MenuIcon, ReactNode> = {
   dashboard: <LayoutDashboard className="h-5 w-5" />,
@@ -160,7 +161,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {mobileOpen && <button data-testid="mobile-sidebar-backdrop" type="button" className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden" onClick={() => setMobileOpen(false)} aria-label={ar ? 'إغلاق' : 'Close'} />}
       <div className={`${ar ? 'lg:mr-[252px]' : 'lg:ml-[252px]'} min-h-screen`}>
         <header data-testid="app-header" className="sticky top-0 z-30 flex h-[76px] items-center justify-between gap-3 border-b border-ui-border bg-ui-surface px-4 shadow-ui-sm sm:px-7">
-          <div className="flex min-w-0 items-center gap-4"><button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ui-muted lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}><Menu className="h-5 w-5" /></button><div className="hidden h-8 w-px bg-ui-border lg:block" /><div data-testid="top-navigation" className="flex min-w-0 items-center gap-6 overflow-x-auto">{TOP_TABS.map((tab) => { const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view'); if (!allowed) return null; return <NavLink data-testid={`top-tab-${tab.key}`} key={tab.key} to={tab.route} className={`relative whitespace-nowrap px-1 py-7 text-sm font-semibold ${activeTop === tab.key ? 'text-ui-primary' : 'text-ui-muted'}`}>{tab.label[ar ? 0 : 1]}{tab.key === 'kitchen' && <span className="ms-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] text-white">{ar ? 'جديد' : 'New'}</span>}{activeTop === tab.key && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-ui-primary" />}</NavLink>; })}</div></div>
+          <div className="flex min-w-0 items-center gap-4"><button data-testid="sidebar-open" type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ui-muted lg:hidden" aria-label={ar ? 'فتح القائمة' : 'Open sidebar'}><Menu className="h-5 w-5" /></button><CommandPaletteTrigger /><div className="hidden h-8 w-px bg-ui-border lg:block" /><div data-testid="top-navigation" className="flex min-w-0 items-center gap-6 overflow-x-auto">{TOP_TABS.map((tab) => { const allowed = tab.key === 'general' || tab.key === 'kitchen' ? true : tab.key === 'branches' ? can('branches.manage') : can('inventory.view'); if (!allowed) return null; return <NavLink data-testid={`top-tab-${tab.key}`} key={tab.key} to={tab.route} className={`relative whitespace-nowrap px-1 py-7 text-sm font-semibold ${activeTop === tab.key ? 'text-ui-primary' : 'text-ui-muted'}`}>{tab.label[ar ? 0 : 1]}{tab.key === 'kitchen' && <span className="ms-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] text-white">{ar ? 'جديد' : 'New'}</span>}{activeTop === tab.key && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-ui-primary" />}</NavLink>; })}</div></div>
           <div className="relative flex items-center gap-2 sm:gap-4" ref={branchMenuRef}>
             <div className="relative">
               <button
@@ -202,6 +203,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }

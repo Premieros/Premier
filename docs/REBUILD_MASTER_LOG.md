@@ -236,6 +236,7 @@ Audited gaps (from the completed branch-isolation audit):
    - **Final run 31813850004 (PR #5, after both fixes): ALL GREEN — `verify` ✅ (unit 236/236), `db` ✅ (integration 154/154), `browser-smoke` ✅ (E2E 50/50), Netlify deploy preview ✅.**
    - **ERP-01 COMPLETE — MERGED.** PR #5 merged into `main` on 2026-08-14 (merge commit `0c2d812`); follow-up docs run 31814495488 also ALL GREEN. PHASE G closed. ERP-02 Product & Recipe Costing starts next from `main` @ `0c2d812`.
 - **Multi-Tenant Phase 3 DONE** — PR #10 (agent/multitenant-phase2) CI green: verify ✅, db ✅, browser-smoke ✅. Ready for merge into `main`. After merge: report final status.
+- **Phase 4 — Navigation Audit & Feature Discoverability — DONE.** Full inventory: 32 sidebar items (A), 15 center-accessible items (B), 0 hidden (D). All features discoverable. New `src/components/CommandPalette.tsx`: global Ctrl+K command search with 46 searchable items, permission-filtered, bilingual (AR/EN), fuzzy search. Integrated into `src/components/Layout.tsx` header. Extended `tests/unit/navigation-contract.test.ts` from 4 → 29 tests: route resolution, center discoverability, feature discoverability, command palette, no duplicates, sidebar structure. Lint ✅, typecheck ✅, 310 unit tests ✅, build ✅. Documentation: `docs/NAVIGATION_AUDIT.md`.
 
 ## Relationship Audit Note
 
