@@ -237,7 +237,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
 
       {/* ── Sidebar: fixed, z-50, below header ── */}
-      <aside data-testid="app-sidebar" className={`fixed top-[64px] bottom-0 ${ar ? 'start-0' : 'end-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? '-translate-x-full' : 'translate-x-full'} lg:translate-x-0`}>
+      <aside data-testid="app-sidebar" className={`fixed top-0 bottom-0 ${ar ? 'start-0' : 'end-0'} z-50 w-[260px] bg-ui-surface border-e border-ui-border shadow-ui-md transition-transform duration-200 ease-[var(--ui-ease)] ${mobileOpen ? 'translate-x-0' : ar ? '-translate-x-full' : 'translate-x-full'} lg:translate-x-0`}>
         {/* Sidebar header */}
         <div className="flex h-14 items-center justify-between border-b border-ui-border px-5">
           <Logo variant="horizontal" size={28} tone="mono" showTagline={false} className="text-ui-primary" />
