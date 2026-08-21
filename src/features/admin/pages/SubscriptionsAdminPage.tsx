@@ -66,6 +66,10 @@ export function SubscriptionsAdminPage() {
   }, [show]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const activePlans = useMemo(() => plans.filter(p => p.is_active), [plans]);
+  const field = (label: string, value: string|number, onChange: (v:string)=>void, type: 'text'|'number'='text') => <label className="block space-y-1"><span className="text-sm font-semibold">{label}</span><input type={type} value={value} onChange={e=>onChange(e.target.value)} className="w-full rounded-xl border border-ui-border bg-ui-surface px-3 py-2.5 outline-none focus:border-brand-500 dark:border-navy-700 dark:bg-navy-900" /></label>;
+
   if (user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />;
 
   const saveBranch = async (branchId: string) => {
@@ -98,9 +102,6 @@ export function SubscriptionsAdminPage() {
     if (error || !(data as { success?: boolean })?.success) { show((data as { error?: string })?.error || error?.message || 'Save failed', 'error'); return; }
     show(isAr ? 'تم حفظ الإعدادات' : 'Settings saved', 'success');
   };
-
-  const activePlans = useMemo(() => plans.filter(p => p.is_active), [plans]);
-  const field = (label: string, value: string|number, onChange: (v:string)=>void, type: 'text'|'number'='text') => <label className="block space-y-1"><span className="text-sm font-semibold">{label}</span><input type={type} value={value} onChange={e=>onChange(e.target.value)} className="w-full rounded-xl border border-ui-border bg-ui-surface px-3 py-2.5 outline-none focus:border-brand-500 dark:border-navy-700 dark:bg-navy-900" /></label>;
 
   return <div className="space-y-6 pb-10">
     <div className="flex items-end justify-between gap-4"><PageHeader title={isAr ? 'مركز الاشتراكات والتحكم في الفروع' : 'Subscriptions & Branch Controls'} subtitle={isAr ? 'تحكم مركزي للـ Super Admin في السعر، الباقة، وحالة كل Module' : 'Central Super Admin control for pricing, plans and module access'} /><Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{isAr ? 'تحديث' : 'Refresh'}</Button></div>
