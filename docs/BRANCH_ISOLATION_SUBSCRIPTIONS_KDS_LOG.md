@@ -11,9 +11,8 @@
 - **Working branch:** `feature/branch-isolation-subscriptions-kds`
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
-- **Current goal:** close branch isolation gaps, make KDS show active kitchen orders, expose Raw Materials correctly, implement branch-level subscription/feature controls, complete Super Admin settings control, and remove duplicate navigation/actions.
 - **Current gate:** NOT READY TO MERGE
-- **Latest known CI:** integration/security gate previously failed on two RLS expectations for cashier INSERT access to `warehouses` and `inventory`; the policies were corrected and must be re-run.
+- **Latest verified CI:** commit `3cd1b28a306d3a52a9a5ef634371048769de15ec` passed lint, typecheck, unit, build, schema verification, integration/security/RLS, and browser smoke. A newer subscription-control commit has started a new CI run and is pending.
 
 ## Non-Negotiable Rules
 
@@ -33,32 +32,32 @@
 
 - [x] Audit tables and policies carrying `branch_id`.
 - [x] Identify known leaks in `raw_materials`, inventory/warehouse paths, and subscription visibility.
-- [x] Tighten `warehouses` INSERT policy to require correct branch + `warehouses.manage`.
-- [x] Tighten `inventory` INSERT policy to require correct branch + `inventory.manage` and branch-owned warehouse.
-- [ ] Audit UPDATE/DELETE policies for the same tables.
+- [x] Tighten `warehouses` INSERT/UPDATE/DELETE policies to require branch ownership + `warehouses.manage` unless admin.
+- [x] Tighten `inventory` INSERT/UPDATE/DELETE policies to require branch ownership + `inventory.manage` and branch-owned warehouse unless admin.
 - [ ] Audit `raw_materials`, `product_components`, recipes, stock movements, purchases, reports, users, suppliers, customers, orders, kitchen, and RPCs.
-- [ ] Add/verify cross-branch negative tests for SELECT/INSERT/UPDATE/DELETE.
+- [ ] Add/verify cross-branch negative tests for SELECT/INSERT/UPDATE/DELETE across all sensitive modules.
 - [ ] Verify branch_id cannot be forged through client payloads.
 - [ ] Verify SECURITY DEFINER functions cannot bypass branch isolation.
-- [ ] Run full security/RLS integration suite.
+- [x] Run the current full security/RLS integration suite — green on the verified commit.
+- [ ] Re-run after the newest subscription migrations complete CI.
 
 ### Phase B — Subscription & Feature Entitlements
 
 - [x] Add/verify branch-level feature override storage.
 - [x] Add/verify `current_branch_feature_enabled(...)` guard.
-- [x] Add/verify Super Admin control for plan/status/features at database level.
-- [ ] Build the single canonical Super Admin subscription management UI.
-- [ ] Allow Super Admin to define plan price.
-- [ ] Allow Super Admin to open/close each module per branch.
-- [ ] Ensure disabled modules cannot be reached directly by URL.
-- [ ] Ensure feature state is enforced consistently in navigation, routes, and backend/service calls.
+- [x] Add/verify Super Admin control for branch plan/status/features at database level.
+- [x] Add Super Admin plan price editing RPC.
+- [x] Normalize legacy plan feature arrays into canonical module feature flags.
+- [x] Build the canonical Super Admin subscription control UI with plan pricing and per-branch module toggles.
+- [ ] Enforce disabled modules on direct routes.
+- [ ] Enforce feature state consistently in navigation and backend/service calls.
 - [ ] Add regression tests for enabled/disabled feature access.
 
 ### Phase C — Super Admin Settings Control Center
 
 - [ ] Inventory every current Settings capability.
 - [ ] Identify capabilities currently missing from Settings UI.
-- [ ] Consolidate them into one canonical Super Admin control center.
+- [ ] Consolidate global controls into one canonical Super Admin control center.
 - [ ] Expose branch management, subscriptions, module entitlements, roles/permissions, system settings, POS/KDS settings, inventory/warehouse controls, and other approved global controls.
 - [ ] Hide global controls from non-Super-Admin users.
 - [ ] Prevent duplicate Settings entry points.
@@ -67,7 +66,7 @@
 ### Phase D — Kitchen Display System
 
 - [x] Locate existing KDS implementation.
-- [x] Fix `/kitchen` so it opens the real KDS instead of redirecting to `/pos`.
+- [x] Fix `/kitchen` so it opens the real Kitchen Display instead of POS.
 - [ ] Make KDS show only active/relevant kitchen orders.
 - [ ] Preserve item-level kitchen state and newly-added unsent items.
 - [ ] Ensure realtime updates remain functional.
@@ -77,6 +76,7 @@
 
 ### Phase E — Raw Materials
 
+- [x] Confirm existing Raw Materials page and route.
 - [ ] Expose Raw Materials through one canonical navigation entry.
 - [ ] Reuse existing inventory/material logic rather than creating a parallel implementation.
 - [ ] Verify branch-scoped raw material reads/writes.
@@ -99,7 +99,7 @@
 - [ ] Unit tests.
 - [ ] Build.
 - [ ] Database migrations/schema verification.
-- [ ] Full RLS/security integration tests.
+- [ ] Full RLS/security integration tests after latest changes.
 - [ ] Browser smoke/e2e for KDS, Raw Materials, subscriptions, Settings, and branch isolation.
 - [ ] Manual/automated two-branch access matrix.
 - [ ] Verify Super Admin global access vs branch-manager isolation.
@@ -109,25 +109,25 @@
 
 ## Latest Findings / Updates
 
-### 2026-08-22 — Initial workstream log
+### 2026-08-22 — RLS regression resolved
 
-- Confirmed the existing KDS implementation was being bypassed because `/kitchen` redirected to `/pos`.
-- Confirmed Raw Materials functionality exists but is not exposed as a clear canonical navigation entry.
-- Confirmed subscription infrastructure exists but requires branch-level feature overrides and a complete Super Admin UI.
-- Confirmed branch isolation still had policy gaps.
-- Confirmed duplicate navigation/actions exist and must be consolidated rather than duplicated.
+- CI initially found two cashier INSERT permission gaps for `warehouses` and `inventory`.
+- Policies were corrected to require the corresponding manage permission plus branch ownership.
+- Verified commit `3cd1b28...` then passed the full verify/db/browser-smoke workflow.
 
-### 2026-08-22 — RLS regression
+### 2026-08-22 — Subscription control implementation
 
-- CI reached the integration/security stage with schema verification successful.
-- Two failures showed cashier INSERT access remained too broad for `warehouses` and `inventory`.
-- Corrected the policies to require management permission in addition to branch ownership.
-- **Required next action:** rerun the full CI/security gate; do not declare success until green.
+- Added Super Admin-only `subscription_plan_update(...)` RPC for monthly/yearly pricing, feature flags, and activation state.
+- Added API methods for branch subscription controls and plan updates.
+- Changed subscription feature typing from descriptive string arrays to `Record<string, boolean>` feature flags.
+- Normalized existing Basic/Standard/Enterprise plan definitions into explicit module flags.
+- Rebuilt the canonical subscription admin screen to control plan pricing, plan modules, branch plan/status, and per-branch module overrides, while retaining global subscription settings and pending-payment approval.
+- Latest CI for the new UI/migrations is pending and must be green before proceeding.
 
 ## Merge Checklist
 
 - [ ] All Phase A–F required items complete.
-- [ ] CI fully green.
+- [ ] CI fully green on the latest commit.
 - [ ] No security test weakened.
 - [ ] No duplicate action remains for the same result.
 - [ ] Super Admin can control all approved system/branch/subscription settings from the canonical Settings area.
