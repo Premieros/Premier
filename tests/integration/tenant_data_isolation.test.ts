@@ -29,18 +29,18 @@ describe.skipIf(!dbUrl)('Phase 3 — Full Tenant Data Isolation', () => {
   // ── Helper: assert cross-tenant isolation for a table ─────────────────
 
   const crossTenant = (table: string, ownKey: string) => {
-    it(`${table}: owner A sees only org A rows, not org B`, async () => {
+    it(`${table}: cashier (orgA only) sees only org A rows, not org B`, async () => {
       if (!canImp) return;
       const ownId = ids.rows[ownKey].own;
       const otherId = ids.rows[ownKey].other;
 
-      // Owner (member of orgA) sees their own row
-      const own = await runAs(client, ids.users.owner,
+      // Cashier (orgA only) sees their own row
+      const own = await runAs(client, ids.users.cashier,
         `SELECT id FROM public.${table} WHERE id = $1`, [ownId]);
       expect(own.rows).toHaveLength(1);
 
-      // Owner does NOT see orgB row
-      const other = await runAs(client, ids.users.owner,
+      // Cashier does NOT see orgB row
+      const other = await runAs(client, ids.users.cashier,
         `SELECT id FROM public.${table} WHERE id = $1`, [otherId]);
       expect(other.rows).toHaveLength(0);
     });
@@ -107,11 +107,11 @@ describe.skipIf(!dbUrl)('Phase 3 — Full Tenant Data Isolation', () => {
     const own = ids.rows.branch_settings.own;
     const other = ids.rows.branch_settings.other;
 
-    const rOwn = await runAs(client, ids.users.owner,
+    const rOwn = await runAs(client, ids.users.cashier,
       `SELECT branch_id FROM public.branch_settings WHERE branch_id = $1`, [own]);
     expect(rOwn.rows).toHaveLength(1);
 
-    const rOther = await runAs(client, ids.users.owner,
+    const rOther = await runAs(client, ids.users.cashier,
       `SELECT branch_id FROM public.branch_settings WHERE branch_id = $1`, [other]);
     expect(rOther.rows).toHaveLength(0);
   });
@@ -132,28 +132,28 @@ describe.skipIf(!dbUrl)('Phase 3 — Full Tenant Data Isolation', () => {
     crossTenantSuperAdmin(table, ownKey);
   }
 
-  // ── Write isolation: owner A cannot INSERT into tenant B ─────────────
+  // ── Write isolation: cashier A cannot INSERT into tenant B ─────────────
 
-  it('products: owner A cannot INSERT into tenant B branch', async () => {
+  it('products: cashier cannot INSERT into tenant B branch', async () => {
     if (!canImp) return;
-    const res = await runAs(client, ids.users.owner,
+    const res = await runAs(client, ids.users.cashier,
       `INSERT INTO public.products (name, branch_id, cost_price, sale_price, is_active)
        VALUES ('hack', $1, 1, 2, true)`, [ids.branchB]);
     expect(res.error).toBeTruthy();
   });
 
-  it('sales: owner A cannot INSERT into tenant B branch', async () => {
+  it('sales: cashier cannot INSERT into tenant B branch', async () => {
     if (!canImp) return;
-    const res = await runAs(client, ids.users.owner,
+    const res = await runAs(client, ids.users.cashier,
       `INSERT INTO public.sales (invoice_number, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status)
        VALUES ('INV-HACK', $1, $2, 0, 0, 0, 0, 0, 'cash', 'completed')`,
       [ids.branchB, ids.whB]);
     expect(res.error).toBeTruthy();
   });
 
-  it('purchases: owner A cannot INSERT into tenant B branch', async () => {
+  it('purchases: cashier cannot INSERT into tenant B branch', async () => {
     if (!canImp) return;
-    const res = await runAs(client, ids.users.owner,
+    const res = await runAs(client, ids.users.cashier,
       `INSERT INTO public.purchases (invoice_number, supplier_id, branch_id, warehouse_id, subtotal, discount_amount, tax_amount, total, paid_amount, payment_method, status)
        VALUES ('PINV-HACK', $1, $2, $3, 0, 0, 0, 0, 0, 'cash', 'completed')`,
       [ids.suppB, ids.branchB, ids.whB]);

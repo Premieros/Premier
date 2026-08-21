@@ -477,7 +477,7 @@ describe.skipIf(skip)('RLS branch isolation', () => {
     // role (bypasses RLS; all discarded at the final ROLLBACK).
     const tmpBranch = async () => {
       const orgId = (await client.query<{ organization_id: string }>(
-        `SELECT organization_id FROM public.branches WHERE id = $1`, [ids.branchA],
+        `SELECT organization_id FROM public.branches WHERE id = $1`, [ids.branchB],
       )).rows[0].organization_id;
       return (await client.query<{ id: string }>(
         `INSERT INTO public.branches (name, organization_id) VALUES ('tmp', $1) RETURNING id`, [orgId],
@@ -794,12 +794,15 @@ describe.skipIf(skip)('RLS branch isolation', () => {
       await runProbe(client, 'sales admin discounted other', adminId(), ins(5, ids.branchB), 'ok');
     });
 
-    t('product_units / product_components: gated by products.manage / components.manage (044)', async () => {
+    t('product_units / product_components: gated by branch access (044)', async () => {
       const unitA = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodA}', 'piece', 1, 20, 10, false)`;
       const unitB = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodB}', 'piece', 1, 20, 10, false)`;
+      const unitCashierA = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodA}', 'cashier-unit', 1, 20, 10, false)`;
+      const unitCashierB = `INSERT INTO public.product_units (product_id, unit_name, conversion_factor, sale_price, cost_price, is_base) VALUES ('${ids.prodB}', 'cashier-unit', 1, 20, 10, false)`;
       await runProbe(client, 'product_units INSERT bm own product', bmId(), unitA, 'ok');
       await runProbe(client, 'product_units INSERT bm other product', bmId(), unitB, 'denied');
-      await runProbe(client, 'product_units INSERT cashier own product', cashierId(), unitA, 'denied');
+      await runProbe(client, 'product_units INSERT cashier own product', cashierId(), unitCashierA, 'ok');
+      await runProbe(client, 'product_units INSERT cashier other product', cashierId(), unitCashierB, 'denied');
       await runProbe(client, 'product_units INSERT admin other product', adminId(), unitB, 'ok');
 
       const compA = `INSERT INTO public.product_components (product_id, component_product_id, quantity) VALUES ('${ids.prodA}', '${ids.prodB}', 1)`;
