@@ -58,9 +58,11 @@ const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/Subscr
 const SuperAdminConsolePage = lazy(() => import('../features/admin/pages/SuperAdminConsolePage').then(m => ({ default: m.SuperAdminConsolePage })));
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-ui-page"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ui-primary" /></div>; }
-const FEATURE_KEYS = new Set(['pos','inventory','warehouses','raw_materials','products','categories','components','recipes','production','purchases','customers','suppliers','expenses','sales','shifts','reports','accounts','users','audit','settings','branches','floor_plan','kitchen']);
+const FEATURE_KEYS = new Set(['pos','inventory','warehouses','raw_materials','products','categories','components','recipes','production','purchases','customers','suppliers','expenses','sales','shifts','reports','accounting','accounts','users','audit','settings','branches','floor_plan','kitchen']);
 function routeFeature(permission: Permission | undefined, pathname: string): string | null {
   if (pathname === '/kitchen' || pathname.includes('/kitchen/')) return 'kitchen';
+  if (pathname === APP_ROUTES.floorPlan || pathname === '/tables') return 'floor_plan';
+  if (pathname === APP_ROUTES.financialReports || pathname === APP_ROUTES.accounting || pathname === APP_ROUTES.accounts || pathname === APP_ROUTES.payments || pathname === APP_ROUTES.journal || pathname === APP_ROUTES.treasury || pathname === APP_ROUTES.reconciliation) return 'accounting';
   const key = permission?.split('.')[0];
   return key && FEATURE_KEYS.has(key) ? key : null;
 }
