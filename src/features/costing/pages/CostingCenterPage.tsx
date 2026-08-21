@@ -388,7 +388,7 @@ export function CostingCenterPage() {
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
+                      <tr className="bg-ui-page-alt text-start text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('item')}</th>
                         <th className="px-3 py-2">{t('quantity')}</th>
                         <th className="px-3 py-2">{t('unitCost')}</th>
@@ -416,7 +416,7 @@ export function CostingCenterPage() {
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
+                      <tr className="bg-ui-page-alt text-start text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('item')}</th>
                         <th className="px-3 py-2">{t('quantity')}</th>
                         <th className="px-3 py-2">{t('wastagePercent')}</th>
@@ -446,7 +446,7 @@ export function CostingCenterPage() {
                 <div className="overflow-x-auto rounded-ui-lg border border-ui-border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-ui-page-alt text-left text-xs text-ui-subtle">
+                      <tr className="bg-ui-page-alt text-start text-xs text-ui-subtle">
                         <th className="px-3 py-2">{t('date')}</th>
                         <th className="px-3 py-2">{t('oldCost')}</th>
                         <th className="px-3 py-2">{t('newCost')}</th>
