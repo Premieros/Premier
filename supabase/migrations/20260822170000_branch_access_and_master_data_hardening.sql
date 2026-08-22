@@ -1,4 +1,6 @@
 -- Branch access hardening: direct branch assignment is authoritative for branch staff.
+-- Owners/admins may access all branches only in organizations where they hold
+-- an active owner/admin membership. Plain members never receive tenant-wide access.
 CREATE OR REPLACE FUNCTION public.user_may_access_branch(p_branch_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -16,10 +18,11 @@ AS $$
     )
     OR EXISTS (
       SELECT 1
-      FROM public.user_organization_access uoa
-      JOIN public.branches b ON b.organization_id = uoa.organization_id
-      WHERE uoa.user_id = auth.uid()
-        AND uoa.role IN ('owner', 'admin')
+      FROM public.organization_members om
+      JOIN public.branches b ON b.organization_id = om.organization_id
+      WHERE om.user_id = auth.uid()
+        AND om.membership_role IN ('owner', 'admin')
+        AND om.is_active = true
         AND b.id = p_branch_id
     );
 $$;
