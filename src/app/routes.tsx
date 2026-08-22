@@ -1,9 +1,10 @@
 import { Suspense, lazy, type ReactNode } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Layout } from '../components/Layout';
 import { useCan, type Permission } from '../lib/permissions';
 import { APP_ROUTES } from '@/core/navigation/routes';
+import { canAccessSubscriptionFeature, type SubscriptionFeatureKey } from '@/lib/subscriptionGate';
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const SubscriptionPage = lazy(() => import('../features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
@@ -44,7 +45,6 @@ const SuppliersPage = lazy(() => import('../features/parties/pages/SuppliersPage
 const ExpensesPage = lazy(() => import('../features/trade/pages/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
 const SalesPage = lazy(() => import('../features/trade/pages/SalesPage').then(m => ({ default: m.SalesPage })));
 const ShiftsPage = lazy(() => import('../features/trade/pages/ShiftsPage').then(m => ({ default: m.ShiftsPage })));
-
 const ReportsCenterPage = lazy(() => import('../features/reporting/pages/ReportsCenterPage').then(m => ({ default: m.ReportsCenterPage })));
 const FinancialReportsPage = lazy(() => import('../features/accounting/pages/FinancialReportsPage').then(m => ({ default: m.FinancialReportsPage })));
 const AccountsPage = lazy(() => import('../features/accounting/pages/AccountsPage').then(m => ({ default: m.AccountsPage })));
@@ -59,7 +59,30 @@ const SubscriptionsAdminPage = lazy(() => import('../features/admin/pages/Subscr
 const SuperAdminConsolePage = lazy(() => import('../features/admin/pages/SuperAdminConsolePage').then(m => ({ default: m.SuperAdminConsolePage })));
 const SystemHealthPage = lazy(() => import('../features/admin/pages/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
 function PageLoader() { return <div className="min-h-screen flex items-center justify-center bg-ui-page"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ui-primary" /></div>; }
-function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true, superAdminOnly = false }: { children: ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean; superAdminOnly?: boolean }) { const { session, loading, user, subscription } = useAuth(); const can = useCan(); if (loading) return <PageLoader />; if (!session) return <Navigate to={APP_ROUTES.login} replace />; if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to={APP_ROUTES.dashboard} replace />; if (permission && !can(permission)) return <Navigate to={APP_ROUTES.dashboard} replace />; if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id && subscription?.expired) return <Navigate to={APP_ROUTES.subscription} replace />; if (fullscreen) return <>{children}</>; return <Layout>{children}</Layout>; }
+const FEATURE_KEYS = new Set<SubscriptionFeatureKey>(['pos','inventory','warehouses','raw_materials','products','categories','components','recipes','production','purchases','customers','suppliers','expenses','sales','shifts','reports','accounting','accounts','users','audit','settings','branches','floor_plan','kitchen']);
+function routeFeature(permission: Permission | undefined, pathname: string): SubscriptionFeatureKey | null {
+  if (pathname === '/kitchen' || pathname.includes('/kitchen/')) return 'kitchen';
+  if (pathname === APP_ROUTES.floorPlan || pathname === '/tables') return 'floor_plan';
+  if (pathname === APP_ROUTES.financialReports || pathname === APP_ROUTES.accounting || pathname === APP_ROUTES.accounts || pathname === APP_ROUTES.payments || pathname === APP_ROUTES.journal || pathname === APP_ROUTES.treasury || pathname === APP_ROUTES.reconciliation) return 'accounting';
+  const key = permission?.split('.')[0];
+  return key && FEATURE_KEYS.has(key as SubscriptionFeatureKey) ? key as SubscriptionFeatureKey : null;
+}
+function ProtectedRoute({ children, permission, fullscreen, subscriptionGate = true, superAdminOnly = false }: { children: ReactNode; permission?: Permission; fullscreen?: boolean; subscriptionGate?: boolean; superAdminOnly?: boolean }) {
+  const { session, loading, user, subscription } = useAuth();
+  const can = useCan();
+  const { pathname } = useLocation();
+  if (loading) return <PageLoader />;
+  if (!session) return <Navigate to={APP_ROUTES.login} replace />;
+  if (superAdminOnly && user?.role !== 'super_admin') return <Navigate to={APP_ROUTES.dashboard} replace />;
+  if (permission && !can(permission)) return <Navigate to={APP_ROUTES.dashboard} replace />;
+  if (subscriptionGate && user && user.role !== 'super_admin' && user.branch_id) {
+    const feature = routeFeature(permission, pathname);
+    if (subscription?.expired) return <Navigate to={APP_ROUTES.subscription} replace />;
+    if (feature && !canAccessSubscriptionFeature(user, subscription, feature)) return <Navigate to={APP_ROUTES.subscription} replace />;
+  }
+  if (fullscreen) return <>{children}</>;
+  return <Layout>{children}</Layout>;
+}
 function PublicRoute({ children }: { children: ReactNode }) { const { session, loading } = useAuth(); if (loading) return null; if (session) return <Navigate to={APP_ROUTES.dashboard} replace />; return <>{children}</>; }
 export function AppRoutes() { return <Suspense fallback={<PageLoader />}><Routes>
 <Route path={APP_ROUTES.login} element={<PublicRoute><LoginPage /></PublicRoute>} /><Route path={APP_ROUTES.register} element={<PublicRoute><RegisterPage /></PublicRoute>} /><Route path={APP_ROUTES.subscription} element={<ProtectedRoute subscriptionGate={false}><SubscriptionPage /></ProtectedRoute>} /><Route path={APP_ROUTES.dashboard} element={<ProtectedRoute permission="dashboard.view"><DashboardPage /></ProtectedRoute>} /><Route path={APP_ROUTES.operationsCenter} element={<ProtectedRoute permission="dashboard.view"><OperationsCenterPage /></ProtectedRoute>} /><Route path={APP_ROUTES.inventoryCenter} element={<ProtectedRoute permission="inventory.view"><InventoryCenterPage /></ProtectedRoute>} /><Route path={APP_ROUTES.procurementCenter} element={<ProtectedRoute permission="purchases.view"><ProcurementCenterPage /></ProtectedRoute>} /><Route path={APP_ROUTES.manufacturingCenter} element={<ProtectedRoute permission="production.view"><ManufacturingCenterPage /></ProtectedRoute>} />
