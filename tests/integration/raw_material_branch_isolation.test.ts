@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type pg from 'pg';
-import { randomUUID } from 'node:crypto';
 import { getDbUrl, openDb } from './db';
-import { runAs, canImpersonate } from './rls';
+import { seedRlsFixture, runAs, canImpersonate } from './rls';
 
 const dbUrl = getDbUrl();
 
-describe.skipIf(!dbUrl)('Raw material branch isolation', () => {
+describe.skipIf(!dbUrl)('Raw material branch isolation hardening', () => {
   let client: pg.Client;
   let branchA: string;
   let branchB: string;
@@ -19,49 +18,16 @@ describe.skipIf(!dbUrl)('Raw material branch isolation', () => {
     client = openDb(dbUrl!);
     await client.connect();
     await client.query('BEGIN');
-
-    const orgA = (await client.query<{ id: string }>(
-      `INSERT INTO public.organizations (name, slug) VALUES ('RM Org A', $1) RETURNING id`,
-      [`rm-org-a-${randomUUID()}`],
-    )).rows[0].id;
-    const orgB = (await client.query<{ id: string }>(
-      `INSERT INTO public.organizations (name, slug) VALUES ('RM Org B', $1) RETURNING id`,
-      [`rm-org-b-${randomUUID()}`],
-    )).rows[0].id;
-
-    branchA = (await client.query<{ id: string }>(
-      `INSERT INTO public.branches (name, organization_id) VALUES ('RM Branch A', $1) RETURNING id`,
-      [orgA],
-    )).rows[0].id;
-    branchB = (await client.query<{ id: string }>(
-      `INSERT INTO public.branches (name, organization_id) VALUES ('RM Branch B', $1) RETURNING id`,
-      [orgB],
-    )).rows[0].id;
-
-    await client.query('ALTER TABLE public.users DISABLE TRIGGER trg_users_role_guard');
-    managerA = (await client.query<{ id: string }>(
-      `INSERT INTO public.users (id, email, username, full_name, role, branch_id, is_active)
-       VALUES ($1, 'rm-manager@test.local', 'rm-manager', 'RM Manager', 'branch_manager', $2, true)
-       RETURNING id`,
-      [randomUUID(), branchA],
-    )).rows[0].id;
-    await client.query('ALTER TABLE public.users ENABLE TRIGGER trg_users_role_guard');
-
-    await client.query(
-      `INSERT INTO public.organization_members (organization_id, user_id, membership_role, is_active)
-       VALUES ($1, $2, 'member', true)`,
-      [orgA, managerA],
-    );
-
-    rmA = (await client.query<{ id: string }>(
-      `INSERT INTO public.raw_materials (code, name, branch_id) VALUES ('RM-A', 'Raw A', $1) RETURNING id`,
-      [branchA],
-    )).rows[0].id;
-    rmB = (await client.query<{ id: string }>(
-      `INSERT INTO public.raw_materials (code, name, branch_id) VALUES ('RM-B', 'Raw B', $1) RETURNING id`,
+    const ids = await seedRlsFixture(client);
+    branchA = ids.branchA;
+    branchB = ids.branchB;
+    managerA = ids.users.branch_manager;
+    rmA = ids.rm;
+    rmB = await client.query<{ id: string }>(
+      `INSERT INTO public.raw_materials (code, name, branch_id) VALUES ('RM-B-TEST', 'Branch B RM', $1) RETURNING id`,
       [branchB],
-    )).rows[0].id;
-
+    ).then(r => r.rows[0].id);
+    await client.query(`UPDATE public.raw_materials SET branch_id = $1 WHERE id = $2`, [branchA, rmA]);
     imp = await canImpersonate(client);
   });
 
@@ -70,7 +36,7 @@ describe.skipIf(!dbUrl)('Raw material branch isolation', () => {
     await client?.end().catch(() => {});
   });
 
-  it('branch manager can read only raw materials from the assigned branch', async () => {
+  it('branch manager sees only raw materials owned by their branch', async () => {
     if (!imp) return;
     const result = await runAs(
       client,
@@ -103,6 +69,6 @@ describe.skipIf(!dbUrl)('Raw material branch isolation', () => {
       [branchB],
     );
     expect(result.error).toBeDefined();
-    expect(result.error?.message).toMatch(/row-level security|policy/i);
+    expect(result.error).toMatch(/row-level security|policy/i);
   });
 });
