@@ -12,8 +12,10 @@
 - **Production branch:** `main` — untouched by this workstream
 - **PR:** #18
 - **Current gate:** NOT READY TO MERGE
-- **Latest implementation:** `3ca20645d32b7fa685589e0a402163707c7d1469`
+- **Latest implementation:** `612790526ef2f6f0a607cec813e4c3ec64f78501`
 - **Previous CI-verified head:** `22eb20872fb96da34e167d9ffa1b5166f82cd289`
+- **Latest completed CI on the prior head:** Run #415 failed during `typecheck:all` because the new raw-material test accessed `.message` on a string error value. This was a test typing defect, not evidence of a security-policy failure.
+- **Current CI:** Run #416 is in progress on the fixed head `612790526ef2f6f0a607cec813e4c3ec64f78501`.
 - **Latest verified CI:** Run #379 / GitHub Actions run `32531787898` passed verify, database/schema, integration/security/RLS, and browser-smoke on `22eb208...`.
 - **Current focus:** Phase A — complete the remaining branch-isolation/RLS/RPC audit, then obtain a fresh CI gate on the latest head.
 - **Merge policy:** No merge/release action is permitted until Phases A–F and the full verification gate are complete.
@@ -141,6 +143,12 @@
 - Added a single canonical Sidebar/menu entry using `raw_materials.view`.
 - Removed the duplicate `inventory-units` Sidebar entry.
 
+### 2026-08-22 — CI failure found and corrected
+- Run #415 (`32566418686`) checked PR #18's merge ref and failed at `typecheck:all` in `tests/integration/raw_material_branch_isolation.test.ts:106` because `runAs().error` is a string, but the test accessed `.message`.
+- This was corrected without weakening the security assertion: the test now matches the returned error string directly against the RLS/policy message.
+- Fixed commit: `612790526ef2f6f0a607cec813e4c3ec64f78501`.
+- Run #416 (`32566635206`) was automatically started for the fixed head and is currently in progress. Phase A remains open until the run completes and the wider RLS/RPC audit is finished.
+
 ### 2026-08-22 — Current branch-vs-plan reconciliation
 - Working branch is `feature/branch-isolation-subscriptions-kds`; `main` remains Production.
 - The authoritative workstream log is this file: `docs/BRANCH_ISOLATION_SUBSCRIPTIONS_KDS_LOG.md`.
@@ -161,4 +169,4 @@
 - [ ] Production deployment verified after merge.
 
 ## NEXT
-**Phase A — continue the remaining RLS/RPC audit.** Prioritize SECURITY DEFINER and service/RPC paths that can accept branch IDs or object IDs, then add negative cross-branch tests. After the audit passes, run the complete CI/security gate on the latest head. Do not merge to `main` before the entire Phase A–G plan is complete and all gates are green.
+**Phase A — continue the remaining RLS/RPC audit.** Run #416 is the immediate verification gate for the latest test fix. If it passes, continue the remaining SECURITY DEFINER/service/RPC audit and add negative cross-branch tests. Only after Phase A passes its security gate should work proceed to Phase B/C/D/E/F. Do not merge to `main` before the entire Phase A–G plan is complete and all gates are green.
