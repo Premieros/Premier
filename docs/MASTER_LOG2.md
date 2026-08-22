@@ -83,34 +83,37 @@ At every phase closure report exactly:
 - Branch isolation hardening reached a successful CI run after the final policy correction: Owner/Admin scope is organization-bound, Branch Manager/Staff scope is branch-bound, and Super Admin remains globally privileged. Earlier CI reached 336/337 before the final correction; the subsequent full run passed all jobs including browser smoke.
 - The current Routes implementation is `src/app/routes.tsx`; do not invent or use `src/routes/routes.tsx`.
 - Subscription administration UI exists and supports plan pricing, active/inactive plans, module selection, branch subscriptions, branch overrides, subscription states, and payment review. Super Admin access is enforced at the administration page.
-- Subscription route protection currently checks subscription expiration. Module-level enforcement is NOT closed yet: a centralized effective-module gate must still be connected to the real route and backend/API boundaries.
-- KDS/raw-material work is part of the active execution scope. Do not mark it closed without focused tests and CI evidence for active orders, incremental item sending, raw-material visibility, and branch isolation.
-- Duplicate-control rule remains mandatory: one visible control/action per outcome; remove redundant buttons/icons rather than adding aliases.
+- A centralized subscription feature-key/type layer is now present on the development branch.
+- `ProtectedRoute` is now wired to the centralized module gate on the development branch, including explicit Super Admin bypass and direct-route blocking for mapped modules.
+- An additive database migration now exposes effective plan feature maps plus per-branch feature overrides through `subscription_status()` and adds `has_subscription_feature(branch_id, feature)` for backend enforcement.
 
 ### CURRENT FOCUS
-1. Subscription Module Enforcement: derive effective access from plan features + branch overrides + subscription status; enforce it consistently in UI, direct routes, and protected backend operations; Super Admin bypass remains explicit.
+1. Subscription Module Enforcement: complete backend/API/RPC enforcement and add focused tests proving ON/OFF behavior for every mapped module, branch override precedence, expired subscription behavior, and Super Admin bypass.
 2. KDS: active orders only; newly added unsent items in an existing order must remain independently pending and sendable; previously sent items must not be resent or falsely mark all items as sent.
 3. Raw Materials: visible operational screen, branch-isolated stock/data, and correct linkage to recipes/production/purchases where applicable.
 4. Super Admin Settings: expose all administrative controls from one coherent settings surface, including subscription/module controls, without hiding required controls or duplicating the same action elsewhere.
 5. After each cohesive group: focused test -> fix -> CI -> record evidence here.
 
 ### REMAINING / NOT CLOSED
-- Centralized module gate is not yet proven end-to-end against every protected route/backend operation.
+- Backend/API/RPC feature enforcement is not yet proven end-to-end; `has_subscription_feature()` is the centralized primitive, but protected write/read operations still need to adopt it where module gating is required.
+- Super Admin still needs a complete, non-duplicated UI for editing module maps and branch overrides; current subscription administration must be verified against the new JSON feature shape.
 - KDS and raw-material requirements are not closed until current-code verification and CI evidence are recorded.
 - Super Admin Settings completeness still requires current UI/schema verification.
 - No claim is made that every roadmap P0/P1/P2 item is complete; the roadmap remains authoritative.
 
 ### BLOCKED / RISKS
+- The module gate is now implemented on the current development branch, but no CI run is currently attached to commit `0b1502a9c6701865cd9b96b039ff11d5da46de20`; therefore the feature is not closed.
+- The new migration uses additive schema changes only. It intentionally normalizes the three existing seeded plans to explicit module maps; this must be validated against the Super Admin plan editor before release.
 - Do not use historical feature-branch commits as evidence for the current development head without re-verifying them on `development/master-log2`.
 - Do not create additional Master Logs. `docs/MASTER_LOG2.md` is the single execution log; other planning/report files are historical/supporting documents unless explicitly promoted here.
-- Do not delete historical logs solely to make the documentation look clean; preserve history and use this file as the authoritative execution record.
 - Any RLS change must preserve existing security tests and must not solve a failing test by weakening the assertion.
 
 ### EVIDENCE
-- Master Log current blob before this update: `f02243f4356535a02b34ac3934a164d935bfd304`.
-- Branch-isolation verification previously reached a full successful CI run after the final policy correction; exact current-head revalidation is required before closing the entire branch-isolation group again.
-- Subscription administration code was inspected; current route protection was confirmed in `src/app/routes.tsx` and was found to enforce expiration but not yet a complete module-level gate.
-- This section intentionally distinguishes historical verified work from work that still requires current-head evidence.
+- `eee7b0217d40fbf3d08ab42e813938bfe9209994`: subscription feature types added to the development branch.
+- `416b009dc0c587cdb2c62ec046973f1f4aced776`: centralized `src/lib/subscriptionGate.ts` added to the development branch.
+- `6e84e4f6e9ebdd120936a4cde304a0cef9bb4456`: additive migration exposing plan features, branch overrides, effective `subscription_status()`, and `has_subscription_feature()`.
+- `0b1502a9c6701865cd9b96b039ff11d5da46de20`: `src/app/routes.tsx` now imports and applies the centralized gate to protected routes.
+- No current-head CI result exists yet for `0b1502a9...`; this is intentionally recorded as pending.
 
 ### NEXT
-Implement and verify the centralized Subscription Module Enforcement against the actual `src/app/routes.tsx` and the protected backend/API boundaries, then run focused tests and the CI gate. Only after that passes move to the KDS/raw-material cohesive group, then Super Admin Settings, while preserving the roadmap order and all prior regression gates.
+Run the focused subscription-gate tests/CI on the current development head. Fix any TypeScript, migration, route, or regression failures. Only after CI passes, add backend/API enforcement to the highest-risk module operations and verify Super Admin plan/override editing against the new feature-map shape. Then move to the KDS/raw-material cohesive group.
