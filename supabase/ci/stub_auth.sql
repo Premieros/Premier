@@ -3,21 +3,7 @@
 -- ----------------------------------------------------------------------------
 -- Applied ONLY by the CI verification job BEFORE supabase/migrations/*.sql.
 -- It reproduces the pieces of a real Supabase project that the migrations
--- depend on but that a stock Postgres image does not ship with:
---
---   1. roles anon / authenticated / service_role (referenced by RLS policies)
---   2. extensions schema (pgcrypto is installed there by 007_fix_login)
---   3. auth schema with users / identities / sessions tables carrying exactly
---      the columns the dynamic auth DML reads via information_schema
---   4. auth.uid() / auth.jwt() so SECURITY DEFINER functions resolve at runtime
---   5. Session-user impersonation for RLS integration tests: auth.uid()/auth.jwt()
---      read the transaction-scoped GUCs app.user_id / app.jwt, so a test can
---      `SELECT set_config('app.user_id', $1, true)` and then SET ROLE
---      authenticated to exercise RLS as that user. With no GUC set they fall
---      back to NULL / '{}' (the old behaviour).
---
--- Never apply this file to a real Supabase database: the auth schema there is
--- managed by GoTrue and must not be overridden.
+-- depend on but that a stock Postgres image does not ship with.
 -- ============================================================================
 
 DO $$
@@ -40,8 +26,6 @@ GRANT service_role TO postgres;
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS extensions;
 
--- RLS policies execute auth.uid() under the querying role, so every API role
--- needs USAGE on the auth schema (EXECUTE on the functions is PUBLIC-default).
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA extensions TO anon, authenticated, service_role;
 
@@ -84,8 +68,6 @@ CREATE TABLE IF NOT EXISTS auth.sessions (
   created_at timestamptz
 );
 
--- Identity of the current request. Plain Postgres has no JWT, so the test
--- harness impersonates a user by setting app.user_id inside its transaction.
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
   LANGUAGE sql STABLE AS $fn$
   SELECT NULLIF(current_setting('app.user_id', true), '')::uuid
@@ -96,8 +78,16 @@ CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb
   SELECT COALESCE(NULLIF(current_setting('app.jwt', true), '')::jsonb, '{}'::jsonb)
 $fn$;
 
--- Marker used by integration tests to detect this CI stub (as opposed to a
--- real Supabase GoTrue backend, where auth.uid() ignores the GUC and RLS
--- impersonation cannot work). Never present on a real project.
+-- Mirrors Supabase auth.role() for CI: use an explicit JWT role when present,
+-- otherwise the current Postgres role. This is used only for service-role
+-- administrative RPC tests; branch users remain governed by branch RLS.
+CREATE OR REPLACE FUNCTION auth.role() RETURNS text
+  LANGUAGE sql STABLE AS $fn$
+  SELECT COALESCE(
+    NULLIF(current_setting('app.jwt', true), '')::jsonb ->> 'role',
+    current_user::text
+  )
+$fn$;
+
 CREATE OR REPLACE FUNCTION auth.is_ci_stub() RETURNS boolean
   LANGUAGE sql STABLE AS $fn$ SELECT true $fn$;
